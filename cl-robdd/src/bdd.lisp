@@ -563,28 +563,33 @@ set of BDDs."
                 (and (not ,(bdd-label bdd)) ,(bdd-to-expr (bdd-negative bdd))))))))
 
 
-(flet ((incr-hash ()
-         (incf *bdd-hash-access-count*)
-         (when *bdd-verbose*
-           (when (= 0 (mod *bdd-hash-access-count* 10000))
-             (format t "bdd hash = ~A wall-time=~A cpu-time=~A~%"
-                     (getf *bdd-hash-struct* :hash)
-                     (truncate (get-internal-run-time) internal-time-units-per-second)
-                     (truncate (get-universal-time) internal-time-units-per-second))))))
+(defun incr-hash ()
+  (incf *bdd-hash-access-count*)
+  (when *bdd-verbose*
+    (when (= 0 (mod *bdd-hash-access-count* 10000))
+      (format t "bdd hash = ~A wall-time=~A cpu-time=~A~%"
+              (getf *bdd-hash-struct* :hash)
+              (truncate (get-internal-run-time) internal-time-units-per-second)
+              (truncate (get-universal-time) internal-time-units-per-second)))))
 
-  (defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
-    (let* ((bdd (make-instance bdd-node-class
-                               :label label
-                               :positive  positive-bdd
-                               :negative negative-bdd))
-           (key (bdd-make-key label (bdd-ident positive-bdd) (bdd-ident negative-bdd))))
-      (incr-hash)
-      (setf (gethash key (bdd-hash)) bdd)))
-  
-  (defmethod %bdd-node (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
-    (cond
-      ((eq positive-bdd negative-bdd)
-       positive-bdd)
-      ((bdd-find (bdd-hash) label positive-bdd negative-bdd))
-      (t ;; 11%
-       (bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class)))))
+(defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
+  (let* ((bdd (make-instance bdd-node-class
+                             :label label
+                             :positive  positive-bdd
+                             :negative negative-bdd))
+         (key (bdd-make-key label (bdd-ident positive-bdd) (bdd-ident negative-bdd))))
+    (incr-hash)
+    (setf (gethash key (bdd-hash)) bdd)))
+
+
+(defmethod %bdd-node (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
+  (cond
+    ((eq positive-bdd negative-bdd)
+     positive-bdd)
+    ((bdd-find (bdd-hash) label positive-bdd negative-bdd))
+    (t ;; 11%
+     (bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))))
+
+
+
+
