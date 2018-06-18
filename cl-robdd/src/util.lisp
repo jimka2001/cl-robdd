@@ -43,3 +43,24 @@
   `(loop :while ,test
 	 :do (progn ,@body)))
 
+(defmacro setof (var data &body body)
+  `(remove-if-not (lambda (,var) ,@body) ,data))
+
+(defun getter (field)
+  (lambda (obj) (getf obj field)))
+
+(defun run-program (program args &rest options)
+  #+sbcl (apply #'sb-ext:run-program program args :search t options)
+  #+allegro (apply #'excl:run-shell-command
+                   (apply #'vector (cons program args))
+                   :wait t
+                   options
+                   )
+  )
+
+
+(defvar *tmp-dir* (format nil "/tmp/~A/" (or (sb-posix:getenv "USER")
+                                             "unknown-user")))
+
+(defun make-temp-dir (suffix)
+  (format nil "~A/~A/" *tmp-dir* suffix))

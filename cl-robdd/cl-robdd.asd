@@ -27,4 +27,5 @@
     ((:file "package")
      (:file "util")
      (:file "bdd" :depends-on ("util"))
+     (:file "bdd-dot" :depends-on ("bdd"))
      ))))
