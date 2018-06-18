@@ -22,4 +22,18 @@
 (cl:defpackage :cl-robdd
   (:use :cl)
   (:export
+   "BDD"
+   "BDD-LABEL"
+   "BDD-LEFT"
+   "BDD-RIGHT"
+   "BDD-FIND"
+   "BDD-MAKE-KEY"
+   "BDD-IDENT"
+   "BDD-HASH"
+   "BDD-ALLOCATE"
+   "BDD-TO-EXPR"
+   "BDD-TRUE"
+   "BDD-FALSE"
+   "*BDD-TRUE*"
+   "*BDD-FALSE*"
    ))

@@ -21,20 +21,28 @@
 
 
 (defpackage :cl-robdd-test
-  (:use :cl :cl-robdd)
+  (:use :cl :cl-robdd :lisp-unit)
   )
   
 (in-package :cl-robdd-test)
 
 
 (let ((package-into (find-package  :cl-robdd-test))
-      (package-from (find-package  :cl-robdd)))
+      (package-from (find-package  :cl-robdd))
+      (*package* (find-package :keyword)))
   (do-symbols (name package-from)
     (when (and (eq package-from (symbol-package name))
                (not (find-symbol (symbol-name name) package-into)))
-      (format t "importing name=~A into ~S ~%" name pacakge-into)
+      (format t "importing name=~A into ~S ~%" name package-into)
       (shadowing-import name package-into))))
 
+
+(defun test ()
+  (let ((*print-summary* t)
+	(*print-failures* t)
+	(*summarize-results* t)
+	(*print-errors* t))
+    (run-tests :all (list :cl-robdd-test))))
 
 
 (define-test test/bdd-and
@@ -76,7 +84,6 @@
       (dolist (test-vector test-vectors)
         (destructuring-bind (a b f) test-vector
           (assert-true (eq f (bdd-xor a b))))))))
-
 
 (define-test test/bdd-xor-2
   (let ((test-operands '((z1 z2)

@@ -22,17 +22,18 @@
 (in-package :cl-robdd-test)
 
 (let ((package-into (find-package  :cl-robdd-test))
-      (package-from (find-package  :cl-robdd)))
+      (package-from (find-package  :cl-robdd))
+      (*package* (find-package :keyword)))
   (do-symbols (name package-from)
     (when (and (eq package-from (symbol-package name))
                (not (find-symbol (symbol-name name) package-into)))
-      (format t "importing name=~A into ~S ~%" name pacakge-into)
+      (format t "importing name=~A into ~S ~%" name package-into)
       (shadowing-import name package-into))))
 
 (define-test bdd-to-png
-  (bdd-to-png (bdd t) nil)
-  (bdd-to-png (bdd nil) nil)
-  (bdd-to-png (bdd '(and x1 (or x2 (not x3)))) nil))
+  (bdd-to-png (bdd t))
+  (bdd-to-png (bdd nil))
+  (bdd-to-png (bdd '(and x1 (or x2 (not x3))))))
 
 
 (define-test bdd-to-dot
