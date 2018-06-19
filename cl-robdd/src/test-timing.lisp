@@ -19,13 +19,11 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(asdf:defsystem :cl-robdd-analysis-test
-  :depends-on (:cl-robdd-analysis
-               (:version :lisp-unit "0.9.0"))
-  :components
-  ((:module "src"
-    :components
-    ((:file "test-size-simulation")
-     (:file "test-profile")
-     (:file "test-timing")
-     ))))
+(in-package :cl-robdd-analysis-test)
+(shadow-all-symbols :package-from :cl-robdd-analysis
+
+(define-test analysis/call-with-timeout
+  (assert-true (numberp (getf (call-with-timeout 2 (lambda () (sleep 10)) 1)
+                              :time-out)))
+  (assert-true (eql 42 (getf (call-with-timeout 20 (lambda () 42) 2)
+                             :value))))
