@@ -26,16 +26,7 @@
   
 (in-package :cl-robdd-test)
 
-
-(let ((package-into (find-package  :cl-robdd-test))
-      (package-from (find-package  :cl-robdd))
-      (*package* (find-package :keyword)))
-  (do-symbols (name package-from)
-    (when (and (eq package-from (symbol-package name))
-               (not (find-symbol (symbol-name name) package-into)))
-      (format t "importing name=~A into ~S ~%" name package-into)
-      (shadowing-import name package-into))))
-
+(shadow-all-symbols :package-from :cl-robdd :package-into :cl-robdd-test)
 
 (defun test ()
   (let ((*print-summary* t)

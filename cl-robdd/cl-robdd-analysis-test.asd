@@ -19,12 +19,12 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(asdf:defsystem :cl-robdd-analysis
-  :depends-on (:cl-robdd :sb-sprof)
+(asdf:defsystem :cl-robdd-analysis-test
+  :depends-on (:cl-robdd-analysis
+               (:version :lisp-unit "0.9.0"))
   :components
   ((:module "src"
     :components
-    ((:file "bdd-size-simulation")
-     (:file "bdd-ops-test")
-     (:file "profile")
+    ((:file "test-size-simulation")
+     (:file "test-profile")
      ))))

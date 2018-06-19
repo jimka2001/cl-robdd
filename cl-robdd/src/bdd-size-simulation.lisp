@@ -22,10 +22,22 @@
 (cl:defpackage :cl-robdd-analysis
   (:use :cl :cl-robdd)
   (:export
-   "MEASURE-AND-WRITE-BDD-DISTRIBUTION"))
+   "MEASURE-AND-WRITE-BDD-DISTRIBUTION"
+   "RANDOM-BOOLEAN-COMBINATION"
+   "CALL-WITH-SPROFILING"
+   "CALL-WITH-DPROFILING"))
 
 (in-package :cl-robdd-analysis)
 
+
+(defmacro while (test &body body)
+  `(loop :while ,test
+	 :do (progn ,@body)))
+
+(defmacro forall (var data &body body)
+  `(every #'(lambda (,var) ,@body) ,data))
+
+(assert (find-symbol "FORALL" :cl-robdd-analysis))
 
 (defun int-to-boolean-expression (n vars)
   "Returns a Boolean expression which is a Boolean combination of the given variable names.
@@ -86,9 +98,7 @@ Why?  Because the truth table of this function is:
   (int-to-boolean-expression (random (expt 2 (expt 2 (length vars))))
                              vars))
 
-(defmacro while (test &body body)
-  `(loop :while ,test
-	 :do (progn ,@body)))
+
 
 (defun median-a-list (a-list)
   (let ((a-list (copy-list a-list)))
