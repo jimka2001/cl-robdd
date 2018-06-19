@@ -23,7 +23,7 @@
 
 (defgeneric bdd-serialize (bdd))
 
-(defgeneric bdd (obj))
+(defgeneric bdd (obj &key bdd-node-class))
 (defgeneric bdd-leaf (value))
 (defgeneric bdd-node (label positive negative))
 (defgeneric bdd-or (b1 b2))
@@ -168,7 +168,7 @@
       (format stream "[~D]" (slot-value bdd 'ident)))
     (format stream "~S=~S" (bdd-serialize bdd) (bdd-to-dnf bdd))))
 
-(defmethod bdd ((bdd bdd))
+(defmethod bdd ((bdd bdd) &key &allow-other-keys)
   bdd)
 
 
@@ -205,10 +205,10 @@
 (defvar *bdd-true* (make-instance 'bdd-true))
 (defvar *bdd-false* (make-instance 'bdd-false))
 
-(defmethod bdd ((label symbol))
-  (%bdd-node label *bdd-true* *bdd-false*))
+(defmethod bdd ((label symbol) &key bdd-node-class)
+  (%bdd-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
-(defgeneric bdd-list-to-bdd (head tail))
+(defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
 (defvar *bdd-operation-order* (the (member :divide-and-conquer
                                            :reduce) :divide-and-conquer ))
 (flet ((bdd-list-to-bdd-helper (len bdds zero op)
@@ -231,16 +231,16 @@
              ((:divide-and-conquer)
               (divide-and-conquer len bdds))))))
 
-  (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail)
+  (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key &allow-other-keys)
     (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-true* #'bdd-xor))
   
-  (defmethod bdd-list-to-bdd ((head (eql 'and)) tail)
+  (defmethod bdd-list-to-bdd ((head (eql 'and)) tail &key &allow-other-keys)
     (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-true* #'bdd-and))
 
-  (defmethod bdd-list-to-bdd ((head (eql 'or)) tail)
+  (defmethod bdd-list-to-bdd ((head (eql 'or)) tail &key &allow-other-keys)
     (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-false* #'bdd-or))
 
-  (defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail)
+  (defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail &key &allow-other-keys)
     ;; (assert (<= 2 (length tail)) ()
     ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
     (destructuring-bind (bdd-head &rest bdd-tail) (mapcar #'bdd tail)
@@ -250,21 +250,21 @@
         ((:divide-and-conquer)
          (bdd-and-not bdd-head (bdd-list-to-bdd-helper (length bdd-tail) bdd-tail *bdd-true* #'bdd-and)))))))
 
-(defmethod bdd-list-to-bdd ((head (eql 'not)) tail)
+(defmethod bdd-list-to-bdd ((head (eql 'not)) tail &key &allow-other-keys)
   ;; (assert (null (cdr tail)) ()
   ;;         "NOT takes exactly one argument: cannot convert ~A to a BDD" expr)
   (bdd-and-not *bdd-true* (bdd (car tail))))
 
-(defmethod bdd-list-to-bdd (head tail &aux (expr (cons head tail)))
-  (%bdd-node expr *bdd-true* *bdd-false*))
+(defmethod bdd-list-to-bdd (head tail &key bdd-node-class &aux (expr (cons head tail)) )
+  (%bdd-node expr *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
-(defmethod bdd ((expr list))
-  (bdd-list-to-bdd (car expr) (cdr expr)))
+(defmethod bdd ((expr list) &key bdd-node-class)
+  (bdd-list-to-bdd (car expr) (cdr expr) :bdd-node-class bdd-node-class))
 
-(defmethod bdd ((label (eql nil)))
+(defmethod bdd ((label (eql nil)) &key &allow-other-keys)
   *bdd-false*)
 
-(defmethod bdd ((label (eql t)))
+(defmethod bdd ((label (eql t)) &key &allow-other-keys)
   *bdd-true*)
 
 (defmethod bdd-leaf ((value (eql t)))
@@ -566,22 +566,34 @@ set of BDDs."
               (truncate (get-internal-run-time) internal-time-units-per-second)
               (truncate (get-universal-time) internal-time-units-per-second)))))
 
+(defmethod bdd-allocate (label (positive-bdd bdd-node) (negative-bdd bdd-node) &key &allow-other-keys)
+  (if (eq (typep positive-bdd 'bdd-leaf)
+          (typep negative-bdd 'bdd-leaf))
+      (call-next-method label positive-bdd negative-bdd :bdd-node-class (class-of positive-bdd))
+      (error "cannot create a bdd-node with children classes ~A"
+             (list (class-of negative-bdd) (class-of positive-bdd)))))
+
+(defmethod bdd-allocate (label (positive-bdd bdd-node) (negative-bdd bdd-leaf) &key &allow-other-keys)
+  (call-next-method label positive-bdd negative-bdd :bdd-node-class (class-of positive-bdd)))
+
+(defmethod bdd-allocate (label (positive-bdd bdd-leaf) (negative-bdd bdd-node) &key &allow-other-keys)
+  (call-next-method label positive-bdd negative-bdd :bdd-node-class (class-of negative-bdd)))
+
 (defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
   (let* ((bdd (make-instance bdd-node-class
                              :label label
-                             :positive  positive-bdd
+                             :positive positive-bdd
                              :negative negative-bdd))
          (key (bdd-make-key label (bdd-ident positive-bdd) (bdd-ident negative-bdd))))
     (incr-hash)
     (setf (gethash key (bdd-hash)) bdd)))
-
 
 (defmethod %bdd-node (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
   (cond
     ((eq positive-bdd negative-bdd)
      positive-bdd)
     ((bdd-find (bdd-hash) label positive-bdd negative-bdd))
-    (t ;; 11%
+    (t
      (bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))))
 
 

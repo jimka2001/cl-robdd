@@ -59,3 +59,48 @@
                (bdd (random-boolean-combination vars))))))
     (test-it :reduce)
     (test-it :divide-and-conquer)))
+
+(define-test test/median
+  (assert-true (= 1 (median-a-list '((1 3)))))
+  (assert-true (= 1 (median-a-list '((0 1) (1 3) (2 1)))))
+  (assert-true (= 1 (median-a-list '((0 2) (1 3) (2 1)))))
+  (assert-true (= 1/2 (median-a-list '((0 2) (1 2)))))
+  )
+
+ ;;    (sb-ext::gc :full t)
+ ;;    (latex-measure-bdd-sizes "/Users/jnewton/newton.16.edtchs/src" '(Z1 Z2 Z3 Z4 Z5 Z6) 4000)
+
+(defun test-with-z1-z3 (prefix num-samples &key (re-run t))
+  (garbage-collect)
+  (latex-measure-bdd-sizes prefix '(Z1 Z2 Z3 Z4 Z5 Z6) num-samples
+                           :min 1 :max 3 :re-run re-run))
+
+(defun test-with-z1-z6 (prefix num-samples &key (re-run t))
+  (garbage-collect)
+  (latex-measure-bdd-sizes prefix '(Z1 Z2 Z3 Z4 Z5 Z6) num-samples
+                           :min 1 :max 6 :re-run re-run))
+
+(defun test-with-z7-z8 (prefix num-samples &key (re-run t))
+  (garbage-collect)
+  (latex-measure-bdd-sizes prefix '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8) num-samples
+                           :min 7 :max 8 :re-run re-run))
+
+(defun test-with-z3-z8 (prefix num-samples &key (re-run t))
+  (garbage-collect)
+  (latex-measure-bdd-sizes prefix '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8) num-samples
+                           :min 3 :max 8 :re-run re-run))
+
+(defun test-with-z1-z8 (prefix num-samples &key (re-run t))
+  (garbage-collect)
+  (latex-measure-bdd-sizes prefix '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8) num-samples
+                           :min 1 :max 8 :re-run re-run))
+
+
+;; (test-with-z1-z6 "/Users/jnewton/newton.16.edtchs/src/bdd-distribution.ltxdat" 1000)
+
+
+(define-test test/bdd-sizes
+  (ensure-directories-exist "/tmp/jnewton/graph/bdd-distribution.ltxdat")
+  (test-with-z1-z6 "/tmp/jnewton/graph" 10 ;; 4000
+                   ))
+

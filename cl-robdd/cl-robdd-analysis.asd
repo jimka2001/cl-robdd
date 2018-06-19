@@ -25,6 +25,7 @@
   ((:module "src"
     :components
     ((:file "bdd-size-simulation")
+     (:file "timing")
      (:file "bdd-ops-test")
      (:file "profile")
      ))))
