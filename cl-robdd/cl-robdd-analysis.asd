@@ -28,4 +28,5 @@
      (:file "timing")
      (:file "bdd-ops-test")
      (:file "profile")
+     (:file "bdd-worst-case")
      ))))
