@@ -92,3 +92,9 @@
     ((cons (eql not))
      (format stream "\\neg ")
      (boolean-expr-to-latex (cadr expr) stream))))
+
+
+(defun garbage-collect ()
+  #+sbcl (sb-ext::gc :full t)
+  #+allegro (excl:gc t)
+)
