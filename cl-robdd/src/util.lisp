@@ -24,7 +24,7 @@
 (defun shadow-all-symbols (&key package-from package-into)
   (let ((package-into (or (find-package  package-into)
                           (error "cannot find package ~A" package-into)))
-        (package-from (or (find-package  :cl-robdd-analysis)
+        (package-from (or (find-package  package-from)
                           (error "cannot find package ~A" package-from)))
         (*package* (find-package :keyword)))
     (let (names)
@@ -33,7 +33,7 @@
       (dolist (name (sort names #'string< ))
         (when (and (eq package-from (symbol-package name))
                    (not (find-symbol (symbol-name name) package-into)))
-          (format t "importing name=~S into ~S ~%" name package-into)
+          ;; (format t "importing name=~S into ~S ~%" name package-into)
           (shadowing-import name package-into))))))
 
 (defun lconc (buf items)
