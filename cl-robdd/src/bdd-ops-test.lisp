@@ -19,7 +19,14 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
 (in-package :cl-robdd-analysis)
+
+(defun compare-hash-strength (num-tests vars)
+  (loop :for *bdd-hash-strength*
+          :in '(:weak :strong :weak-dynamic :strong-dynamic)
+        :do (format t "~A~%" *bdd-hash-strength*)
+        :do (time (bdd-ops-test num-tests vars))))
 
 (defun bdd-ops-test (num-tests vars)
   (garbage-collect)
@@ -41,8 +48,7 @@
               (bdd-and-not y x))))))
     (format t "~A~%" (bdd-hash))))
 
-(defun compare-hash-strength (num-tests vars)
-  (loop :for lisp-types::*bdd-hash-strength*
-          :in '(:weak :strong :weak-dynamic :strong-dynamic)
-        :do (format t "~A~%" lisp-types::*bdd-hash-strength*)
-        :do (time (bdd-ops-test num-tests vars))))
+
+
+
+

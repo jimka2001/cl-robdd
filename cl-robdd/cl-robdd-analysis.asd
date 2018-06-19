@@ -25,4 +25,5 @@
   ((:module "src"
     :components
     ((:file "bdd-size-simulation")
+     (:file "bdd-ops-test")
      ))))

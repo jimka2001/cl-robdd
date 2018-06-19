@@ -80,12 +80,6 @@
            (tconc buf (bdd-negative (car nodes))))))
       (pop nodes))))
 
-(defun bdd-count-nodes (bdd)
-  (let ((c 0))
-    (bdd-bfs bdd (lambda (node)
-                   (declare (ignore node))
-                   (incf c)))
-    c))
 
 (defvar *bdd-generation* 0)
 (defvar *bdd-hash-strength* :weak-dynamic ) ;; or :weak or :weak-dynamic
