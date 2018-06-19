@@ -28,6 +28,14 @@
                     :package-into :cl-robdd-analysis-test)
 
 
+(defun test ()
+  (let ((*print-summary* t)
+	(*print-failures* t)
+	(*summarize-results* t)
+	(*print-errors* t))
+    (run-tests :all (list :cl-robdd-analysis-test))))
+
+
 (defun test-operation-order ()
   (labels ((local (vars)
              (when vars

@@ -44,13 +44,9 @@
       (forall item profiling
         (assert-true (numberp (getf item :nr))))
       (forall item profiling
-        (assert-true (consp (getf item :self))))
-      (forall item profiling
         (assert-true (consp (getf item :total))))
       (forall item profiling
         (assert-true (consp (getf item :cumul))))
-      (forall item profiling
-        (assert-true (getf item :calls)))
       (forall item profiling
         (assert-true (getf item :function))))))
       
