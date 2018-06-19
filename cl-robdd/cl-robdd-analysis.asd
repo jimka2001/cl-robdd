@@ -24,5 +24,5 @@
   :components
   ((:module "src"
     :components
-    ((:file "bdd-analysis" :depends-on ("bdd"))
+    ((:file "bdd-size-simulation")
      ))))
