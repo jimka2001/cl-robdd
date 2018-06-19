@@ -24,6 +24,7 @@
   (:export
    "SHADOW-ALL-SYMBOLS"
    "%BDD-NODE"
+   "%BDD-CMP"
    "*BDD-FALSE*"
    "*BDD-HASH-STRENGTH*"
    "*BDD-TRUE*"
@@ -44,6 +45,7 @@
    "BDD-NOT"
    "BDD-OR"
    "BDD-POSITIVE"
+   "BDD-SERIALIZE"
    "BDD-TO-DNF"
    "BDD-TO-EXPR"
    "BDD-TO-PNG"

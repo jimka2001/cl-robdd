@@ -97,3 +97,38 @@
                            (bdd-xor a b)))
 )))))
           
+(define-test test/bdd-cmp
+  (bdd-with-new-hash ()
+    ;; =
+    (assert-true (eq '= (bdd-cmp 'a 'a)))
+    (assert-true (eq '= (bdd-cmp "a" "a")))
+    (assert-true (eq '= (bdd-cmp 1 1)))
+    (assert-true (eq '= (bdd-cmp 1.0 1.0)))
+    (assert-true (eq '= (bdd-cmp 1/2 1/2)))
+    (assert-true (eq '= (bdd-cmp nil nil)))
+    (assert-true (eq '= (bdd-cmp '(a 1 1.0) '(a 1 1.0))))
+
+    ;; <
+    (assert-true (eq '< (bdd-cmp "CL-USER" "KEYWORD")))
+    (assert-true (eq '< (bdd-cmp 'CL-USER::x :x)))
+    (assert-true (eq '< (bdd-cmp '(a b c) '(a b c d))))
+    (assert-true (eq '< (bdd-cmp '(a 1 c) '(a 2 c d))))
+    (assert-true (eq '< (bdd-cmp '(a 1 c d) '(a 2 c))))
+    (assert-true (eq '< (bdd-cmp 'string 'symbol)))
+    ;; (assert-true (eq '< (bdd-cmp "string" 'symbol)))
+    (assert-true (eq '< (bdd-cmp 'cons 'null)))
+    (assert-true (eq '< (bdd-cmp nil '(a))))
+    (assert-true (eq '< (bdd-cmp 1/3 1/2)))
+
+    ;; >
+    (assert-true (eq '> (bdd-cmp "KEYWORD" "CL-USER")))
+    (assert-true (eq '> (bdd-cmp :x 'CL-USER::x)))
+    (assert-true (eq '> (bdd-cmp '(a b c d) '(a b c))))
+    (assert-true (eq '> (bdd-cmp '(a 2 c d) '(a 1 c))))
+    (assert-true (eq '> (bdd-cmp '(a 2 c) '(a 1 c d))))
+    (assert-true (eq '> (bdd-cmp 'symbol 'string)))
+    ;; (assert-true (eq '> (bdd-cmp 'symbol "string")))
+    (assert-true (eq '> (bdd-cmp 'null 'cons)))
+    (assert-true (eq '> (bdd-cmp '(a) nil)))
+    (assert-true (eq '> (bdd-cmp 1/2 1/3)))
+    )  )
