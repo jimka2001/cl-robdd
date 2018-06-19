@@ -24,9 +24,11 @@
   :components
   ((:module "src"
     :components
-    ((:file "bdd-size-simulation")
-     (:file "timing")
-     (:file "bdd-ops-test")
-     (:file "profile")
-     (:file "bdd-worst-case")
+    ((:file "bdd-analysis")
+     (:file "bdd-size-simulation" :depends-on ("bdd-analysis"))
+     (:file "timing" :depends-on ("bdd-analysis"))
+     (:file "bdd-ops-test" :depends-on ("bdd-analysis"))
+     (:file "profile" :depends-on ("bdd-analysis"))
+     (:file "bdd-worst-case" :depends-on ("bdd-analysis"))
+     (:file "theta" :depends-on ("bdd-analysis"))
      ))))

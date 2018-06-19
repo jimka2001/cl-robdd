@@ -20,12 +20,22 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+(defpackage :cl-robdd-analysis
+  (:use :cl :cl-robdd)
+  (:export
+   "MEASURE-AND-WRITE-BDD-DISTRIBUTION"
+   "RANDOM-BOOLEAN-COMBINATION"
+   "CALL-WITH-TIMEOUT"
+   "QSTAT-F"
+   "CALL-WITH-SPROFILING"
+   "CALL-WITH-DPROFILING"))
+
 (in-package :cl-robdd-analysis)
 
 (defun compare-hash-strength (num-tests vars)
-  (loop :for lisp-types::*bdd-hash-strength*
+  (loop :for *bdd-hash-strength*
           :in '(:weak :strong :weak-dynamic :strong-dynamic)
-        :do (format t "~A~%" lisp-types::*bdd-hash-strength*)
+        :do (format t "~A~%" *bdd-hash-strength*)
         :do (time (bdd-ops-test num-tests vars))))
 
 (defun bdd-ops-test (num-tests vars)
