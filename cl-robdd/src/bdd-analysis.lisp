@@ -23,12 +23,14 @@
 (defpackage :cl-robdd-analysis
   (:use :cl :cl-robdd)
   (:export
-   "MEASURE-AND-WRITE-BDD-DISTRIBUTION"
-   "RANDOM-BOOLEAN-COMBINATION"
-   "CALL-WITH-TIMEOUT"
-   "QSTAT-F"
+   "CALL-WITH-DPROFILING"
    "CALL-WITH-SPROFILING"
-   "CALL-WITH-DPROFILING"))
+   "CALL-WITH-TIMEOUT"
+   "DEMAND-ENV-VAR"
+   "MEASURE-AND-WRITE-BDD-DISTRIBUTION"
+   "QSTAT-F"
+   "RANDOM-BOOLEAN-COMBINATION"
+))
 
 (in-package :cl-robdd-analysis)
 
@@ -46,6 +48,10 @@ is replaced with replacement."
                            :end (or pos (length string)))
           when pos do (write-string replacement out)
             while pos)))
+
+(defun demand-env-var (env-var-name)
+  (or (sb-posix:getenv env-var-name)
+      (error "Missing env var ~s" env-var-name)))
 
 (defun qstat-f ()
   "call qstat -f and write the output to a file with the .sXXXX extension
