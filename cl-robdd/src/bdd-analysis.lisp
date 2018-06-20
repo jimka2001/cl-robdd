@@ -30,6 +30,7 @@
    "MEASURE-AND-WRITE-BDD-DISTRIBUTION"
    "QSTAT-F"
    "RANDOM-BOOLEAN-COMBINATION"
+   "WITH-DUP-STREAM"
 ))
 
 (in-package :cl-robdd-analysis)
@@ -88,3 +89,14 @@ similar to where current Output_Path is indicating."
                               :if-does-not-exist :create)
         (format stream "~%")
         (write-line qstat-out stream)))))
+
+(defmacro with-dup-stream ((stream file) &body body)
+  "Rebind the named STREAM to a broadcast-stream which duplicates it to the named FILE, evaluating the BODY within the dynamic extend of the rebinding."
+  (let ((log-file (gensym)))
+    `(with-open-file (,log-file ,file
+                                :direction :output
+                                :if-exists :supersede
+                                :if-does-not-exist :create)
+       (let ((,stream (make-broadcast-stream ,stream ,log-file)))
+         ,@body))))
+
