@@ -22,7 +22,7 @@
 (in-package :cl-robdd)
 
 (defgeneric bdd-serialize (bdd))
-
+(defgeneric bdd-factory (bdd-class))
 (defgeneric bdd (obj &key bdd-node-class))
 (defgeneric bdd-leaf (value))
 (defgeneric bdd-node (label positive negative  &key bdd-node-class))
@@ -33,6 +33,7 @@
 (defgeneric bdd-not (b))
 (defgeneric %bdd-node (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys))
 (defgeneric bdd-allocate (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys))
+
 
 (deftype class-designator ()
   `(or (and symbol (not null)) class))
@@ -67,6 +68,12 @@
    (negative :type bdd :initarg :negative ;; :reader bdd-negative
           )))
 
+(defmethod bdd-factory ((bdd-class (eql (find-class 'bdd-node))))
+  #'bdd)
+
+(defmethod bdd-factory ((bdd-class (eql 'bdd-node)))
+  #'bdd)
+
 (defun bdd-bfs (bdd action)
   (let* ((buf (tconc nil bdd))
          ;; TODO -- don't really need nodes, we could
@@ -86,6 +93,7 @@
 
 (defvar *bdd-generation* 0)
 (defvar *bdd-hash-strength* :weak-dynamic ) ;; or :weak or :weak-dynamic
+(defvar *bdd-hash-type* '(or bdd-node bdd-leaf))
 (defun bdd-new-hash (&key ((bdd-hash-strength *bdd-hash-strength*) *bdd-hash-strength*))
   (flet ((make-hash ()
            (incf *bdd-generation*)
@@ -235,29 +243,34 @@
              ((:divide-and-conquer)
               (divide-and-conquer len bdds))))))
 
-  (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key &allow-other-keys)
-    (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-true* #'bdd-xor))
+  (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
+    (declare (type class-designator bdd-node-class))
+    (bdd-list-to-bdd-helper (length tail) (mapcar (bdd-factory bdd-node-class) tail) *bdd-true* #'bdd-xor))
   
-  (defmethod bdd-list-to-bdd ((head (eql 'and)) tail &key &allow-other-keys)
-    (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-true* #'bdd-and))
+  (defmethod bdd-list-to-bdd ((head (eql 'and)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
+    (declare (type class-designator bdd-node-class))
+    (bdd-list-to-bdd-helper (length tail) (mapcar (bdd-factory bdd-node-class) tail) *bdd-true* #'bdd-and))
 
-  (defmethod bdd-list-to-bdd ((head (eql 'or)) tail &key &allow-other-keys)
-    (bdd-list-to-bdd-helper (length tail) (mapcar #'bdd tail) *bdd-false* #'bdd-or))
+  (defmethod bdd-list-to-bdd ((head (eql 'or)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
+    (declare (type class-designator bdd-node-class))
+    (bdd-list-to-bdd-helper (length tail) (mapcar (bdd-factory bdd-node-class) tail) *bdd-false* #'bdd-or))
 
-  (defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail &key &allow-other-keys)
+  (defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
+    (declare (type class-designator bdd-node-class))
     ;; (assert (<= 2 (length tail)) ()
     ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
-    (destructuring-bind (bdd-head &rest bdd-tail) (mapcar #'bdd tail)
+    (destructuring-bind (bdd-head &rest bdd-tail) (mapcar (bdd-factory bdd-node-class) tail)
       (ecase *bdd-operation-order*
         ((:reduce)
          (reduce #'bdd-and-not bdd-tail :initial-value bdd-head))
         ((:divide-and-conquer)
          (bdd-and-not bdd-head (bdd-list-to-bdd-helper (length bdd-tail) bdd-tail *bdd-true* #'bdd-and)))))))
 
-(defmethod bdd-list-to-bdd ((head (eql 'not)) tail &key &allow-other-keys)
+(defmethod bdd-list-to-bdd ((head (eql 'not)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
+  (declare (type class-designator bdd-node-class))
   ;; (assert (null (cdr tail)) ()
   ;;         "NOT takes exactly one argument: cannot convert ~A to a BDD" expr)
-  (bdd-and-not *bdd-true* (bdd (car tail))))
+  (bdd-and-not *bdd-true* (funcall (bdd-factory bdd-node-class) (car tail))))
 
 (defmethod bdd-list-to-bdd (head tail &key bdd-node-class &aux (expr (cons head tail)) )
   (%bdd-node expr *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
@@ -589,6 +602,7 @@ set of BDDs."
 (defmethod bdd-allocate (label (positive-bdd bdd-leaf) (negative-bdd bdd-node) &key &allow-other-keys)
   (call-next-method label positive-bdd negative-bdd :bdd-node-class (class-of negative-bdd)))
 
+(defvar *bdd-node-type* '(or bdd-leaf bdd-node))
 (defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
   (declare (type class-designator bdd-node-class))
   (let* ((bdd (make-instance bdd-node-class
@@ -597,6 +611,8 @@ set of BDDs."
                              :negative negative-bdd))
          (key (bdd-make-key label (bdd-ident positive-bdd) (bdd-ident negative-bdd))))
     (incr-hash)
+    (assert (typep bdd *bdd-node-type*) (bdd *bdd-node-type*) "The bdd hash ~A is expecting objects of type ~A not ~A"
+            (bdd-hash) *bdd-node-type*  (type-of bdd ))
     (setf (gethash key (bdd-hash)) bdd)))
 
 (defmethod %bdd-node (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
