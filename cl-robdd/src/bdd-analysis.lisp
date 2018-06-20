@@ -32,31 +32,20 @@
 
 (in-package :cl-robdd-analysis)
 
-(defun compare-hash-strength (num-tests vars)
-  (loop :for *bdd-hash-strength*
-          :in '(:weak :strong :weak-dynamic :strong-dynamic)
-        :do (format t "~A~%" *bdd-hash-strength*)
-        :do (time (bdd-ops-test num-tests vars))))
-
-(defun bdd-ops-test (num-tests vars)
-  (garbage-collect)
-  (bdd-with-new-hash ()
-    (dotimes (_ num-tests)
-      (bdd-with-new-hash ()
-        (let* ((a (bdd (random-boolean-combination vars)))
-               (b (bdd (random-boolean-combination vars)))
-               (c (bdd-or a b))
-               (d (bdd-and a b))
-               (e (bdd-and-not a b))
-               (f (bdd-and-not b a))
-               (bdds (list c d e f)))
-          (dolist (x bdds)
-            (dolist (y bdds)
-              (bdd-and x y)
-              (bdd-or x y)
-              (bdd-and-not x y)
-              (bdd-and-not y x))))))
-    (format t "~A~%" (bdd-hash))))
+(defun replace-all (string part replacement &key (test #'char=))
+  "Returns a new string in which all the occurences of the part 
+is replaced with replacement."
+  (with-output-to-string (out)
+    (loop with part-length = (length part)
+          for old-pos = 0 then (+ pos part-length)
+          for pos = (search part string
+                            :start2 old-pos
+                            :test test)
+          do (write-string string out
+                           :start old-pos
+                           :end (or pos (length string)))
+          when pos do (write-string replacement out)
+            while pos)))
 
 (defun qstat-f ()
   "call qstat -f and write the output to a file with the .sXXXX extension

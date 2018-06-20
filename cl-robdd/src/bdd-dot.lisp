@@ -128,7 +128,4 @@
                  :search t)
     png-path))
   
-(defun bdd-view (bdd &key (reduced t) (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd))))
-  (run-program "open" (list (bdd-to-png bdd :reduced reduced
-                                            :basename basename))
-               :search t))
+

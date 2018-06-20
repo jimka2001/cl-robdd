@@ -21,6 +21,14 @@
 
 (in-package :cl-robdd-analysis)
 
+(defun run-program (program args &rest options)
+  #+sbcl (apply #'sb-ext:run-program program args :search t options)
+  #+allegro (apply #'excl:run-shell-command
+                   (apply #'vector (cons program args))
+                   :wait t
+                   options
+                   )
+  )
 
 (defun bdd-nth-row (n)
   (let ((k 1))
@@ -78,6 +86,18 @@
                             ;; been handled already above
             (t
              (funcall f (svref vec i1) (svref vec r)))))))))
+
+
+(defvar *tmp-dir* (format nil "/tmp/~A/" (or (sb-posix:getenv "USER")
+                                             "unknown-user")))
+
+(defun make-temp-dir (suffix)
+  (format nil "~A/~A/" *tmp-dir* suffix))
+
+(defun bdd-view (bdd &key (reduced t) (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd))))
+  (run-program "open" (list (bdd-to-png bdd :reduced reduced
+                                            :basename basename))
+               :search t))
 
 (defun bdd-make-worst-case (vars &key (basename (format nil "/tmp/jnewton/graph/bdd-worst-~D" (length vars))))
   (let* ((leaves (list *bdd-true* *bdd-false*))

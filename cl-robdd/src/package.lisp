@@ -22,9 +22,8 @@
 (cl:defpackage :cl-robdd
   (:use :cl)
   (:export
-   "SHADOW-ALL-SYMBOLS"
-   "%BDD-NODE"
    "%BDD-CMP"
+   "%BDD-NODE"
    "*BDD-FALSE*"
    "*BDD-HASH-STRENGTH*"
    "*BDD-TRUE*"
@@ -33,6 +32,7 @@
    "BDD-AND"
    "BDD-AND-NOT"
    "BDD-BFS"
+   "BDD-CMP"
    "BDD-FALSE"
    "BDD-FIND"
    "BDD-HASH"
@@ -41,6 +41,7 @@
    "BDD-LEAF"
    "BDD-MAKE-KEY"
    "BDD-NEGATIVE"
+   "BDD-NEW-HASH"
    "BDD-NODE"
    "BDD-NOT"
    "BDD-OR"
@@ -50,9 +51,9 @@
    "BDD-TO-EXPR"
    "BDD-TO-PNG"
    "BDD-TRUE"
-   "BDD-NEW-HASH"
    "BDD-WITH-NEW-HASH"
    "BDD-XOR"
    "BOOLEAN-EXPR-TO-LATEX"
    "INCR-HASH"
+   "SHADOW-ALL-SYMBOLS"
    ))

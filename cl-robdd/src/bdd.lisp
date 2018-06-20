@@ -25,7 +25,7 @@
 
 (defgeneric bdd (obj &key bdd-node-class))
 (defgeneric bdd-leaf (value))
-(defgeneric bdd-node (label positive negative))
+(defgeneric bdd-node (label positive negative  &key bdd-node-class))
 (defgeneric bdd-or (b1 b2))
 (defgeneric bdd-and (b1 b2))
 (defgeneric bdd-and-not (b1 b2))
@@ -33,6 +33,9 @@
 (defgeneric bdd-not (b))
 (defgeneric %bdd-node (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys))
 (defgeneric bdd-allocate (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys))
+
+(deftype class-designator ()
+  `(or (and symbol (not null)) class))
 
 (defvar *bdd-count* 1)
 (defclass bdd ()
@@ -205,7 +208,8 @@
 (defvar *bdd-true* (make-instance 'bdd-true))
 (defvar *bdd-false* (make-instance 'bdd-false))
 
-(defmethod bdd ((label symbol) &key bdd-node-class)
+(defmethod bdd ((label symbol) &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class))
   (%bdd-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
 (defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
@@ -258,7 +262,8 @@
 (defmethod bdd-list-to-bdd (head tail &key bdd-node-class &aux (expr (cons head tail)) )
   (%bdd-node expr *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
-(defmethod bdd ((expr list) &key bdd-node-class)
+(defmethod bdd ((expr list) &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class))
   (bdd-list-to-bdd (car expr) (cdr expr) :bdd-node-class bdd-node-class))
 
 (defmethod bdd ((label (eql nil)) &key &allow-other-keys)
@@ -277,27 +282,32 @@
         (bdd-serialize (bdd-positive b))
         (bdd-serialize (bdd-negative b))))
 
-(defmethod bdd-node (label positive negative)
+(defmethod bdd-node (label positive negative &key &allow-other-keys)
   (error "cannot create bdd-node from arguments ~A" (list label positive negative)))
 
-(defmethod bdd-node :around (label (positive (eql t)) negative)
-  (bdd-node label *bdd-true* negative))
+(defmethod bdd-node :around (label (positive (eql t)) negative &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class))
+  (bdd-node label *bdd-true* negative :bdd-node-class bdd-node-class))
 
-(defmethod bdd-node :around (label (positive (eql nil)) negative)
-  (bdd-node label *bdd-false* negative))
+(defmethod bdd-node :around (label (positive (eql nil)) negative &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class))
+  (bdd-node label *bdd-false* negative :bdd-node-class bdd-node-class))
 
-(defmethod bdd-node :around (label positive (negative (eql t)))
-  (bdd-node label positive *bdd-true*))
+(defmethod bdd-node :around (label positive (negative (eql t)) &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class))
+  (bdd-node label positive *bdd-true* :bdd-node-class bdd-node-class))
 
-(defmethod bdd-node :around (label positive (negative (eql nil)))
-  (bdd-node label positive *bdd-false*))
+(defmethod bdd-node :around (label positive (negative (eql nil)) &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class))
+  (bdd-node label positive *bdd-false* :bdd-node-class bdd-node-class))
 
 (defvar *bdd-hash-access-count* 0)
 
 
 
-(defmethod bdd-node (label (positive bdd) (negative bdd))
-  (%bdd-node label positive negative))
+(defmethod bdd-node (label (positive bdd) (negative bdd) &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class))
+  (%bdd-node label positive negative :bdd-node-class bdd-node-class))
 
 (defmethod bdd-not ((true bdd-true))
   *bdd-false*)
@@ -580,6 +590,7 @@ set of BDDs."
   (call-next-method label positive-bdd negative-bdd :bdd-node-class (class-of negative-bdd)))
 
 (defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class))
   (let* ((bdd (make-instance bdd-node-class
                              :label label
                              :positive positive-bdd
@@ -589,6 +600,7 @@ set of BDDs."
     (setf (gethash key (bdd-hash)) bdd)))
 
 (defmethod %bdd-node (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class))
   (cond
     ((eq positive-bdd negative-bdd)
      positive-bdd)
