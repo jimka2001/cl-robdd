@@ -319,7 +319,7 @@ than INTERVAL number of seconds"
         (setf samples (remove-duplicates-sorted-list (sort samples #'<)))
         (format t "generating ~D " (length samples))
         (when randomp (format t "randomly chosen "))
-        (format t "BDDs of possible ~D (~a%) with ~D variables ~S~%"  (1+ ffff)
+        (format t "BDDs of possible ~D (~a%)~%   with ~D variables ~S~%"  (1+ ffff)
                 (* 100.0 (/ (length samples) (1+ ffff))) num-vars vars)
         (loop :for truth-table :in samples
               :for iteration = 0 :then (1+ iteration)
@@ -410,7 +410,7 @@ than INTERVAL number of seconds"
                                             (getf plist :counts))))
                     (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
 
-(defvar *bdd-boolean-variables* '(ZC ZB ZA Z9 Z8 Z7 Z6 Z5 Z4 Z3 Z2 Z1))
+(defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1))
 
 (defun measure-and-write-bdd-distribution (prefix num-vars num-samples bdd-sizes-file &key (interval 2) (read-from-log-p nil))
   "PREFIX: string designating path name to directory to write analysis results, 
