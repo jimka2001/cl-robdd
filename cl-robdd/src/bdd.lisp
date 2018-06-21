@@ -116,17 +116,14 @@
             ((:strong)
              (make-hash-table :test #'equal))
             (t
-             (if (bdd-hash)
-                 (progn
-                   ;; if we are reusing the current hash table, then we must
-                   ;; make sure that the node type is the same
-                   (assert (equal bdd-node-type
-                                  (bdd-node-type))
-                           ()
-                           "vain attempt make a new hash structure, reusing old hash table, but node types are not compatible:  ~A vs ~A"
-                           bdd-node-type (bdd-node-type))
-                   (bdd-hash))
-                 (make-hash)))))))
+             (cond
+               ((not (equal bdd-node-type (bdd-node-type)))
+                ;; if we are reusing the current hash table, then we must
+                ;; make sure that the node type is the same
+                (make-hash))
+               ((bdd-hash))
+               (t
+                (make-hash))))))))
 
 (defvar *bdd-hash-struct* nil)
 (defun bdd-hash ()
