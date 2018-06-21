@@ -93,8 +93,9 @@
 
 (defvar *bdd-generation* 0)
 (defvar *bdd-hash-strength* :weak-dynamic ) ;; or :weak or :weak-dynamic
-(defvar *bdd-hash-type* '(or bdd-node bdd-leaf))
-(defun bdd-new-hash (&key ((bdd-hash-strength *bdd-hash-strength*) *bdd-hash-strength*))
+
+(defun bdd-new-hash (&key (bdd-node-type '(or bdd-node bdd-leaf))
+                       ((bdd-hash-strength *bdd-hash-strength*) *bdd-hash-strength*))
   (flet ((make-hash ()
            (incf *bdd-generation*)
            (case *bdd-hash-strength*
@@ -105,6 +106,7 @@
              (t
               (make-hash-table :test #'equal)))))
     (list :generation *bdd-generation*
+          :bdd-node-type bdd-node-type
           :recent-count 0
           :strength *bdd-hash-strength*
           :hash 
@@ -128,6 +130,10 @@
   (setf (getf *bdd-hash-struct* :recent-count)
         value))
 
+
+(defun bdd-node-type ()
+  (getf *bdd-hash-struct* :bdd-node-type))
+
 (defun bdd-generation ()
   (getf *bdd-hash-struct* :generation))
 
@@ -139,9 +145,9 @@
 (defmacro bdd-with-new-hash (vars &body body)
   `(bdd-call-with-new-hash (lambda ,vars ,@body)))
 
-(defun bdd-call-with-new-hash (thunk &key (verbose *bdd-verbose*))
+(defun bdd-call-with-new-hash (thunk &key (bdd-node-type '(or bdd-node bdd-leaf)) (verbose *bdd-verbose*))
   (let ((*bdd-verbose* verbose)
-        (*bdd-hash-struct* (bdd-new-hash)))
+        (*bdd-hash-struct* (bdd-new-hash :bdd-node-type bdd-node-type)))
     (prog1 (funcall thunk)
       (when verbose
         (format t "finished with ~A~%" (bdd-hash))))))
@@ -315,8 +321,6 @@
   (bdd-node label positive *bdd-false* :bdd-node-class bdd-node-class))
 
 (defvar *bdd-hash-access-count* 0)
-
-
 
 (defmethod bdd-node (label (positive bdd) (negative bdd) &key (bdd-node-class 'bdd-node))
   (declare (type class-designator bdd-node-class))
@@ -602,7 +606,6 @@ set of BDDs."
 (defmethod bdd-allocate (label (positive-bdd bdd-leaf) (negative-bdd bdd-node) &key &allow-other-keys)
   (call-next-method label positive-bdd negative-bdd :bdd-node-class (class-of negative-bdd)))
 
-(defvar *bdd-node-type* '(or bdd-leaf bdd-node))
 (defmethod bdd-allocate (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
   (declare (type class-designator bdd-node-class))
   (let* ((bdd (make-instance bdd-node-class
@@ -611,8 +614,8 @@ set of BDDs."
                              :negative negative-bdd))
          (key (bdd-make-key label (bdd-ident positive-bdd) (bdd-ident negative-bdd))))
     (incr-hash)
-    (assert (typep bdd *bdd-node-type*) (bdd *bdd-node-type*) "The bdd hash ~A is expecting objects of type ~A not ~A"
-            (bdd-hash) *bdd-node-type*  (type-of bdd ))
+    (assert (typep bdd (bdd-node-type)) (bdd) "The bdd hash ~A is expecting objects of type ~A not ~A"
+            (bdd-hash) (bdd-node-type)  (type-of bdd))
     (setf (gethash key (bdd-hash)) bdd)))
 
 (defmethod %bdd-node (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
