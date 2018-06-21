@@ -28,6 +28,8 @@
    "*BDD-HASH-STRENGTH*"
    "*BDD-NODE-TYPE*"
    "*BDD-TRUE*"
+   "*BDD-HASH-STRUCT*"
+   "*BDD-CMP-FUNCTION*"
    "BDD"
    "BDD-ALLOCATE"
    "BDD-AND"
