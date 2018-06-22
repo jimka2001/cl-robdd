@@ -397,7 +397,9 @@ than INTERVAL number of seconds"
   (dolist (plist data)
     (write-one-bdd-distribution-data plist prefix)))
 
-(defun read-bdd-distribution-data (prefix &key (min 1) (max 14) vars)
+(defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1))
+
+(defun read-bdd-distribution-data (prefix &key (min 1) (max (length *bdd-boolean-variables*)) vars)
   (declare (ignore vars))
   (loop for var from min to max
         for data-file = (format nil "~A/bdd-distribution-data-~D.sexp" prefix var)
@@ -409,8 +411,6 @@ than INTERVAL number of seconds"
                                               (list sample occurances))
                                             (getf plist :counts))))
                     (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
-
-(defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1))
 
 (defun measure-and-write-bdd-distribution (prefix num-vars num-samples bdd-sizes-file &key (interval 2) (read-from-log-p nil))
   "PREFIX: string designating path name to directory to write analysis results, 
