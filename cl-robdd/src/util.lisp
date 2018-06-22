@@ -135,13 +135,21 @@
 )
 
 (defun sci-notation (bignum)
-  ;; bignum = alpha * 10^beta
-  (let* ((log_x (log bignum 10))
-         (beta (truncate (log bignum 10.0)))
-         (log_alpha (- log_x beta))
-         (alpha (expt 10d0 log_alpha)))
-    
-    (list alpha beta)))
+  (cond
+    ((zerop bignum)
+     (list 0.0 1))
+    ((minusp bignum)
+     (destructuring-bind (alpha beta) (sci-notation (- bignum))
+       (list (- alpha) beta)))
+    (t
+     ;; bignum = alpha * 10^beta
+     (let* ((log_x (log bignum 10))
+            (beta (truncate (log bignum 10.0)))
+            (log_alpha (- log_x beta))
+            (alpha (expt 10d0 log_alpha)))
+       (if (< alpha 1)
+           (list (float (* 10 alpha) 1.0) (1- beta))
+           (list (float alpha 1.0) beta))))))
 
 (defun sci-notation-string (num)
   (typecase num
