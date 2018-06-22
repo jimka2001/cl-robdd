@@ -133,3 +133,18 @@
   #+sbcl (sb-ext::gc :full t)
   #+allegro (excl:gc t)
 )
+
+(defun sci-notation (bignum)
+  ;; bignum = alpha * 10^beta
+  (let* ((log_x (log bignum 10))
+         (beta (truncate (log bignum 10.0)))
+         (log_alpha (- log_x beta))
+         (alpha (expt 10d0 log_alpha)))
+    
+    (list alpha beta)))
+
+(defun sci-notation-string (num)
+  (typecase num
+    (bignum (destructuring-bind (alpha beta) (sci-notation num)
+              (format nil "~Ae~A" alpha beta)))
+    (t (format nil "~A" num))))

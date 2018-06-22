@@ -190,7 +190,7 @@ than INTERVAL number of seconds"
                                       (float (/ (cadr pair) sum)) ;; normalized number of bdds of this size as a fraction of total sample
                                       (cadr pair) ;; number of bdds of this size in sample
                                       ;; extrapolation
-                                      (truncate (cadr pair) density) ;; estimated number of unique bdds of this size
+                                      ;;(truncate (cadr pair) density) ;; estimated number of unique bdds of this size
                                       ))
                               histogram))))))
 
@@ -228,17 +228,17 @@ than INTERVAL number of seconds"
   (with-open-file (log-file bdd-sizes-file
                             :direction :input
                             :if-does-not-exist :error)
-    (let (num-vars samples)
+    (let (num-vars bdd-size samples)
       (while (setf num-vars (read log-file nil nil nil))
-        (destructuring-bind (bdd-size truth-table) (list
-                                                    ;; read the bdd-size integer
-                                                    (read log-file t nil nil)
-                                                    ;; read and ignore the base-36 integer
-                                                    (let ((*read-base* 36))
-                                                      (read log-file t nil nil)))
-          (declare (ignore truth-table))
-          (when (= target-num-vars num-vars)
-            (push bdd-size samples))))
+        ;; read the bdd-size integer
+        (setf bdd-size (read log-file t nil nil))
+        (when (= target-num-vars num-vars)
+          (push bdd-size samples))
+        ;; read and ignore the base-36 integer
+        ;; read to end of line
+        (let (char)
+          (while (not (member char '(#\Linefeed #\Return)))
+            (setf char (read-char log-file nil nil nil)))))
       samples)))
 
 (defun bdd-count-nodes (bdd)
@@ -319,7 +319,7 @@ than INTERVAL number of seconds"
         (setf samples (remove-duplicates-sorted-list (sort samples #'<)))
         (format t "generating ~D " (length samples))
         (when randomp (format t "randomly chosen "))
-        (format t "BDDs of possible ~D (~a%)~%   with ~D variables ~S~%"  (1+ ffff)
+        (format t "BDDs of possible ~D (~a%)~%   with ~D variables ~S~%"  (sci-notation-string (1+ ffff))
                 (* 100.0 (/ (length samples) (1+ ffff))) num-vars vars)
         (loop :for truth-table :in samples
               :for iteration = 0 :then (1+ iteration)
