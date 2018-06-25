@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :cl-robdd-analysis
-  :depends-on (:cl-robdd :sb-sprof)
+  :depends-on (:cl-robdd :sb-sprof :open-pipe-to-file)
   :components
   ((:module "src"
     :components
