@@ -657,26 +657,59 @@ than INTERVAL number of seconds"
           #'< :key (getter :node-count))))
 
 (defun all-possible-bdds-latex (prefix vars)
+  (declare (type list vars))
   (with-open-file (latex (format nil "~A/all-robdds-~A.ltx" prefix (length vars))
                          :direction :output :if-exists :supersede :if-does-not-exist :create)
-    (format latex "\\begin{table}~%")
-    (format latex "\\begin{center}~%")
-    (format latex "\\begin{tabular}{c|c|l}~%")
-    (format latex "No. Nodes & ROBDD & Boolean Expression\\\\~%")
-    (format latex "\\hline~%")
-    (dolist (data (all-possible-bdds prefix vars))
-      (destructuring-bind (&key path node-count expr &allow-other-keys) data
-        (format latex "~D " node-count)
-        (format latex "& \\includegraphics[width=0.5in]{~A}~%" (pathname-name (pathname path)))
-        (format latex "&~%")
-        (format latex "\\begin{minipage}{2in}")
-        (format latex "\\begin{verbatim}~%")
-        (format latex "~A~%" expr)
-        (format latex "\\end{verbatim}~%")
-        (format latex "\\end{minipage}\\\\~%")))
-    (format latex "\\hline~%")
-    (format latex "\\end{tabular}~%")
-    (format latex "\\end{center}~%")
-    (format latex "\\caption{All ROBDDs of ~r Variable~:p }~%" (length vars))
-    (format latex "\\label{fig.robdds.of.size.~D}~%" (length vars))
-    (format latex "\\end{table}~%")))
+    (when latex
+      (format latex "\\begin{table}~%")
+      (format latex "\\begin{center}~%")
+      (format latex "\\begin{tabular}{c|c|l}~%")
+      (format latex "No. Nodes & ROBDD & Boolean Expression\\\\~%")
+      (format latex "\\hline~%")
+      (dolist (data (all-possible-bdds prefix vars))
+	(destructuring-bind (&key path node-count expr &allow-other-keys) data
+          (format latex "~D " node-count)
+          (format latex "& \\includegraphics[width=0.5in]{~A}~%" (pathname-name (pathname path)))
+          (format latex "&~%")
+          (format latex "\\begin{minipage}{2in}")
+          (format latex "\\begin{verbatim}~%")
+          (format latex "~A~%" expr)
+          (format latex "\\end{verbatim}~%")
+          (format latex "\\end{minipage}\\\\~%")))
+      (format latex "\\hline~%")
+      (format latex "\\end{tabular}~%")
+      (format latex "\\end{center}~%")
+      (format latex "\\caption{All ROBDDs of ~r Variable~:p }~%" (length vars))
+      (format latex "\\label{fig.robdds.of.size.~D}~%" (length vars))
+      (format latex "\\end{table}~%"))))
+
+
+;; e.g. input-pattern "/lrde/home/jnewton/cluster.*/bdd-sizes.*.master.lrde.epita.*"
+;; output-directory "/lrde/cluster/jnewton/bdd-sizes"
+(defun combine-bdd-size-results (output-directory input-pattern)
+  (let ((pipes (make-hash-table)))
+  (labels ((process-file (fname)
+	     (format t "file: ~A~%" fname)
+	     (with-open-file (log-stream fname :direction :input)
+	       (let (num-vars)
+		 (loop :while (setf num-vars (read log-stream nil nil nil))
+		       :unless (gethash num-vars pipes)
+			       (setf (gethash num-vars pipes)
+				     
+		       :do (with-open-file (out-stream (format nil "~a/bdd-sizes-unique-~D"
+							       output-directory
+							       num-vars)
+						       :if-exists :append
+						       :if-does-not-exist :create
+						       :direction :output)
+			     (when out-stream
+			       (format out-stream "~D " num-vars)
+			       (let ((char (read-char log-stream nil nil nil)))
+				 (loop :while (not (member char '(#\Linefeed #\Return)))
+				       :do (write-char char out-stream)
+				       :do (setf char (read-char log-stream nil nil nil))))
+			       (terpri out-stream))))))))
+    (mapcar #'process-file (directory input-pattern))
+    nil))
+
+    
