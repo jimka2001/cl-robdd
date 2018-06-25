@@ -581,7 +581,7 @@ than INTERVAL number of seconds"
              (size-plots (stream)
                (format stream "% normalized size plots~%")
                (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~% xlabel=BDD Size,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Probability,~%legend style={font=\\tiny},~% label style={font=\\tiny}~%]~%")
+               (format stream "\\begin{axis}[~% xlabel=BDD Size,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Probability,~% legend style={font=\\tiny,at={(1,0)},anchor=south west},~% label style={font=\\tiny}~%]~%")
                 
                (dolist (datum data)
                  (destructuring-bind (&key num-vars counts &allow-other-keys) datum
