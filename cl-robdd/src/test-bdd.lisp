@@ -21,7 +21,7 @@
 
 
 (defpackage :cl-robdd-test
-  (:use :cl :cl-robdd :lisp-unit)
+  (:use :cl :cl-robdd :lisp-unit :open-pipe-to-file)
   )
   
 (in-package :cl-robdd-test)
@@ -132,3 +132,17 @@
     (assert-true (eq '> (bdd-cmp '(a) nil)))
     (assert-true (eq '> (bdd-cmp 1/2 1/3)))
     )  )
+
+(define-test test/open-pipe-to-file
+  (let ((answer (with-output-to-string (str)
+                  (multiple-value-bind (stream clean-up)
+                      (open-pipe-to-file str
+                                         '(("grep" "-i" "a")
+                                           ("sort" "-u")))
+                    (loop for i from 0 to #xff
+                          do (format stream "0x~x~%" i))
+                    (loop for i from 0 to #xff
+                          do (format stream "0x~x~%" i))
+                    (funcall clean-up)
+                    ))))
+    (assert-false (string= "" answer))))

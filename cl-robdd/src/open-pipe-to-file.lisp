@@ -15,39 +15,41 @@
 
 
 (defpackage :open-pipe-to-file
- (:use :cl :iterate :alexandria)
+ (:use :cl )
  (:export "OPEN-PIPE-TO-FILE"
           "WITH-OPEN-PIPE-TO-FILE"))
 
 (in-package :open-pipe-to-file)
 
-(defun open-pipe-to-file (filename commands)
-  "..."
-  (iterate (with processes = ())
-      (for output-spec initially filename
-                then last-input)
-      (for command in (reverse commands))
-      (for process = (funcall #'uiop:launch-program
-                              command
-                              :input :stream
-                              :if-output-exists :supersede
-                              :output output-spec
-                              :error-output *error-output*))
-      ;; we need the last-started process first in the list
-      (push process processes)
-      (for last-input = (uiop:process-info-input process))
-      (finally
-        (return (values last-input processes)))))
+(defun open-pipe-to-file (writable-stream commands)
+  "Returns two values (new-stream clean-up-thunk),
+NEW-STREAM is the stream which the calling function may write to, to effectively write into the pipe chain.
+EOF-THUNK is a 0-ary function which the calling function must call to close the pipes and assure the
+   data gets written into into WRITABLE-STREAM"
+  (labels ((recure (p-in commands cleanup-processes )
+             (if commands
+                 (let ((process (uiop:launch-program (car commands)
+                                                     :input :stream
+                                                     :output p-in
+                                                     :error-output *error-output*)))
+                   (format t "started ~A connected to ~A~%" (car commands) p-in)
+                   (recure (uiop:process-info-input process)
+                           (cdr commands)
+                           (cons (list process (car commands)) cleanup-processes)))
+                 (values p-in (lambda ()
+                                (dolist (process cleanup-processes)
+                                  (format t "closing  ~A~%" (cadr process))
+                                  (close (uiop:process-info-input (car process)))
+                                  ;;(format t "waiting on ~A~%" (cadr process))
+                                  ;;(uiop:wait-process (car process))
+                                  ))))))
 
+    (recure writable-stream (reverse commands) nil)))
 
-(defmacro with-open-pipe-to-file ((stream filename commands) &body body)
-  (with-gensyms (processes process)
-    `(multiple-value-bind (,stream ,processes)
-         (open-pipe-to-file ,filename ,commands)
+(defmacro with-open-pipe-to-file ((stream-pipe-input stream-pipe-output commands) &body body)
+  (let ((eof (gensym "eof")))
+    `(multiple-value-bind (,stream-pipe-input ,eof)
+         (open-pipe-to-file ,stream-pipe-output ,commands)
        (unwind-protect
            (progn ,@ body)
-         (iterate (for ,process in ,processes)
-             (close (uiop:process-info-input ,process))
-             ;; Last process writes into a file
-             (if (uiop:process-info-output ,process)
-               (close (uiop:process-info-output ,process))))))))
+         (funcall ,eof)))))

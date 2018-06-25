@@ -688,28 +688,23 @@ than INTERVAL number of seconds"
 ;; output-directory "/lrde/cluster/jnewton/bdd-sizes"
 (defun combine-bdd-size-results (output-directory input-pattern)
   (let ((pipes (make-hash-table)))
-  (labels ((process-file (fname)
-	     (format t "file: ~A~%" fname)
-	     (with-open-file (log-stream fname :direction :input)
-	       (let (num-vars)
-		 (loop :while (setf num-vars (read log-stream nil nil nil))
-		       :unless (gethash num-vars pipes)
-			       (setf (gethash num-vars pipes)
-				     
-		       :do (with-open-file (out-stream (format nil "~a/bdd-sizes-unique-~D"
-							       output-directory
-							       num-vars)
-						       :if-exists :append
-						       :if-does-not-exist :create
-						       :direction :output)
-			     (when out-stream
+    (labels ((process-file (fname)
+               (format t "file: ~A~%" fname)
+               (with-open-file (log-stream fname :direction :input)
+                 (let (num-vars)
+                   (loop :while (setf num-vars (read log-stream nil nil nil))
+                         :unless (gethash num-vars pipes)
+                           :do (setf (gethash num-vars pipes)
+                                     (open-pipe-to-file (format nil "~a/bdd-sizes-unique-~D"
+                                                                output-directory
+                                                                num-vars)
+                                                        '("sort -u")))
+                         :do (let ((out-stream (gethash num-vars pipes)))
 			       (format out-stream "~D " num-vars)
 			       (let ((char (read-char log-stream nil nil nil)))
 				 (loop :while (not (member char '(#\Linefeed #\Return)))
 				       :do (write-char char out-stream)
 				       :do (setf char (read-char log-stream nil nil nil))))
-			       (terpri out-stream))))))))
-    (mapcar #'process-file (directory input-pattern))
-    nil))
-
-    
+			       (terpri out-stream)))))))
+      (mapcar #'process-file (directory input-pattern))))
+  nil)

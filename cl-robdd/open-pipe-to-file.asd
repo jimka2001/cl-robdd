@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :open-pipe-to-file
-  :depends-on (:iterate :alexandria)
+  ;;:depends-on ()
   :components
   ((:module "src"
     :components
