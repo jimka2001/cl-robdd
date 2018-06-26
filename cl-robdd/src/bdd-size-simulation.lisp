@@ -30,6 +30,38 @@
 (defmacro forall (var data &body body)
   `(every #'(lambda (,var) ,@body) ,data))
 
+(defun gen-min-term (i vars)
+  ;; interpret the given I as a bit-mask
+  ;; and generate an (AND ...) expression
+  ;; the arguments of AND are the symbols in order in VAR
+  ;; either as is or wrapped in (NOT ...)
+  ;; e.g. if VARS='(a b), then 2 with bitmask 10 -> (and A (not B))
+  ;; bits from right to left correspond to variables from left to right
+  (cons 'and (mapcar (lambda (var)
+                       (prog1 (if (oddp i)
+                                  var
+                                  `(not ,var))
+                         (setf i (ash i -1))))
+                     vars)))
+
+(defun random-bdd (vars &aux (num-vars (length vars)))
+  ;; generate 2^n bits
+  ;; when the bit is 1, generate the minterm
+  ;; BDD-OR together all the minterms incrementally
+  (let (stack)
+    (labels ((compactify ()
+               (when (cdr stack)
+                 (destructuring-bind ((n1 bdd1) (n2 bdd2) &rest tail) stack
+                   (when (= n1 n2)
+                     (setf stack (cons (list (* 2 n1) (bdd-or bdd1 bdd2)) tail))
+                     (compactify))))))
+               
+      (dotimes (row (expt 2 num-vars))
+        (unless (zerop (random 2))
+          (push (list 1 (bdd (gen-min-term row vars)))
+                stack)
+          (compactify)))
+      (bdd-list-to-bdd 'or (mapcar #'cadr stack)))))
 
 (defun int-to-boolean-expression (n vars)
   "Returns a Boolean expression which is a Boolean combination of the given variable names.
@@ -64,24 +96,10 @@ Why?  Because the truth table of this function is:
       (assert (< n max-n) (n vars)
               "N=~D must be less than ~D for ~D variables=~A"
               n max-n num-vars vars))
-    (flet ((gen-min-term (i)
-             ;; interpret the given I as a bit-mask
-             ;; and generate an (AND ...) expression
-             ;; the arguments of AND are the symbols in order in VAR
-             ;; either as is or wrapped in (NOT ...)
-             ;; e.g. if VARS='(a b), then 2 with bitmask 10 -> (and A (not B))
-             ;; bits from right to left correspond to variables from left to right
-             (prog1
-                 (when (oddp n)
-                   (list (cons 'and (mapcar (lambda (var)
-                                              (prog1 (if (oddp i)
-                                                         var
-                                                         `(not ,var))
-                                                (setf i (ash i -1))))
-                                            vars))))
-               (setf n (ash n -1)))))
-      (cons 'or (loop for i from 0 below (expt 2 num-vars)
-                      nconc (gen-min-term i))))))
+    (cons 'or (loop for i from 0 below (expt 2 num-vars)
+                    for m = n then (ash m -1)
+                    when (oddp m)
+                      nconc (list (gen-min-term i vars))))))
 
 
 (defun random-boolean-combination (vars)

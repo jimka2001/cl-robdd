@@ -43,6 +43,7 @@
    "BDD-IDENT"
    "BDD-LABEL"
    "BDD-LEAF"
+   "BDD-LIST-TO-BDD"
    "BDD-MAKE-KEY"
    "BDD-NEGATIVE"
    "BDD-NEW-HASH"
