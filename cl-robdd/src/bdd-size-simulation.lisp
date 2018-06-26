@@ -440,10 +440,27 @@ than INTERVAL number of seconds"
 
     (labels ((find-plist (num-vars)
                (find num-vars data :key (getter :num-vars)))
+             (samples-table (stream)
+               (format stream "\\begin{tabular}{r|r|r}~%")
+               (format stream "No.      & No.      & No. \\\\~%")
+               (format stream "Variables & Samples & Unique \\\\~%")
+               (format stream "$(n)$         &          & Sizes \\\\~%")
+               (format stream "\\hline~%")
+               (loop :for n :from 5 :to max
+                     :do (let ((sexp-file-name (format nil "~A/bdd-distribution-data-~D.sexp" prefix n)))
+                           (with-open-file (sexp-file sexp-file-name :direction :input :if-does-not-exist :error)
+                             (let ((sexp-plist (read sexp-file nil nil nil)))
+                               (format stream "~D & ~D & ~D\\\\~%"
+                                       n (getf sexp-plist :num-samples) (or (getf sexp-plist :unique-sizes)
+                                                                            (length (getf sexp-plist :possible-sizes))))))))
+               (format stream "\\hline~%")
+               (format stream "\\end{tabular}~%")
+
+               )
              (individual-plot (stream num-vars &aux (plist (find-plist num-vars)))
                (format stream "% individual plot ~D vars~%" num-vars)
                (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~% xlabel=ROBDD node count for ~D variables,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Number of Boolean functions,~% label style={font=\\large},~% tick label style={font=\\Large}~%]~%" num-vars)
+               (format stream "\\begin{axis}[~% xlabel=Node count for ~D variables,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Number of Boolean functions,~% label style={font=\\large},~% tick label style={font=\\Large}~%]~%" num-vars)
                (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
                (destructuring-bind (alpha beta) (getf plist :density)
                  ;; density is in form (alpha beta) meaning alpha * 10 ^ beta
@@ -451,6 +468,8 @@ than INTERVAL number of seconds"
                  (dolist (item (getf plist :counts))
                    (destructuring-bind (bdd-size normalized number-of-bdds) item
                      (declare (ignore normalized))
+                     (when (or (> number-of-bdds 2)
+                               (<= num-vars 10))
                      ;; normalized = normalized number of bdds of this size as a fraction of total sample
                      (destructuring-bind (x y) (sci-notation (/ number-of-bdds alpha))
                        ;;   extrapolated estimate = normalized / density
@@ -460,14 +479,14 @@ than INTERVAL number of seconds"
                        (convert-double-notation
                         stream
                         (with-output-to-string (str)
-                          (format str "(~D,~Ae~A)~%" bdd-size (float x 1.0) (- y beta))))))))
+                          (format str "(~D,~Ae~A) % ~D~%" bdd-size (float x 1.0) (- y beta) number-of-bdds))))))))
                (format stream "};~%")
                (format stream "\\legend{}~%")
                (format stream "\\end{axis}~%")
                (format stream "\\end{tikzpicture}~%"))
              (sigma-plot (stream)
                (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~% ymajorgrids,~% xmin=0,~% ymin=0,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=Standard deviation,~% legend style={anchor=west,font=\tiny},")
+               (format stream "\\begin{axis}[~% ymajorgrids,~% xmin=0,~% ymode=log,~% ymin=0,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=Standard deviation,~% legend style={anchor=west,font=\tiny},")
                (format stream "xtick={1")
                (loop for xtick from 2
                        to (reduce (lambda (max item)
@@ -487,7 +506,7 @@ than INTERVAL number of seconds"
                (format stream "\\end{tikzpicture}~%"))             
              (average-plot (stream)
                (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~% ymin=0,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=ROBDD size,~% legend style={at={(0,1)},anchor=north west,font=\tiny},~%")
+               (format stream "\\begin{axis}[~% ymode=log,~% ymin=0,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=ROBDD size,~% legend style={at={(0,1)},anchor=north west,font=\tiny},~%")
                (format stream " xtick={0,1")
                (loop for xtick from 2
                        to (reduce (lambda (max item)
@@ -572,7 +591,7 @@ than INTERVAL number of seconds"
              (size-plots (stream)
                (format stream "% normalized size plots~%")
                (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~% xlabel=BDD Size,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Probability,~% legend style={font=\\tiny,at={(1,0)},anchor=south west},~% label style={font=\\tiny}~%]~%")
+               (format stream "\\begin{axis}[~% xmode=log,~% xlabel=BDD Size,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Probability,~% legend style={font=\\tiny,at={(1,0)},anchor=south west},~% label style={font=\\tiny}~%]~%")
                 
                (dolist (datum data)
                  (destructuring-bind (&key num-vars counts &allow-other-keys) datum
@@ -595,7 +614,10 @@ than INTERVAL number of seconds"
                (format stream "\\end{axis}~%")
                (format stream "\\end{tikzpicture}~%")))
 
-
+      (with-open-file (stream (format nil "~A/bdd-samples-table.ltx" prefix)
+                              :direction :output :if-does-not-exist :create :if-exists :supersede)
+        (format t "writing to ~A~%" stream)
+        (samples-table stream))
     (with-open-file (stream (format nil "~A/bdd-distribution-sigma.ltxdat" prefix)
                             :direction :output :if-does-not-exist :create :if-exists :supersede)
       (format t "writing to ~A~%" stream)
