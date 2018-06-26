@@ -35,14 +35,21 @@ EOF-THUNK is a 0-ary function which the calling function must call to close the 
                    (format t "started ~A connected to ~A~%" (car commands) p-in)
                    (recure (uiop:process-info-input process)
                            (cdr commands)
-                           (cons (list process (car commands)) cleanup-processes)))
+                           (cons (list :process process :command (car commands)) cleanup-processes)))
                  (values p-in (lambda ()
-                                (dolist (process cleanup-processes)
-                                  (format t "closing  ~A~%" (cadr process))
-                                  (close (uiop:process-info-input (car process)))
-                                  ;;(format t "waiting on ~A~%" (cadr process))
-                                  ;;(uiop:wait-process (car process))
-                                  ))))))
+                                (destructuring-bind (&key process command) (car cleanup-processes)
+                                  (format t "closing  ~A~%" command)
+                                  (close (uiop:process-info-input process)))
+                                (destructuring-bind ((&key process command)) (last cleanup-processes)
+                                  (format t "waiting on ~A~%" command)
+                                  (uiop:wait-process process))
+                                ;; (dolist (process cleanup-processes)
+                                ;;   (format t "closing  ~A~%" (cadr process))
+                                ;;   (close (uiop:process-info-input (car process)))
+                                ;;   (format t "waiting on ~A~%" (cadr process))
+                                ;;   (uiop:wait-process (car process))
+                                ;;   )
+                                )))))
 
     (recure writable-stream (reverse commands) nil)))
 
@@ -53,3 +60,15 @@ EOF-THUNK is a 0-ary function which the calling function must call to close the 
        (unwind-protect
            (progn ,@ body)
          (funcall ,eof)))))
+
+
+
+(defun test-launch-program ()
+  (with-output-to-string (str)
+    (let ((process (uiop:launch-program '("sort" "-u")
+                                       :input :stream
+                                       :output str
+                                       :error-output *error-output*)))
+      (dotimes (_ 4) 
+        (loop :for i :from 0 :to #xff
+              :do (format (uiop:process-info-input process) "0x~x~%" i))))))
