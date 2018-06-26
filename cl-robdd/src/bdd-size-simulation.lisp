@@ -30,7 +30,6 @@
 (defmacro forall (var data &body body)
   `(every #'(lambda (,var) ,@body) ,data))
 
-(assert (find-symbol "FORALL" :cl-robdd-analysis))
 
 (defun int-to-boolean-expression (n vars)
   "Returns a Boolean expression which is a Boolean combination of the given variable names.
