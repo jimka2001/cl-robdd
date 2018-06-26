@@ -211,22 +211,6 @@ than INTERVAL number of seconds"
                                       ))
                               histogram))))))
 
-(defun gen-random-samples (min max num-samples)
-  (declare (type unsigned-byte min max num-samples))
-  (cond
-    ((> (- max min) num-samples)
-     (let ((hash (make-hash-table :test #'eql)))
-       (dotimes (_ num-samples)
-         (setf (gethash (+ min (random (- max min))) hash) t))
-       (loop while (< (hash-table-count hash) num-samples)
-             do (setf (gethash (+ min (random (- max min))) hash) t))
-       (sort (loop for k being the hash-keys of hash
-                   collect k)
-             #'<)))
-    (t
-     (loop for k from min to max
-           collect k))))
-
 (defun log-bdd-count (bdd-sizes-file num-vars bdd-count truth-table)
   (declare (type unsigned-byte bdd-count truth-table))
   (flet ((print-it (stream)
