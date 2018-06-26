@@ -108,8 +108,6 @@ Why?  Because the truth table of this function is:
   (int-to-boolean-expression (random (expt 2 (expt 2 (length vars))))
                              vars))
 
-
-
 (defun median-a-list (a-list)
   (let ((a-list (copy-list a-list)))
     (loop while (cdr a-list)
