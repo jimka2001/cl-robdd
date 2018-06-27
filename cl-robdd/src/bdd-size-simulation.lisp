@@ -818,11 +818,10 @@ than INTERVAL number of seconds"
 
 ;; e.g. input-pattern "/lrde/home/jnewton/cluster.*/bdd-sizes.*.master.lrde.epita.*"
 ;; output-directory "/lrde/cluster/jnewton/bdd-sizes"
-(defun combine-bdd-size-results (output-directory input-pattern)
+(defun combine-bdd-size-results (output-directory input-paths)
   (let* ((stream (list :stream (open "/dev/null" :direction :output :if-exists :append :if-does-not-exist :error)
                       :num-vars 0))
-         (pathnames (directory input-pattern))
-         (num-files (length pathnames)))
+         (num-files (length input-paths)))
         
     (labels ((stream-to (num-vars)
                (cond
@@ -851,5 +850,5 @@ than INTERVAL number of seconds"
 				       :do (write-char char out-stream)
 				       :do (setf char (read-char log-stream nil nil nil))))
 			       (terpri out-stream)))))))
-      (mapcar #'process-file pathnames))
+      (mapcar #'process-file input-paths))
     (close (getf stream :stream))))
