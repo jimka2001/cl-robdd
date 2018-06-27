@@ -23,6 +23,9 @@
 (in-package :cl-robdd-analysis)
 
 
+(defmacro setof (var data &body body)
+  `(remove-if-not (lambda (,var) ,@body) ,data))
+
 (defmacro while (test &body body)
   `(loop :while ,test
 	 :do (progn ,@body)))
@@ -401,7 +404,7 @@ than INTERVAL number of seconds"
 
 (defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1))
 
-(defun read-bdd-distribution-data (prefix &key (min 1) (max (length *bdd-boolean-variables*)) vars)
+(defun read-bdd-distribution-data (prefix &key (min 1) (max (length *bdd-boolean-variables*)) (kolmogorov '(8 11 18)) vars)
   (declare (ignore vars))
   (flet ((read-1-file (data-file exponent)
            (with-open-file (stream data-file
@@ -417,10 +420,11 @@ than INTERVAL number of seconds"
      (loop for var from min to max
            for data-file = (format nil "~A/bdd-distribution-data-~D.sexp" prefix var)
            nconc (read-1-file data-file 1))
-     (loop for var = 11
-           for exponent :from 2 :to 8
-           for data-file = (format nil "~A/bdd-distribution-data-~D-sample-~D.sexp" prefix var exponent)
-           nconc (read-1-file data-file exponent)))))
+     (loop :for var :in kolmogorov
+           :nconc
+           (loop :for exponent :from 2 :to 8
+                 :for data-file = (format nil "~A/bdd-distribution-data-~D-sample-~D.sexp" prefix var exponent)
+                 :nconc (read-1-file data-file exponent))))))
      
 
 (defun measure-and-write-bdd-distribution (prefix num-vars num-samples bdd-sizes-file &key (exponent 1) (interval 2) (read-from-log-p nil))
@@ -549,7 +553,24 @@ than INTERVAL number of seconds"
                              (coerce sigma 'float)))))
                (format stream "};~%")
                (format stream "\\end{axis}~%")
-               (format stream "\\end{tikzpicture}~%"))             
+               (format stream "\\end{tikzpicture}~%"))
+             (kolmogorov-sigma-plot (stream &key (logy t) data)
+               (format stream "%% standard deviation with successively more point samples~%")
+               (format stream "\\begin{tikzpicture}~%")
+               (format stream "\\begin{axis}[~% ymajorgrids,~% xmin=0,~% ")
+               (when logy
+                 (format stream "ymode=log,~% "))
+               (format stream "ymin=0,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of samples,~% ylabel=Standard deviation")
+               (format stream "~%]~%")
+               (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
+               (dolist (plist (sort data #'< :key (getter :num-samples)))
+                 (destructuring-bind (&key num-samples sigma &allow-other-keys) plist
+                   (format stream "(~D,~D)~%"
+                           num-samples
+                           (coerce sigma 'float))))
+               (format stream "};~%")
+               (format stream "\\end{axis}~%")
+               (format stream "\\end{tikzpicture}~%"))
              (average-plot (stream &key (max max) (logy t) (xticks t) (exponent 1) (data (get-data exponent)))
                (format stream "\\begin{tikzpicture}~%")
                (format stream "\\begin{axis}[~%")
@@ -721,7 +742,7 @@ than INTERVAL number of seconds"
                      (format t "writing to ~A~%" stream)
                      (individual-plot stream num-vars :counts (getf (find-plist num-vars 1) :counts)))
                    (warn "no data to plot, skipping ~A" (format nil "~A/bdd-distribution-~D.ltxdat" prefix num-vars))))
-      (let ((num-vars 11))
+      (dolist (num-vars '(8 11 18))
         (dolist (exponent '(1 2 3 4 5 6 7 8))
           (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D.ltxdat" prefix exponent num-vars)))
             (if (getf (find-plist num-vars exponent) :counts)
@@ -731,9 +752,15 @@ than INTERVAL number of seconds"
                   (individual-plot stream num-vars
                                    :counts (getf (find-plist num-vars exponent) :counts)
                                    :xlabel (lambda (num-vars)
-                                             (format nil "Distribution with ~D samples"
-                                                     (getf (find-plist num-vars exponent) :num-samples)))))
-                (warn "no data to plot ~A~%" fname))))))
+                                             (format nil "~D-var distrib. w/ ~D samples"
+                                                     num-vars (getf (find-plist num-vars exponent) :num-samples)))))
+                (warn "no data to plot ~A~%" fname))))
+        (let ((fname (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
+              (data (setof plist data
+                      (= num-vars (getf plist :num-vars)))))
+          (with-open-file (stream fname :direction :output :if-does-not-exist :create :if-exists :supersede)
+            (format t "writing to ~A~%" stream)
+            (kolmogorov-sigma-plot stream :data data :logy nil)))))
     data))
 
 (defun all-possible-bdds (prefix vars &aux (num-vars (length vars)))
