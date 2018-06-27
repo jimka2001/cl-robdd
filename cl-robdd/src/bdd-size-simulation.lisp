@@ -557,17 +557,34 @@ than INTERVAL number of seconds"
              (kolmogorov-sigma-plot (stream &key (logy t) data)
                (format stream "%% standard deviation with successively more point samples~%")
                (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~% ymajorgrids,~% xmin=0,~% ")
+               (format stream "\\begin{axis}[~% ymajorgrids,~% ")
                (when logy
                  (format stream "ymode=log,~% "))
-               (format stream "ymin=0,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of samples,~% ylabel=Standard deviation")
+               (format stream "yminorgrids,~% xmajorgrids,~% xlabel=Number of samples,~% ylabel=Standard deviation")
                (format stream "~%]~%")
                (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
-               (dolist (plist (sort data #'< :key (getter :num-samples)))
+               (dolist (plist (sort (copy-list data) #'< :key (getter :num-samples)))
                  (destructuring-bind (&key num-samples sigma &allow-other-keys) plist
                    (format stream "(~D,~D)~%"
                            num-samples
                            (coerce sigma 'float))))
+               (format stream "};~%")
+               (format stream "\\end{axis}~%")
+               (format stream "\\end{tikzpicture}~%"))
+             (kolmogorov-average-plot (stream &key (logy t) data)
+               (format stream "%% average with successively more point samples~%")
+               (format stream "\\begin{tikzpicture}~%")
+               (format stream "\\begin{axis}[~% ymajorgrids,~% ")
+               (when logy
+                 (format stream "ymode=log,~% "))
+               (format stream "yminorgrids,~% xmajorgrids,~% xlabel=Number of samples,~% ylabel=Average")
+               (format stream "~%]~%")
+               (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
+               (dolist (plist (sort (copy-list data) #'< :key (getter :num-samples)))
+                 (destructuring-bind (&key num-samples average-size &allow-other-keys) plist
+                   (format stream "(~D,~D)~%"
+                           num-samples
+                           (coerce average-size 'float))))
                (format stream "};~%")
                (format stream "\\end{axis}~%")
                (format stream "\\end{tikzpicture}~%"))
@@ -622,7 +639,7 @@ than INTERVAL number of seconds"
                         (/ value (1- (expt 2.0 (1+ num-vars))))))
                  (format stream "%Residual compression ratio plot~%")
                  (format stream "\\begin{tikzpicture}~%")
-                 (format stream "\\begin{axis}[~% ymin=0,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=Residual compression ratio,~% legend style={at={(0,1)},anchor=north west,font=\tiny},~%")
+                 (format stream "\\begin{axis}[~% ymin=0,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=Residual compression ratio,~% legend style={at={(1,1)},anchor=north east,font=\tiny},~%")
                  (format stream " ytick={0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0},~%")
                  (format stream " xtick={0,1")
                  (loop for xtick from 2
@@ -755,12 +772,16 @@ than INTERVAL number of seconds"
                                              (format nil "~D-var distrib. w/ ~D samples"
                                                      num-vars (getf (find-plist num-vars exponent) :num-samples)))))
                 (warn "no data to plot ~A~%" fname))))
-        (let ((fname (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
+        (let ((sigma-name (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
+              (average-name (format nil "~A/average-kolmogorov-~D.ltxdat" prefix num-vars))
               (data (setof plist data
                       (= num-vars (getf plist :num-vars)))))
-          (with-open-file (stream fname :direction :output :if-does-not-exist :create :if-exists :supersede)
+          (with-open-file (stream sigma-name :direction :output :if-does-not-exist :create :if-exists :supersede)
             (format t "writing to ~A~%" stream)
-            (kolmogorov-sigma-plot stream :data data :logy nil)))))
+            (kolmogorov-sigma-plot stream :data data :logy nil))
+          (with-open-file (stream average-name :direction :output :if-does-not-exist :create :if-exists :supersede)
+            (format t "writing to ~A~%" stream)
+            (kolmogorov-average-plot stream :data data :logy nil)))))
     data))
 
 (defun all-possible-bdds (prefix vars &aux (num-vars (length vars)))
