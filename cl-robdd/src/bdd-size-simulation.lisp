@@ -152,7 +152,7 @@ than INTERVAL number of seconds"
                 (remaining-seconds (- total-seconds elapsed-seconds)))
            (funcall announce iteration (coerce remaining-seconds 'double-float))))))))
 
-(defun calc-plist (histogram num-vars randomp)
+(defun calc-plist (histogram num-vars randomp &key (exponent 1))
   (declare (type cons histogram)
            (type fixnum num-vars))
   ;; histogram is a list of pairs, each pair is (sample occurances)
@@ -190,6 +190,7 @@ than INTERVAL number of seconds"
         (setf median (median-a-list histogram))
         (list :sum sum
               :num-samples num-samples
+              :exponent exponent
               :randomp randomp
               :num-vars num-vars
               :density (sci-notation density)
@@ -223,7 +224,7 @@ than INTERVAL number of seconds"
     (t
      (print-it bdd-sizes-file)))))
 
-(defun read-counts-from-log (target-num-vars bdd-sizes-file)
+(defun read-counts-from-log (target-num-vars bdd-sizes-file &key (exponent 1))
   (with-open-file (log-file bdd-sizes-file
                             :direction :input
                             :if-does-not-exist :error)
@@ -231,7 +232,8 @@ than INTERVAL number of seconds"
       (while (setf num-vars (read log-file nil nil nil))
         ;; read the bdd-size integer
         (setf bdd-size (read log-file t nil nil))
-        (when (= target-num-vars num-vars)
+        (when (and (= target-num-vars num-vars)
+                   (zerop (random (expt 2 (1- exponent)))))
           (push bdd-size samples))
         ;; read and ignore the base-36 integer
         ;; read to end of line
@@ -252,7 +254,7 @@ than INTERVAL number of seconds"
   #+allegro (excl:gc t)
 )
 
-(defun measure-bdd-size (vars num-samples &key (interval 2) (bdd-sizes-file "/dev/null") (read-from-log-p nil))
+(defun measure-bdd-size (vars num-samples &key (interval 2) (bdd-sizes-file "/dev/null") (read-from-log-p nil) (exponent 1))
   ;; READ-FROM-LOG-P specifies to read a bdd-size from the log file if possible.
   ;;      if there are fewer than num-samples in the log file, an error is triggered.
   ;;      If READ-FROM-LOG-P is TRUE, then BDD-SIZES-FILE should be a file already created
@@ -272,7 +274,7 @@ than INTERVAL number of seconds"
          (randomp (< num-samples (1+ ffff)))
          (start-time (get-internal-real-time))
          (bdd-sizes (when read-from-log-p
-                      (read-counts-from-log num-vars bdd-sizes-file))))
+                      (read-counts-from-log num-vars bdd-sizes-file :exponent exponent))))
 
     (when (and read-from-log-p
                (null bdd-sizes))
@@ -310,12 +312,16 @@ than INTERVAL number of seconds"
                               (format t " = ~D hours ~D minutes" (truncate hours)
                                       (truncate (- minutes (* 60 (truncate hours))))))
                             (format t "~%"))))))
-        (format t "generating ~D " num-samples)
+        (if read-from-log-p
+            (format t "using pre-chosen ~D" num-samples)
+            (format t "generating ~D " num-samples))
         (when randomp (format t "randomly chosen "))
         (format t "BDDs of possible ~D (~a%)~%   with ~D variables ~S~%"  (sci-notation-string (1+ ffff))
                 (* 100.0 (/ num-samples (1+ ffff))) num-vars vars)
         (loop :for iteration :from 0 :below num-samples
-                  :do (measure (random (1- ffff)))
+              :do (measure (if read-from-log-p
+                               0
+                               (random (1- ffff))))
                   :do (funcall announcer iteration)))
       (let (histogram)
         (declare #+sbcl (notinline sort))
@@ -323,8 +329,10 @@ than INTERVAL number of seconds"
                    (push args histogram))
                  hash)
         (setf histogram (sort histogram #'< :key #'car))
-        (list* :seconds (float (/ (- (get-internal-real-time) start-time) internal-time-units-per-second))
-               (calc-plist histogram num-vars randomp))))))
+        (list* :seconds (if read-from-log-p
+                            -1
+                            (float (/ (- (get-internal-real-time) start-time) internal-time-units-per-second)))
+               (calc-plist histogram num-vars randomp :exponent exponent))))))
 
 (defun remove-duplicates-sorted-list (elements)
   (declare (optimize (speed 3) (debug 0)))
@@ -341,7 +349,7 @@ than INTERVAL number of seconds"
                 tail))))
     (recure elements nil)))
 
-(defun measure-bdd-sizes (vars num-samples min max &key (interval 2) (read-from-log-p nil) (bdd-sizes-file "/dev/null"))
+(defun measure-bdd-sizes (vars num-samples min max &key (interval 2) (read-from-log-p nil) (bdd-sizes-file "/dev/null") (exponent 1))
   (mapcon (lambda (vars)
             (cond
               ((> min (length vars))
@@ -354,6 +362,7 @@ than INTERVAL number of seconds"
                                             num-samples)
                                        :bdd-sizes-file bdd-sizes-file
                                        :read-from-log-p read-from-log-p
+                                       :exponent exponent
                                        :interval interval)))))
           vars))
 
@@ -365,9 +374,11 @@ than INTERVAL number of seconds"
                (format stream "e")
                (format stream "~A" char))))
 
-(defun write-one-bdd-distribution-data (plist prefix)
+(defun write-one-bdd-distribution-data (plist prefix &key (exponent 1))
   (let* ((num-vars (getf plist :num-vars))
-         (data-file (format nil "~A/bdd-distribution-data-~D.sexp" prefix num-vars)))
+         (data-file (case exponent
+                      ((1) (format nil "~A/bdd-distribution-data-~D.sexp" prefix num-vars))
+                      (t (format nil "~A/bdd-distribution-data-~D-sample-~D.sexp" prefix num-vars exponent)))))
     (with-open-file (stream data-file
                             :direction :output :if-does-not-exist :create :if-exists :supersede)
       (when stream
@@ -382,28 +393,37 @@ than INTERVAL number of seconds"
           (pop plist))
           (format stream "  )~%")))))
 
-(defun write-bdd-distribution-data (data prefix)
+(defun write-bdd-distribution-data (data prefix &key (exponent 1))
   (declare (type list data)
            (type string prefix))
   (dolist (plist data)
-    (write-one-bdd-distribution-data plist prefix)))
+    (write-one-bdd-distribution-data plist prefix :exponent exponent)))
 
 (defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1))
 
 (defun read-bdd-distribution-data (prefix &key (min 1) (max (length *bdd-boolean-variables*)) vars)
   (declare (ignore vars))
-  (loop for var from min to max
-        for data-file = (format nil "~A/bdd-distribution-data-~D.sexp" prefix var)
-        nconc (with-open-file (stream data-file
-                                      :direction :input :if-does-not-exist nil)
-                (when stream
-                  (let* ((plist (read stream))
-                         (histogram (mapcar (lambda (this &aux (sample (car this)) (occurances (caddr this)))
-                                              (list sample occurances))
-                                            (getf plist :counts))))
-                    (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp))))))))
+  (flet ((read-1-file (data-file exponent)
+           (with-open-file (stream data-file
+                                   :direction :input :if-does-not-exist nil)
+             (when stream
+               (format t "reading from ~A~%" stream)
+               (let* ((plist (read stream))
+                      (histogram (mapcar (lambda (this &aux (sample (car this)) (occurances (caddr this)))
+                                           (list sample occurances))
+                                         (getf plist :counts))))
+                 (list (calc-plist histogram (getf plist :num-vars) (getf plist :randomp) :exponent exponent)))))))
+    (append
+     (loop for var from min to max
+           for data-file = (format nil "~A/bdd-distribution-data-~D.sexp" prefix var)
+           nconc (read-1-file data-file 1))
+     (loop for var = 11
+           for exponent :from 2 :to 8
+           for data-file = (format nil "~A/bdd-distribution-data-~D-sample-~D.sexp" prefix var exponent)
+           nconc (read-1-file data-file exponent)))))
+     
 
-(defun measure-and-write-bdd-distribution (prefix num-vars num-samples bdd-sizes-file &key (interval 2) (read-from-log-p nil))
+(defun measure-and-write-bdd-distribution (prefix num-vars num-samples bdd-sizes-file &key (exponent 1) (interval 2) (read-from-log-p nil))
   "PREFIX: string designating path name to directory to write analysis results, 
            e.g., \"/lrde/home/jnewton/analysis/.\"
    NUM-VARS: number of variables of the BDD to create
@@ -414,8 +434,10 @@ than INTERVAL number of seconds"
                                                   num-samples num-vars num-vars
                                                   :bdd-sizes-file bdd-sizes-file
                                                   :read-from-log-p read-from-log-p
+                                                  :exponent exponent
                                                   :interval interval)
-                               prefix))
+                               prefix
+                               :exponent exponent))
 
 (defun getter (field)
   (lambda (obj) (getf obj field)))
@@ -438,8 +460,18 @@ than INTERVAL number of seconds"
     (when re-run
       (write-bdd-distribution-data data prefix))
 
-    (labels ((find-plist (num-vars)
-               (find num-vars data :key (getter :num-vars)))
+    (labels ((get-data (exponent)
+               (remove-if-not (lambda (plist)
+                                (= exponent (getf plist :exponent 1))) data))
+             (find-plist (num-vars exponent &key (data data))
+               (cond
+                 ((null data) nil)
+                 (t
+                  (destructuring-bind (plist &rest plists) data
+                    (if (and (= num-vars (getf plist :num-vars))
+                             (= exponent (getf plist :exponent)))
+                        plist
+                        (find-plist num-vars exponent :data plists))))))
              (samples-table (stream)
                (format stream "\\begin{tabular}{r|r|r}~%")
                (format stream "No.      & No.      & No. \\\\~%")
@@ -457,20 +489,28 @@ than INTERVAL number of seconds"
                (format stream "\\end{tabular}~%")
 
                )
-             (individual-plot (stream num-vars &aux (plist (find-plist num-vars)))
+
+             (individual-plot (stream num-vars &key (plist (find-plist num-vars 1)) (counts (getf plist :counts))
+                                                 (xlabel (lambda (num-vars)
+                                                           (format nil "Node count for ~D variables" num-vars))))
+               ;; if exponent = 5, this means we only plot 1/(2^5= 1/32 of the points.
                (format stream "% individual plot ~D vars~%" num-vars)
                (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~% xlabel=Node count for ~D variables,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Number of Boolean functions,~% label style={font=\\large},~% tick label style={font=\\Large}~%]~%" num-vars)
+               (format stream "\\begin{axis}[~%")
+               (format stream " xlabel=~A,~%" (funcall xlabel num-vars))
+               (format stream " ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Number of Boolean functions,~% label style={font=\\large},~% tick label style={font=\\Large}~%]~%")
                (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
                (destructuring-bind (alpha beta) (getf plist :density)
                  ;; density is in form (alpha beta) meaning alpha * 10 ^ beta
-                         
-                 (dolist (item (getf plist :counts))
+                 
+                 (dolist (item counts)
                    (destructuring-bind (bdd-size normalized number-of-bdds) item
                      (declare (ignore normalized))
-                     (when (or (> number-of-bdds 2)
-                               (<= num-vars 10))
-                       ;; normalized = normalized number of bdds of this size as a fraction of total sample
+                     (cond
+                       ((and (<= number-of-bdds 2)
+                             (> num-vars 10)))
+                       (t
+                        ;; normalized = normalized number of bdds of this size as a fraction of total sample
                        (destructuring-bind (x y) (sci-notation (/ number-of-bdds alpha))
                          ;;   extrapolated estimate = normalized / density
                          ;;                         = normalized/alpha   * 10 ^ beta
@@ -479,12 +519,12 @@ than INTERVAL number of seconds"
                          (convert-double-notation
                           stream
                           (with-output-to-string (str)
-                            (format str "(~D,~Ae~A) % ~D~%" bdd-size (float x 1.0) (- y beta) number-of-bdds))))))))
+                            (format str "(~D,~Ae~A) % ~D~%" bdd-size (float x 1.0) (- y beta) number-of-bdds)))))))))
                (format stream "};~%")
                (format stream "\\legend{}~%")
                (format stream "\\end{axis}~%")
                (format stream "\\end{tikzpicture}~%"))
-             (sigma-plot (stream &key (max max) (logy t) (xmarks nil))
+             (sigma-plot (stream &key (max max) (logy t) (xmarks nil) (exponent 1) (data (get-data exponent)))
                (format stream "\\begin{tikzpicture}~%")
                (format stream "\\begin{axis}[~% ymajorgrids,~% xmin=0,~% ")
                (when logy
@@ -510,7 +550,7 @@ than INTERVAL number of seconds"
                (format stream "};~%")
                (format stream "\\end{axis}~%")
                (format stream "\\end{tikzpicture}~%"))             
-             (average-plot (stream &key (max max) (logy t) (xticks t))
+             (average-plot (stream &key (max max) (logy t) (xticks t) (exponent 1) (data (get-data exponent)))
                (format stream "\\begin{tikzpicture}~%")
                (format stream "\\begin{axis}[~%")
                (when logy
@@ -556,7 +596,7 @@ than INTERVAL number of seconds"
                (format stream "\\legend{Worst case, Average, Median}~%")
                (format stream "\\end{axis}~%")
                (format stream "\\end{tikzpicture}~%"))
-             (efficiency-plot (stream)
+             (efficiency-plot (stream &key (exponent 1) (data (get-data exponent)))
                (flet ((residual-compression-ratio (value num-vars)
                         (/ value (1- (expt 2.0 (1+ num-vars))))))
                  (format stream "%Residual compression ratio plot~%")
@@ -602,7 +642,8 @@ than INTERVAL number of seconds"
                  (format stream "\\legend{Worst case, Average, Median}~%")
                  (format stream "\\end{axis}~%")
                  (format stream "\\end{tikzpicture}~%")))
-             (size-plots (stream   &key (max 19) (logx t) (mark t) (colors colors))
+             (size-plots (stream   &key (max 19) (logx t) (mark t) (colors colors) ((:exponent given-exponent) 1))
+               (declare (type unsigned-byte given-exponent))
                (format stream "% normalized size plots~%")
                (format stream "\\begin{tikzpicture}~%")
                (format stream "\\begin{axis}[~%")
@@ -610,10 +651,12 @@ than INTERVAL number of seconds"
                  (format stream " xmode=log,~%"))
                (format stream " xlabel=BDD Size,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Probability,~% legend style={font=\\tiny,at={(1,0)},anchor=south west},~% label style={font=\\tiny}~%]~%")
 
-                
+               
                (dolist (datum data)
-                 (destructuring-bind (&key num-vars counts &allow-other-keys) datum
+                 (destructuring-bind (&key num-vars ((:exponent this-exponent) 1) counts &allow-other-keys) datum
+                   (declare (type unsigned-byte this-exponent))
                    (when (and (> num-vars 1)
+                              (= this-exponent given-exponent)
                               (<= num-vars max))
                      (push (format nil "Size with ~D variables" num-vars) legend)
                      (format stream "\\addplot~A[color=~A] coordinates {~%"
@@ -627,7 +670,7 @@ than INTERVAL number of seconds"
                      (dolist (xy counts)
                        (format stream "  (~D,~A)~%" (car xy) (cadr xy)))
                      (format stream "};~%"))))
-                
+               
                (format stream "\\legend{")
                (let ((first t))
                  (dolist (label (reverse legend))
@@ -672,14 +715,26 @@ than INTERVAL number of seconds"
         (format t "writing to ~A~%" stream)
         (efficiency-plot stream))
       (loop for num-vars from min to max
-            do (if (getf (find-plist num-vars) :counts)
+            do (if (getf (find-plist num-vars 1) :counts)
                    (with-open-file (stream (format nil "~A/bdd-distribution-~D.ltxdat" prefix num-vars)
                                            :direction :output :if-does-not-exist :create :if-exists :supersede)
                      (format t "writing to ~A~%" stream)
-                     (individual-plot stream num-vars))
+                     (individual-plot stream num-vars :counts (getf (find-plist num-vars 1) :counts)))
                    (warn "no data to plot, skipping ~A" (format nil "~A/bdd-distribution-~D.ltxdat" prefix num-vars))))
-      )
-  data))
+      (let ((num-vars 11))
+        (dolist (exponent '(1 2 3 4 5 6 7 8))
+          (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D.ltxdat" prefix exponent num-vars)))
+            (if (getf (find-plist num-vars exponent) :counts)
+                (with-open-file (stream fname
+                                        :direction :output :if-does-not-exist :create :if-exists :supersede)
+                  (format t "writing to ~A~%" stream)
+                  (individual-plot stream num-vars
+                                   :counts (getf (find-plist num-vars exponent) :counts)
+                                   :xlabel (lambda (num-vars)
+                                             (format nil "Distribution with ~D samples"
+                                                     (getf (find-plist num-vars exponent) :num-samples)))))
+                (warn "no data to plot ~A~%" fname))))))
+    data))
 
 (defun all-possible-bdds (prefix vars &aux (num-vars (length vars)))
   (declare #+sbcl (notinline sort)
