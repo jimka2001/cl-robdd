@@ -851,7 +851,7 @@ than INTERVAL number of seconds"
                  (t
                   (close (getf stream :stream))
                   (setf (getf stream :num-vars) num-vars
-                        (getf stream :file) (format nil "~a/bdd-sizes-unique-~D"
+                        (getf stream :file) (format nil "~a/bdd-sizes-unique-~D.new"
                                                             output-directory
                                                             num-vars)
                         (getf stream :stream) (open (getf stream :file)
