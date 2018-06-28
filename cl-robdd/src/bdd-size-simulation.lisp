@@ -575,9 +575,8 @@ than INTERVAL number of seconds"
                             "sigma plot"
                             (list "ymajorgrids"
                                   '("xmin" 0)
-                                  (if logy
-                                    '("ymode" "log")
-                                    '("ymin" 0))
+                                  (when logy
+                                    '("ymode" "log"))
                                   "yminorgrids"
                                   "xmajorgrids"
                                   '("xlabel" "Number of variables")
@@ -616,8 +615,7 @@ than INTERVAL number of seconds"
                                   '("scaled y ticks" "false")
                                   "yminorgrids"
                                   "xmajorgrids"
-                                  (list "xlabel" (format nil "~A-variable number of samples" num-vars))
-                                  '("ylabel" "Standard deviation"))
+                                  (list "xlabel" (format nil "{Sample size for \\numvars=~A}" num-vars)))
                             (lambda ()
                               (addplot stream
                                        nil ; no comment
@@ -639,8 +637,7 @@ than INTERVAL number of seconds"
                                   '("scaled y ticks" "false")
                                   "yminorgrids"
                                   "xmajorgrids"
-                                  (list "xlabel" (format nil "~A-variable number of samples" num-vars))
-                                  '("ylabel" "Average"))
+                                  (list "xlabel" (format nil "{Sample size for \\numvars=~A}" num-vars)))
                             (lambda ()
                               (addplot stream
                                        nil ; no comment
