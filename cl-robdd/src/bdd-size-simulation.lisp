@@ -456,8 +456,7 @@ than INTERVAL number of seconds"
            (type fixnum num-samples)
            #+sbcl (notinline sort))
   (ensure-directories-exist prefix)
-  (let* (legend
-         (colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "teal" "orange"))
+  (let* ((colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "teal" "orange"))
          (data (if re-run
                    (sort (measure-bdd-sizes vars num-samples min max) #'< :key (getter :num-vars))
                    (read-bdd-distribution-data prefix :vars vars))))
@@ -493,232 +492,325 @@ than INTERVAL number of seconds"
                (format stream "\\end{tabular}~%")
 
                )
-
+             (join-strings (delimeter strings)
+               (with-output-to-string (str)
+                 (when (car strings)
+                   (format str "~A" (car strings)))
+                 (dolist (string (cdr strings))
+                   (format str "~A~A" delimeter string))))
+             (print-option (axis-option)
+               (typecase axis-option
+                 (string (format nil "~A" axis-option))
+                 ((cons string (cons string)) (format nil "~A=~A" (car axis-option) (cadr axis-option)))
+                 ((cons string (cons fixnum)) (format nil "~A=~D" (car axis-option) (cadr axis-option)))
+                 (t
+                  (error "unknown axis-option ~A" axis-option))))
+             (tikzpicture (stream comment axis-options continuation)
+               (declare (type (or null string) comment)
+                        (type list axis-options)
+                        (type (function () t) continuation))
+               (when comment
+                 (format stream "% ~A~%" comment))
+               (format stream "\\begin{tikzpicture}~%")
+               (format stream "\\begin{axis}[~% ~A~%]~%"
+                       (join-strings (format nil ",~% ") (mapcar  #'print-option (remove nil axis-options))))
+               (funcall continuation)
+               (format stream "\\end{axis}~%")
+               (format stream "\\end{tikzpicture}~%"))
+             (addplot (stream comment plot-options control-string points &key (addplot "addplot"))
+               (declare (type (or null string) comment)
+                        (type list plot-options)
+                        (type string control-string)
+                        (type list points))
+               (when comment
+                 (format stream "% ~A~%" comment))
+               (format stream "\\~A[~A] coordinates {~%" addplot
+                       (join-strings "," (mapcar #'print-option plot-options)))
+               (dolist (point points)
+                 (apply #'format stream control-string point)
+                 (terpri stream))
+               (format stream "};~%"))
              (individual-plot (stream num-vars &key (plist (find-plist num-vars 1)) (counts (getf plist :counts))
                                                  (xlabel (lambda (num-vars)
                                                            (format nil "Node count for ~D variables" num-vars))))
                ;; if exponent = 5, this means we only plot 1/(2^5= 1/32 of the points.
-               (format stream "% individual plot ~D vars~%" num-vars)
-               (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~%")
-               (format stream " xlabel=~A,~%" (funcall xlabel num-vars))
-               (format stream " ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Number of Boolean functions,~% label style={font=\\large},~% tick label style={font=\\Large}~%]~%")
-               (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
-               (destructuring-bind (alpha beta) (getf plist :density)
-                 ;; density is in form (alpha beta) meaning alpha * 10 ^ beta
-                 
-                 (dolist (item counts)
-                   (destructuring-bind (bdd-size normalized number-of-bdds) item
-                     (declare (ignore normalized))
-                     (cond
-                       ((and (<= number-of-bdds 2)
-                             (> num-vars 10)))
-                       (t
-                        ;; normalized = normalized number of bdds of this size as a fraction of total sample
-                       (destructuring-bind (x y) (sci-notation (/ number-of-bdds alpha))
-                         ;;   extrapolated estimate = normalized / density
-                         ;;                         = normalized/alpha   * 10 ^ beta
-                         ;;   if normalized/alpha   = x*10^y
-                         ;;   then         estimate = x * 10 ^(y - beta)
-                         (convert-double-notation
-                          stream
-                          (with-output-to-string (str)
-                            (format str "(~D,~Ae~A) % ~D~%" bdd-size (float x 1.0) (- y beta) number-of-bdds)))))))))
-               (format stream "};~%")
-               (format stream "\\legend{}~%")
-               (format stream "\\end{axis}~%")
-               (format stream "\\end{tikzpicture}~%"))
+               (tikzpicture stream
+                            (format nil "individual plot ~D vars" num-vars) ; comment
+                            (list 
+                             (list "xlabel" (funcall xlabel num-vars))
+                             "ymajorgrids"
+                             "yminorgrids"
+                             "xmajorgrids"
+                             "xminorgrids"
+                             '("ylabel" "Number of Boolean functions")
+                             '("label style" "{font=\\large}")
+                             '("tick label style" "{font=\\Large}"))
+                            (lambda ()
+                              (addplot stream
+                                       nil ; no comment
+                                       '(("color" "blue")
+                                         ("mark" "*"))
+                                       "(~D,~Ae~A) % ~D"
+                                       (destructuring-bind (alpha beta) (getf plist :density)
+                                         ;; density is in form (alpha beta) meaning alpha * 10 ^ beta
+                                         (mapcan (lambda (item)
+                                                   (destructuring-bind (bdd-size normalized number-of-bdds) item
+                                                     (declare (ignore normalized))
+                                                     (cond
+                                                       ((and (<= number-of-bdds 2)
+                                                             (> num-vars 10))
+                                                        nil)
+                                                       (t
+                                                        ;; normalized = normalized number of bdds of this size as a fraction of total sample
+                                                        (destructuring-bind (x y) (sci-notation (/ number-of-bdds alpha))
+                                                          ;;   extrapolated estimate = normalized / density
+                                                          ;;                         = normalized/alpha   * 10 ^ beta
+                                                          ;;   if normalized/alpha   = x*10^y
+                                                          ;;   then         estimate = x * 10 ^(y - beta)
+                                                          (list (list bdd-size (float x 1.0) (- y beta) number-of-bdds)))))))
+                                                 counts)))
+                              (format stream "\\legend{}~%"))))
              (sigma-plot (stream &key (max max) (logy t) (xmarks nil) (exponent 1) (data (get-data exponent)))
-               (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~% ymajorgrids,~% xmin=0,~% ")
-               (when logy
-                 (format stream "ymode=log,~% "))
-               (format stream "ymin=0,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=Standard deviation,~% legend style={anchor=west,font=\tiny}")
-               (when xmarks
-                 (format stream ",~% xtick={1")
-                 (loop for xtick from 2
-                         to (reduce (lambda (max item)
-                                      (max max (getf item :num-vars)))
-                                    (cdr data)
-                                    :initial-value (getf (car data) :num-vars))
-                       do (format stream ",~D" xtick))
-                 (format stream "}"))
-               (format stream "~%]~%")
-               (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
-               (dolist (plist data)
-                 (destructuring-bind (&key num-vars sigma &allow-other-keys) plist
-                   (when (<= num-vars max)
-                     (format stream "(~D,~D)~%"
-                             num-vars
-                             (coerce sigma 'float)))))
-               (format stream "};~%")
-               (format stream "\\end{axis}~%")
-               (format stream "\\end{tikzpicture}~%"))
-             (kolmogorov-sigma-plot (stream &key (logy t) data)
-               (format stream "%% standard deviation with successively more point samples~%")
-               (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~% ymajorgrids,~% ")
-               (when logy
-                 (format stream "ymode=log,~% "))
-               (format stream "yminorgrids,~% xmajorgrids,~% xlabel=Number of samples,~% ylabel=Standard deviation")
-               (format stream "~%]~%")
-               (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
-               (dolist (plist (sort (copy-list data) #'< :key (getter :num-samples)))
-                 (destructuring-bind (&key num-samples sigma &allow-other-keys) plist
-                   (format stream "(~D,~D)~%"
-                           num-samples
-                           (coerce sigma 'float))))
-               (format stream "};~%")
-               (format stream "\\end{axis}~%")
-               (format stream "\\end{tikzpicture}~%"))
-             (kolmogorov-average-plot (stream &key (logy t) data)
-               (format stream "%% average with successively more point samples~%")
-               (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~% ymajorgrids,~% ")
-               (when logy
-                 (format stream "ymode=log,~% "))
-               (format stream "yminorgrids,~% xmajorgrids,~% xlabel=Number of samples,~% ylabel=Average")
-               (format stream "~%]~%")
-               (format stream "\\addplot[color=blue,mark=*] coordinates {~%")
-               (dolist (plist (sort (copy-list data) #'< :key (getter :num-samples)))
-                 (destructuring-bind (&key num-samples average-size &allow-other-keys) plist
-                   (format stream "(~D,~D)~%"
-                           num-samples
-                           (coerce average-size 'float))))
-               (format stream "};~%")
-               (format stream "\\end{axis}~%")
-               (format stream "\\end{tikzpicture}~%"))
+               (tikzpicture stream
+                            "sigma plot"
+                            (list "ymajorgrids"
+                                  '("xmin" 0)
+                                  (if logy
+                                    '("ymode" "log")
+                                    '("ymin" 0))
+                                  "yminorgrids"
+                                  "xmajorgrids"
+                                  '("xlabel" "Number of variables")
+                                  '("ylabel" "Standard deviation")
+                                  '("legend style" "{anchor=west,font=\\tiny}")
+                                  (when xmarks
+                                    (list "xtick"
+                                          (format nil "{~A}"
+                                                  (join-strings ","
+                                                                (loop for xtick from 1
+                                                                        to (reduce (lambda (max item)
+                                                                                     (max max (getf item :num-vars)))
+                                                                                   (cdr data)
+                                                                                   :initial-value (getf (car data) :num-vars))
+                                                                      collect (format nil "~D" xtick)))))))
+                            (lambda ()
+                              (addplot stream
+                                       nil ; no comment
+                                       '(("color" "blue")
+                                         ("mark" "*"))
+                                       "(~D,~D)"
+                                       (mapcan (lambda (plist)
+                                                 (destructuring-bind (&key num-vars sigma &allow-other-keys) plist
+                                                   (when (<= num-vars max)
+                                                     (list (list num-vars
+                                                                 (coerce sigma 'float))))))
+                                               data)))))
+             (kolmogorov-sigma-plot (stream num-vars &key (logx t) (logy t) data)
+               (tikzpicture stream
+                            "standard deviation with successively more point samples"
+                            (list "ymajorgrids"
+                                  (when logx
+                                    '("xmode" "log"))
+                                  (when logy
+                                    '("ymode" "log"))
+                                  '("scaled y ticks" "false")
+                                  "yminorgrids"
+                                  "xmajorgrids"
+                                  (list "xlabel" (format nil "~A-variable number of samples" num-vars))
+                                  '("ylabel" "Standard deviation"))
+                            (lambda ()
+                              (addplot stream
+                                       nil ; no comment
+                                       '(("color" "blue")
+                                         ("mark" "*"))
+                                       "(~D,~D)"
+                                       (mapcar (lambda (plist)
+                                                 (destructuring-bind (&key num-samples sigma &allow-other-keys) plist
+                                                   (list num-samples (coerce sigma 'float))))
+                                               (sort (copy-list data) #'< :key (getter :num-samples)))))))
+             (kolmogorov-average-plot (stream num-vars &key (logx t) (logy t) data)
+               (tikzpicture stream
+                            "average with successively more point samples"
+                            (list "ymajorgrids"
+                                  (when logy
+                                    '("ymode" "log"))
+                                  (when logx
+                                    '("xmode" "log"))
+                                  '("scaled y ticks" "false")
+                                  "yminorgrids"
+                                  "xmajorgrids"
+                                  (list "xlabel" (format nil "~A-variable number of samples" num-vars))
+                                  '("ylabel" "Average"))
+                            (lambda ()
+                              (addplot stream
+                                       nil ; no comment
+                                       '(("color" "blue")
+                                         ("mark" "*"))
+                                       "(~D,~D)"
+                                       (mapcar (lambda (plist)
+                                                 (destructuring-bind (&key num-samples average-size &allow-other-keys) plist
+                                                   (list num-samples (coerce average-size 'float))))
+                                               (sort (copy-list data) #'< :key (getter :num-samples)))))))                            
              (average-plot (stream &key (max max) (logy t) (xticks t) (exponent 1) (data (get-data exponent)))
-               (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~%")
-               (when logy
-                 (format stream " ymode=log,~%"))
-               (format stream " ymin=0,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=ROBDD size,~% legend style={at={(0,1)},anchor=north west,font=\tiny}")
-               (when xticks
-                 (format stream ",~% xtick={0,1")
-                 (loop for xtick from 2
-                         to (reduce (lambda (max item)
-                                      (max max (getf item :num-vars)))
-                                    (cdr data)
-                                    :initial-value (getf (car data) :num-vars))
-                       do (format stream ",~D" xtick))
-                 (format stream "}"))
-               (format stream "~%]~%")
-               ;; worst case size
-               (format stream "\\addplot[line width=0.8pt,style=densely dotted,color=blue,mark=*] coordinates {~%")
-               (dolist (plist data)
-                 (destructuring-bind (&key num-vars counts &allow-other-keys) plist
-                   (when (<= num-vars max)
-                     (format stream "(~D,~D)~%"
-                             num-vars
-                             (reduce #'max counts :key #'car :initial-value 0)))))
-               (format stream "};~%")
-               ;; average size
-               (format stream "\\addplot[color=teal,mark=triangle] coordinates {~%")
-               (dolist (plist data)
-                 (destructuring-bind (&key num-vars average-size &allow-other-keys) plist
-                   (when (<= num-vars max)
-                     (format stream "(~D,~D)~%"
-                             num-vars
-                             (coerce average-size 'float)))))
-               (format stream "};~%")
-               ;; median
-               (format stream "\\addplot[line width=0.8pt,style=dashed,color=greeny,mark=diamond] coordinates {~%")
-               (dolist (plist data)
-                 (destructuring-bind (&key num-vars median &allow-other-keys) plist
-                   (when (<= num-vars max)
-                     (format stream "(~D,~D)~%"
-                             num-vars
-                             median))))
-               (format stream "};~%")
-               (format stream "\\legend{Worst case, Average, Median}~%")
-               (format stream "\\end{axis}~%")
-               (format stream "\\end{tikzpicture}~%"))
+               (tikzpicture stream
+                            "generated by CL function average-plot"
+                            (list (if logy
+                                      '("ymode" "log")
+                                      '("ymin" "0"))
+                                  "ymajorgrids"
+                                  "yminorgrids"
+                                  "xmajorgrids"
+                                  '("xlabel" "Number of variables")
+                                  '("ylabel" "ROBDD size")
+                                  '("legend style" "{at={(0,1)},anchor=north west,font=\\tiny}")
+                                  (when xticks
+                                    (list "xtick"
+                                          (format nil "{~A}"
+                                                  (join-strings "," (list* "0" "1" (loop for xtick from 2
+                                                                                           to (reduce (lambda (max item)
+                                                                                                        (max max (getf item :num-vars)))
+                                                                                                      (cdr data)
+                                                                                                      :initial-value (getf (car data) :num-vars))
+                                                                                         collect (format nil "~D" xtick))))))))
+                            (lambda ()
+                              (addplot stream
+                                       "worst case size"
+                                       '(("line width" "0.8pt")
+                                         ("style" "densely dotted")
+                                         ("color" "blue")
+                                         ("mark" "*"))
+                                       "(~D,~D)"
+                                       (mapcan (lambda (plist)
+                                                 (destructuring-bind (&key num-vars counts &allow-other-keys) plist
+                                                   (when (<= num-vars max)
+                                                     (list (list num-vars
+                                                                 (reduce #'max counts :key #'car :initial-value 0))))))
+                                               data))
+                              (addplot stream
+                                       "average size"
+                                       '(("color" "teal")
+                                         ("mark" "triangle"))
+                                       "(~D,~D)"
+                                       (mapcan (lambda (plist)
+                                                 (destructuring-bind (&key num-vars average-size &allow-other-keys) plist
+                                                   (when (<= num-vars max)
+                                                     (list (list num-vars
+                                                                 (coerce average-size 'float))))))
+                                               data))
+                              (addplot stream
+                                       "median size"
+                                       '(("line width" "0.8pt")
+                                         ("style" "dashed")
+                                         ("color" "greeny")
+                                         ("mark" "diamond"))
+                                       "(~D,~D)"
+                                       (mapcan (lambda (plist)
+                                                 (destructuring-bind (&key num-vars median &allow-other-keys) plist
+                                                   (when (<= num-vars max)
+                                                     (list (list num-vars median)))))
+                                               data))
+                              (format stream "\\legend{Worst case, Average, Median}~%"))))
              (efficiency-plot (stream &key (exponent 1) (data (get-data exponent)))
                (flet ((residual-compression-ratio (value num-vars)
                         (/ value (1- (expt 2.0 (1+ num-vars))))))
-                 (format stream "%Residual compression ratio plot~%")
-                 (format stream "\\begin{tikzpicture}~%")
-                 (format stream "\\begin{axis}[~% ymin=0,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xlabel=Number of variables,~% ylabel=Residual compression ratio,~% legend style={at={(1,1)},anchor=north east,font=\tiny},~%")
-                 (format stream " ytick={0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0},~%")
-                 (format stream " xtick={0,1")
-                 (loop for xtick from 2
-                         to (reduce (lambda (max item)
-                                      (max max (getf item :num-vars)))
-                                    (cdr data)
-                                    :initial-value (getf (car data) :num-vars))
-                       do (format stream ",~D" xtick))
-                 (format stream "}~%]~%")
-                 ;; worst case size
-                 (format stream "%%worst case~%")
-                 (format stream "\\addplot[line width=0.8pt,style=densely dotted,color=blue,mark=*] coordinates {~%")
-                 (dolist (plist data)
-                   (destructuring-bind (&key num-vars counts &allow-other-keys) plist
-                     (format stream "(~D , ~D)~%"
-                             num-vars
-                             (residual-compression-ratio (reduce #'max counts :key #'car :initial-value 0.0)
-                                                         num-vars))))
-                 (format stream "};~%")
-                 ;; average size
-                 (format stream "%%average~%")
-                 (format stream "\\addplot[color=teal,mark=triangle] coordinates {~%")
-                 (dolist (plist data)
-                   (destructuring-bind (&key num-vars average-size &allow-other-keys) plist
-                     (format stream "(~D , ~D)~%"
-                             num-vars
-                             (residual-compression-ratio (coerce average-size 'float) num-vars))))
-                 (format stream "};~%")
-                 ;; median
-                 (format stream "%%median~%")
-                 (format stream "\\addplot[line width=0.8pt,style=dashed,color=greeny,mark=diamond] coordinates {~%")
-                 (dolist (plist data)
-                   (destructuring-bind (&key num-vars median &allow-other-keys) plist
-                     (format stream "(~D , ~D)~%"
-                             num-vars
-                             (residual-compression-ratio median num-vars))))
-                 (format stream "};~%")
-                 (format stream "\\legend{Worst case, Average, Median}~%")
-                 (format stream "\\end{axis}~%")
-                 (format stream "\\end{tikzpicture}~%")))
-             (size-plots (stream   &key (max 19) (logx t) (mark t) (colors colors) ((:exponent given-exponent) 1))
+                 (tikzpicture stream
+                              "Residual compression ratio plot"
+                              (list '("ymin" 0)
+                                    "ymajorgrids"
+                                    "yminorgrids"
+                                    "xmajorgrids"
+                                    '("xlabel" "Number of variables")
+                                    '("ylabel" "Residual compression ratio")
+                                    '("legend style" "{at={(1,1)},anchor=north east,font=\\tiny}")
+                                    '("ytick" "{0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0}")
+                                    (list "xtick"
+                                          (format nil "{~A}"
+                                                  (join-strings "," (list* "0" "1"
+                                                                           (loop for xtick from 2
+                                                                                   to (reduce (lambda (max item)
+                                                                                                (max max (getf item :num-vars)))
+                                                                                              (cdr data)
+                                                                                              :initial-value (getf (car data) :num-vars))
+                                                                                 collect (format nil "~D" xtick)))))))
+                              (lambda ()
+                                (addplot stream
+                                         "worst case"
+                                         '(("line width" "0.8pt")
+                                           ("style" "densely dotted")
+                                           ("color" "blue")
+                                           ("mark" "*"))
+                                         "(~D , ~D)"
+                                         (mapcar (lambda (plist)
+                                                   (destructuring-bind (&key num-vars counts &allow-other-keys) plist
+                                                     (list num-vars
+                                                           (residual-compression-ratio (reduce #'max counts :key #'car :initial-value 0.0)
+                                                                                       num-vars))))
+                                                 data))
+                                (addplot stream
+                                         "average size"
+                                         '(("color" "teal")
+                                           ("mark" "triangle"))
+                                         "(~D , ~D)"
+                                         (mapcar (lambda (plist)
+                                                   (destructuring-bind (&key num-vars average-size &allow-other-keys) plist
+                                                     (list num-vars
+                                                           (residual-compression-ratio (coerce average-size 'float) num-vars))))
+                                                 data))
+                                (addplot stream
+                                         "median"
+                                         '(("line width" "0.8pt")
+                                           ("style" "dashed")
+                                           ("color" "greeny")
+                                           ("mark" "diamond"))
+                                         "(~D , ~D)"
+                                         (mapcar (lambda (plist)
+                                                   (destructuring-bind (&key num-vars median &allow-other-keys) plist
+                                                     (list num-vars
+                                                           (residual-compression-ratio median num-vars))))
+                                                 data))
+                                (format stream "\\legend{Worst case, Average, Median}~%")))))
+             (size-plots (stream &key (max 19) (logx t) (mark t) (colors colors) ((:exponent given-exponent) 1) &aux legend)
                (declare (type unsigned-byte given-exponent))
-               (format stream "% normalized size plots~%")
-               (format stream "\\begin{tikzpicture}~%")
-               (format stream "\\begin{axis}[~%")
-               (when logx
-                 (format stream " xmode=log,~%"))
-               (format stream " xlabel=BDD Size,~% ymajorgrids,~% yminorgrids,~% xmajorgrids,~% xminorgrids,~% ylabel=Probability,~% legend style={font=\\tiny,at={(1,0)},anchor=south west},~% label style={font=\\tiny}~%]~%")
-
-               
-               (dolist (datum data)
-                 (destructuring-bind (&key num-vars ((:exponent this-exponent) 1) counts &allow-other-keys) datum
-                   (declare (type unsigned-byte this-exponent))
-                   (when (and (> num-vars 1)
-                              (= this-exponent given-exponent)
-                              (<= num-vars max))
-                     (push (format nil "Size with ~D variables" num-vars) legend)
-                     (format stream "\\addplot~A[color=~A] coordinates {~%"
-                             (if mark "+" "")
-                             (cond
-                               ((null mark)
-                                "black")
-                               ((pop colors))
-                               (t
-                                "black")))
-                     (dolist (xy counts)
-                       (format stream "  (~D,~A)~%" (car xy) (cadr xy)))
-                     (format stream "};~%"))))
-               
-               (format stream "\\legend{")
-               (let ((first t))
-                 (dolist (label (reverse legend))
-                   (unless first
-                     (format stream ","))
-                   (format stream "~S" label)
-                   (setf first nil)))
-               (format stream "}~%")
-               (format stream "\\end{axis}~%")
-               (format stream "\\end{tikzpicture}~%")))
+               (tikzpicture stream
+                             "normalized size plots"
+                             (list (when logx
+                                     '("xmode" "log"))
+                                   '("xlabel" "BDD Size")
+                                   "ymajorgrids"
+                                   "yminorgrids"
+                                   "xmajorgrids"
+                                   "xminorgrids"
+                                   '("ylabel" "Probability")
+                                   '("legend style" "{font=\\tiny,at={(1,0)},anchor=south west}")
+                                   '("label style" "{font=\\tiny}"))
+                             (lambda ()
+                               (dolist (datum data)
+                                 (destructuring-bind (&key num-vars ((:exponent this-exponent) 1) counts &allow-other-keys) datum
+                                   (declare (type unsigned-byte this-exponent))
+                                   (when (and (> num-vars 1)
+                                              (= this-exponent given-exponent)
+                                              (<= num-vars max))
+                                     (let ((label (format nil "Size with ~D variables" num-vars)))
+                                       (push label legend)
+                                       (addplot stream
+                                                label
+                                                (list (list "color" (cond
+                                                                      ((null mark)
+                                                                       "black")
+                                                                      ((pop colors))
+                                                                      (t
+                                                                       "black"))))
+                                                "  (~D,~A)"
+                                                counts
+                                                :addplot (if mark "addplot+" "addplot") )))))
+                               (format stream "\\legend{")
+                               (let ((first t))
+                                 (dolist (label (reverse legend))
+                                   (unless first
+                                     (format stream ","))
+                                   (format stream "~S" label)
+                                   (setf first nil)))
+                               (format stream "}~%")))))
 
       (with-open-file (stream (format nil "~A/bdd-samples-table.ltx" prefix)
                               :direction :output :if-does-not-exist :create :if-exists :supersede)
@@ -778,10 +870,10 @@ than INTERVAL number of seconds"
                       (= num-vars (getf plist :num-vars)))))
           (with-open-file (stream sigma-name :direction :output :if-does-not-exist :create :if-exists :supersede)
             (format t "writing to ~A~%" stream)
-            (kolmogorov-sigma-plot stream :data data :logy nil))
+            (kolmogorov-sigma-plot stream num-vars :data data :logy nil))
           (with-open-file (stream average-name :direction :output :if-does-not-exist :create :if-exists :supersede)
             (format t "writing to ~A~%" stream)
-            (kolmogorov-average-plot stream :data data :logy nil)))))
+            (kolmogorov-average-plot stream num-vars :data data :logy nil)))))
     data))
 
 (defun all-possible-bdds (prefix vars &aux (num-vars (length vars)))
