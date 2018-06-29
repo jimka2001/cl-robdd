@@ -227,6 +227,19 @@ than INTERVAL number of seconds"
     (t
      (print-it bdd-sizes-file)))))
 
+(defun random-selection (data fraction)
+  "DATA: list of objects
+FRACTION: number between 0 and 1 to indicate which portion of the given population to choose from"
+  (declare (type (float 0.0 1.0) fraction)
+           (type list data))
+  (let* ((n (length data))
+         (arr (make-array n :initial-contents data)))
+    (loop :for i :from 0 :below n
+          :for j = (random n)
+          :do (rotatef (aref arr i) (aref arr j)))
+    (loop :for i :from 0 :below (truncate (* n fraction))
+          :collect (aref arr i))))
+
 (defun generate-sample-files (bdd-sizes-file min-exponent max-exponent)
   ;; e.g., bdd-sizes-file = (format nil "/Users/jnewton/analysis/bdd-sizes-unique-~D.2-columns" n)
   ;; e.g., min-exponent = 2
@@ -235,23 +248,25 @@ than INTERVAL number of seconds"
              (values (read stream nil nil nil)
                      (read stream nil nil nil)
                      (read stream nil nil nil)))
-           (gen-sample (exponent read-file &aux (eof nil) (write-file (format nil "~A-exponent-~D" bdd-sizes-file exponent)))
+           (read-samples (&aux triples (eof nil))
+             (with-open-file (rstream bdd-sizes-file :direction :input :if-does-not-exist :error)
+               (while (not eof)
+                 (multiple-value-bind (num-vars bdd-count index) (read-3 rstream)
+                   (cond
+                     ((and num-vars bdd-count index)
+                      (push (list num-vars bdd-count index) triples))
+                     (t
+                      (setf eof t))))))
+             triples)
+           (gen-sample (exponent samples &aux (write-file (format nil "~A-exponent-~D" bdd-sizes-file exponent)))
              (when (<= exponent max-exponent)
-               (with-open-file (rstream read-file :direction :input :if-does-not-exist :error)
-                 (with-open-file (wstream write-file :direction :output :if-exists :supersede :if-does-not-exist :create)
-                   (format t "writing to ~A~%" wstream)
-                   ;; copy 3, then skip 3 if possible
-                   (while (not eof)
-                     (multiple-value-bind (num-vars bdd-count index) (read-3 rstream)
-                       (cond
-                         ((and num-vars bdd-count index)
-                          (format wstream "~A ~A ~A~%" num-vars bdd-count index)
-                          ;; now skip 3
-                          (read-3 rstream))
-                         (t
-                          (setf eof t)))))))
-               (gen-sample (1+ exponent) write-file))))
-    (gen-sample min-exponent bdd-sizes-file)))
+               (with-open-file (wstream write-file :direction :output :if-exists :supersede :if-does-not-exist :create)
+                 (format t "writing to ~A~%" wstream)
+                 (dolist (triple samples)
+                   (destructuring-bind (num-vars bdd-count index) triple
+                     (format wstream "~A ~A ~A~%" num-vars bdd-count index))))
+               (gen-sample (1+ exponent) (random-selection samples 0.5)))))
+    (gen-sample min-exponent (random-selection (read-samples) 0.5))))
 
 (defun read-counts-from-log (target-num-vars bdd-sizes-file &key (exponent 1))
   (with-open-file (log-file (case exponent
