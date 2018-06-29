@@ -227,16 +227,43 @@ than INTERVAL number of seconds"
     (t
      (print-it bdd-sizes-file)))))
 
+(defun generate-sample-files (bdd-sizes-file min-exponent max-exponent)
+  ;; e.g., bdd-sizes-file = (format nil "/Users/jnewton/analysis/bdd-sizes-unique-~D.2-columns" n)
+  ;; e.g., min-exponent = 2
+  ;; e.g., max-exponent = 8
+  (labels ((read-3 (stream)
+             (values (read stream nil nil nil)
+                     (read stream nil nil nil)
+                     (read stream nil nil nil)))
+           (gen-sample (exponent read-file &aux (eof nil) (write-file (format nil "~A-exponent-~D" bdd-sizes-file exponent)))
+             (when (<= exponent max-exponent)
+               (with-open-file (rstream read-file :direction :input :if-does-not-exist :error)
+                 (with-open-file (wstream write-file :direction :output :if-exists :supersede :if-does-not-exist :create)
+                   (format t "writing to ~A~%" wstream)
+                   ;; copy 3, then skip 3 if possible
+                   (while (not eof)
+                     (multiple-value-bind (num-vars bdd-count index) (read-3 rstream)
+                       (cond
+                         ((and num-vars bdd-count index)
+                          (format wstream "~A ~A ~A~%" num-vars bdd-count index)
+                          ;; now skip 3
+                          (read-3 rstream))
+                         (t
+                          (setf eof t)))))))
+               (gen-sample (1+ exponent) write-file))))
+    (gen-sample min-exponent bdd-sizes-file)))
+
 (defun read-counts-from-log (target-num-vars bdd-sizes-file &key (exponent 1))
-  (with-open-file (log-file bdd-sizes-file
+  (with-open-file (log-file (case exponent
+                              ((1) bdd-sizes-file)
+                              (t (format nil "~A-exponent-~D" bdd-sizes-file exponent)))
                             :direction :input
                             :if-does-not-exist :error)
     (let (num-vars bdd-size samples)
       (while (setf num-vars (read log-file nil nil nil))
         ;; read the bdd-size integer
         (setf bdd-size (read log-file t nil nil))
-        (when (and (= target-num-vars num-vars)
-                   (zerop (random (expt 2 (1- exponent)))))
+        (when (= target-num-vars num-vars)
           (push bdd-size samples))
         ;; read and ignore the base-36 integer
         ;; read to end of line
