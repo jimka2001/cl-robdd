@@ -527,7 +527,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                      :do (let ((sexp-file-name (format nil "~A/bdd-distribution-data-~D.sexp" prefix n)))
                            (with-open-file (sexp-file sexp-file-name :direction :input :if-does-not-exist :error)
                              (let ((sexp-plist (read sexp-file nil nil nil)))
-                               (format stream "~D & ~D & ~D\\\\~%"
+                               (format stream "~D & ~:D & ~D\\\\~%" ;; ~:D prints with , separating 1000's
                                        n (getf sexp-plist :num-samples) (or (getf sexp-plist :unique-sizes)
                                                                             (length (getf sexp-plist :possible-sizes))))))))
                (format stream "\\hline~%")
@@ -548,6 +548,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                  (t
                   (error "unknown axis-option ~A" axis-option))))
              (tikzpicture (stream comment axis-options continuation)
+               ;; returns the values returned from CONTINUATION
                (declare (type (or null string) comment)
                         (type list axis-options)
                         (type (function () t) continuation))
@@ -556,9 +557,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (format stream "\\begin{tikzpicture}~%")
                (format stream "\\begin{axis}[~% ~A~%]~%"
                        (join-strings (format nil ",~% ") (mapcar  #'print-option (remove nil axis-options))))
-               (funcall continuation)
-               (format stream "\\end{axis}~%")
-               (format stream "\\end{tikzpicture}~%"))
+               (prog1 (funcall continuation)
+                 (format stream "\\end{axis}~%")
+                 (format stream "\\end{tikzpicture}~%")))
              (addplot (stream comment plot-options control-string points &key (addplot "addplot"))
                (declare (type (or null string) comment)
                         (type list plot-options)
@@ -572,9 +573,14 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                  (apply #'format stream control-string point)
                  (terpri stream))
                (format stream "};~%"))
-             (individual-plot (stream num-vars &key (plist (find-plist num-vars 1)) (counts (getf plist :counts))
+             (sqr (x)
+               (* x x))
+             (individual-plot (stream num-vars &key(include-normal-distribution nil) (plist (find-plist num-vars 1)) (counts (getf plist :counts))
+                                                 (comment nil)
                                                  (xlabel (lambda (num-vars)
                                                            (format nil "Node count for ~D variables" num-vars))))
+               (when comment
+                 (format stream "%~A~%" comment))
                ;; if exponent = 5, this means we only plot 1/(2^5= 1/32 of the points.
                (tikzpicture stream
                             (format nil "individual plot ~D vars" num-vars) ; comment
@@ -588,30 +594,49 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                              '("label style" "{font=\\large}")
                              '("tick label style" "{font=\\Large}"))
                             (lambda ()
-                              (addplot stream
-                                       nil ; no comment
-                                       '(("color" "blue")
-                                         ("mark" "*"))
-                                       "(~D,~Ae~A) % ~D"
-                                       (destructuring-bind (alpha beta) (getf plist :density)
-                                         ;; density is in form (alpha beta) meaning alpha * 10 ^ beta
-                                         (mapcan (lambda (item)
-                                                   (destructuring-bind (bdd-size normalized number-of-bdds) item
-                                                     (declare (ignore normalized))
-                                                     (cond
-                                                       ((and (<= number-of-bdds 2)
-                                                             (> num-vars 10))
-                                                        nil)
-                                                       (t
-                                                        ;; normalized = normalized number of bdds of this size as a fraction of total sample
-                                                        (destructuring-bind (x y) (sci-notation (/ number-of-bdds alpha))
-                                                          ;;   extrapolated estimate = normalized / density
-                                                          ;;                         = normalized/alpha   * 10 ^ beta
-                                                          ;;   if normalized/alpha   = x*10^y
-                                                          ;;   then         estimate = x * 10 ^(y - beta)
-                                                          (list (list bdd-size (float x 1.0) (- y beta) number-of-bdds)))))))
-                                                 counts)))
-                              (format stream "\\legend{}~%"))))
+                              (destructuring-bind (&key num-samples ((:density (alpha beta)) '(0 0)) sigma ((:average-size mu)) &allow-other-keys) plist
+                                (flet ((to-sci-notation (estimate)
+                                         (destructuring-bind (a b) (sci-notation (/ estimate alpha))
+                                           ;;   extrapolated estimate = normalized / density
+                                           ;;                         = normalized/alpha   * 10 ^ beta
+                                           ;;   if normalized/alpha   = a*10^b
+                                           ;;   then         estimate = a * 10 ^(b - beta)
+                                           (list (float a 1.0) (- b beta)))))
+
+                                  (let* ((sigma^2 (sqr sigma))
+                                         (points 
+                                           ;; density is in form (alpha beta) meaning alpha * 10 ^ beta
+                                           (mapcan (lambda (item)
+                                                     (destructuring-bind (bdd-size normalized number-of-bdds) item
+                                                       (declare (ignore normalized))
+                                                       (cond
+                                                         ((and (<= number-of-bdds 2)
+                                                               (> num-vars 10))
+                                                          nil)
+                                                         (t
+                                                          ;; normalized = normalized number of bdds of this size as a fraction of total sample
+                                                          (destructuring-bind (a b) (to-sci-notation number-of-bdds)
+                                                            (list (list bdd-size a b number-of-bdds)))))))
+                                                   counts)))
+                                    (addplot stream
+                                             nil ; no comment
+                                             '(("color" "blue")
+                                               ("mark" "*"))
+                                             "(~D,~Ae~A) % ~D"
+                                             points)
+                                    (when include-normal-distribution
+                                      (addplot stream
+                                               "theoretical normal distrubution"
+                                               '(("color" "orange"))
+                                               "(~D,~Ae~A)"
+                                               (mapcar (lambda (xy &aux (x (car xy)))
+                                                         (let ((normalized (* (/ 1.0 (sqrt (* 2 pi sigma^2)))
+                                                                              (exp (- (/ (sqr (- x mu))
+                                                                                         (* 2 sigma^2)))))))
+                                                           (destructuring-bind (a b) (to-sci-notation (* num-samples normalized))
+                                                             (list x a b))))
+                                                       points)))
+                                    (format stream "\\legend{}~%")))))))
              (sigma-plot (stream &key (max max) (logy t) (xmarks nil) (exponent 1) (data (get-data exponent)))
                (tikzpicture stream
                             "sigma plot"
@@ -658,7 +683,10 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                   "yminorgrids"
                                   "xmajorgrids"
                                   (list "xlabel" (format nil "{Sample size for \\numvars=~A}" num-vars)))
-                            (lambda ()
+                            (lambda (&aux (data (sort (copy-list data) #'< :key (getter :num-samples)))
+                                       (min-value (getf (car data) :sigma))
+                                       (max-value min-value)
+                                       (end-value (getf (car (last data)) :sigma)))
                               (addplot stream
                                        nil ; no comment
                                        '(("color" "blue")
@@ -666,8 +694,20 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                        "(~D,~D)"
                                        (mapcar (lambda (plist)
                                                  (destructuring-bind (&key num-samples sigma &allow-other-keys) plist
+                                                   (setf min-value (min min-value (coerce sigma 'float))
+                                                         max-value (max max-value (coerce sigma 'float)))
                                                    (list num-samples (coerce sigma 'float))))
-                                               (sort (copy-list data) #'< :key (getter :num-samples)))))))
+                                               data))
+                              (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
+                                (format stream "% min-value = ~A~%" min-value) ; min
+                                (format stream "% max-value = ~A~%" max-value) ; max
+                                (format stream "% end-value = ~A~%" end-value) ; final
+                                (format stream "% excursion = ~A%~%" excursion-percent)
+                                (list :num-vars num-vars
+                                      :min-value min-value
+                                      :max-value max-value
+                                      :end-value end-value
+                                      :excursion excursion-percent)))))
              (kolmogorov-average-plot (stream num-vars &key (logx t) (logy t) data)
                (tikzpicture stream
                             "average with successively more point samples"
@@ -680,7 +720,10 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                   "yminorgrids"
                                   "xmajorgrids"
                                   (list "xlabel" (format nil "{Sample size for \\numvars=~A}" num-vars)))
-                            (lambda ()
+                            (lambda (&aux (data (sort (copy-list data) #'< :key (getter :num-samples)))
+                                       (min-value (getf (car data) :average-size))
+                                       (max-value min-value)
+                                       (end-value (getf (car (last data)) :average-size)))
                               (addplot stream
                                        nil ; no comment
                                        '(("color" "blue")
@@ -688,8 +731,20 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                        "(~D,~D)"
                                        (mapcar (lambda (plist)
                                                  (destructuring-bind (&key num-samples average-size &allow-other-keys) plist
+                                                   (setf min-value (min min-value (coerce average-size 'float))
+                                                         max-value (max max-value (coerce average-size 'float)))
                                                    (list num-samples (coerce average-size 'float))))
-                                               (sort (copy-list data) #'< :key (getter :num-samples)))))))                            
+                                               data))
+                              (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
+                                (format stream "% min-value = ~A~%" (float min-value 1.0)) ; min
+                                (format stream "% max-value = ~A~%" (float max-value 1.0)) ; max
+                                (format stream "% end-value = ~A~%" (float end-value 1.0)) ; final
+                                (format stream "% excursion = ~A%~%" excursion-percent)
+                                (list :num-vars num-vars
+                                      :min-value min-value
+                                      :max-value max-value
+                                      :end-value end-value
+                                      :excursion excursion-percent)))))
              (average-plot (stream &key (max max) (logy t) (xticks t) (exponent 1) (data (get-data exponent)))
                (tikzpicture stream
                             "generated by CL function average-plot"
@@ -849,7 +904,24 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                      (format stream ","))
                                    (format stream "~S" label)
                                    (setf first nil)))
-                               (format stream "}~%")))))
+                               (format stream "}~%"))))
+             (write-excursion-summary (stream average-excursion-summary sigma-excursion-summary)
+               (format stream "\\begin{tabular}{crr}~%")
+               (format stream "\\hline~%")
+               (format stream "$\numvars$~%")
+               (format stream "& $\\frac{{\\mu_{\\numvars}}_{max} - {\\mu_{\\numvars}}_{min}}{{\\mu_{\\numvars}}_{final}} \\times 100\\%$~%")
+               (format stream "& $\\frac{{\\sigma_{\\numvars}}_{max} - {\\sigma_{\\numvars}}_{min}}{{\\sigma_{\\numvars}}_{final}} \\times 100\\%$ \\\\~%")
+               (format stream "\\hline~%")
+               (loop for sigma-excursion :in sigma-excursion-summary
+                     for average-excursion :in average-excursion-summary
+                     do (format stream "~A~%" (getf sigma-excursion :num-vars))
+                     do (dolist (summary (list average-excursion sigma-excursion))
+                          (destructuring-bind (&key max-value min-value end-value excursion &allow-other-keys) summary
+                            (format stream "& $\\frac{~,3f - ~,3f}{~,3f} = ~,2f\\%$~%"
+                                    (float max-value 1.0) (float min-value 1.0) (float end-value 1.0) (float excursion 1.0))))
+                     do (format stream "\\\\~%"))
+               (format stream "\\hline~%")
+               (format stream "\\end{tabular}~%")))
 
       (with-open-file (stream (format nil "~A/bdd-samples-table.ltx" prefix)
                               :direction :output :if-does-not-exist :create :if-exists :supersede)
@@ -888,31 +960,51 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                    (with-open-file (stream (format nil "~A/bdd-distribution-~D.ltxdat" prefix num-vars)
                                            :direction :output :if-does-not-exist :create :if-exists :supersede)
                      (format t "writing to ~A~%" stream)
-                     (individual-plot stream num-vars :counts (getf (find-plist num-vars 1) :counts)))
+                     (individual-plot stream num-vars :include-normal-distribution nil
+                                                      :counts (getf (find-plist num-vars 1) :counts)))
                    (warn "no data to plot, skipping ~A" (format nil "~A/bdd-distribution-~D.ltxdat" prefix num-vars))))
-      (dolist (num-vars '(8 11 18))
-        (dolist (exponent '(1 2 3 4 5 6 7 8))
-          (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D.ltxdat" prefix exponent num-vars)))
-            (if (getf (find-plist num-vars exponent) :counts)
-                (with-open-file (stream fname
-                                        :direction :output :if-does-not-exist :create :if-exists :supersede)
-                  (format t "writing to ~A~%" stream)
-                  (individual-plot stream num-vars
-                                   :counts (getf (find-plist num-vars exponent) :counts)
-                                   :xlabel (lambda (num-vars)
-                                             (format nil "~D-var distrib. w/ ~D samples"
-                                                     num-vars (getf (find-plist num-vars exponent) :num-samples)))))
-                (warn "no data to plot ~A~%" fname))))
-        (let ((sigma-name (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
-              (average-name (format nil "~A/average-kolmogorov-~D.ltxdat" prefix num-vars))
-              (data (setof plist data
-                      (= num-vars (getf plist :num-vars)))))
-          (with-open-file (stream sigma-name :direction :output :if-does-not-exist :create :if-exists :supersede)
-            (format t "writing to ~A~%" stream)
-            (kolmogorov-sigma-plot stream num-vars :data data :logy nil))
-          (with-open-file (stream average-name :direction :output :if-does-not-exist :create :if-exists :supersede)
-            (format t "writing to ~A~%" stream)
-            (kolmogorov-average-plot stream num-vars :data data :logy nil)))))
+      (let (average-excursion-summary
+            sigma-excursion-summary)
+        (dolist (num-vars '(8 11 18))
+          (dolist (exponent '(1 2 3 4 5 6 7 8))
+            (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D.ltxdat" prefix exponent num-vars)))
+              (if (getf (find-plist num-vars exponent) :counts)
+                  (with-open-file (stream fname
+                                          :direction :output :if-does-not-exist :create :if-exists :supersede)
+                    (format t "writing to ~A~%" stream)
+                    (individual-plot stream num-vars
+                                     :counts (getf (find-plist num-vars exponent) :counts)
+                                     :xlabel (lambda (num-vars)
+                                               (format nil "~D-var distrib. w/ ~D samples"
+                                                       num-vars (getf (find-plist num-vars exponent) :num-samples)))))
+                  (warn "no data to plot ~A~%" fname)))
+            (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D+normal.ltxdat" prefix exponent num-vars)))
+              (if (getf (find-plist num-vars exponent) :counts)
+                  (with-open-file (stream fname
+                                          :direction :output :if-does-not-exist :create :if-exists :supersede)
+                    (format t "writing to ~A~%" stream)
+                    (individual-plot stream num-vars
+                                     :include-normal-distribution t
+                                     :counts (getf (find-plist num-vars exponent) :counts)
+                                     :xlabel (lambda (num-vars)
+                                               (format nil "~D-var distrib. w/ ~D samples"
+                                                       num-vars (getf (find-plist num-vars exponent) :num-samples)))))
+                  (warn "no data to plot ~A~%" fname))))
+          (let ((sigma-name (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
+                (average-name (format nil "~A/average-kolmogorov-~D.ltxdat" prefix num-vars))
+                (data (setof plist data
+                        (= num-vars (getf plist :num-vars)))))
+            (with-open-file (stream sigma-name :direction :output :if-does-not-exist :create :if-exists :supersede)
+              (format t "writing to ~A~%" stream)
+              (push (kolmogorov-sigma-plot stream num-vars :data data :logy nil)
+                    sigma-excursion-summary))
+            (with-open-file (stream average-name :direction :output :if-does-not-exist :create :if-exists :supersede)
+              (format t "writing to ~A~%" stream)
+              (push (kolmogorov-average-plot stream num-vars :data data :logy nil)
+                    average-excursion-summary))))
+        (with-open-file (stream (format nil "~A/excursion-summary.ltxdat" prefix) :direction :output :if-does-not-exist :create :if-exists :supersede)
+          (format t "writing to ~A~%" stream)
+          (write-excursion-summary stream average-excursion-summary sigma-excursion-summary))))
     data))
 
 (defun all-possible-bdds (prefix vars &aux (num-vars (length vars)))
