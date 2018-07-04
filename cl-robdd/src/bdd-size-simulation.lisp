@@ -126,7 +126,7 @@ Why?  Because the truth table of this function is:
                                                       (list (list high-index (- high-count low-count))))
                                                      (t
                                                       (list (list low-index (- low-count high-count)))))
-                                         (set-difference a-list couple :test #'eq)
+                                         (copy-list (set-difference a-list couple :test #'eq))
                                          #'<
                                          :key #'car))))))
     (values (caar a-list) a-list)))
@@ -154,7 +154,6 @@ than INTERVAL number of seconds"
                 (total-seconds (/ elapsed-seconds fraction-done))
                 (remaining-seconds (- total-seconds elapsed-seconds)))
            (funcall announce iteration (coerce remaining-seconds 'double-float))))))))
-
 (defun calc-plist (histogram num-vars randomp &key (exponent 1))
   (declare (type cons histogram)
            (type fixnum num-vars))
@@ -185,7 +184,6 @@ than INTERVAL number of seconds"
            (density (/ num-samples (1+ ffff))))
 
       (let (sum average-size median)
-        (declare #+sbcl (notinline sort))
         (setf sum (reduce #'+ histogram :initial-value 0 :key #'cadr))
         (setf average-size (/ (reduce (lambda (old item)
                                         (destructuring-bind (sample occurances) item
@@ -216,7 +214,19 @@ than INTERVAL number of seconds"
 (defun log-bdd-count (bdd-sizes-file num-vars bdd-count truth-table)
   (declare (type unsigned-byte bdd-count truth-table))
   (flet ((print-it (stream)
-           (format stream "~A ~A ~36R~%" num-vars bdd-count truth-table)))
+           ;; we print a line consisting of 4 items
+           ;; 1. the number of Boolean variables in the sample
+           ;; 2. the count of the the size of the corresponding ROBDD
+           ;; 3. the base 36 representation of the integer representing the truth table of the ROBDD
+           ;; 4. a semi-colon
+           ;; The purpose of the semi-colon is to be able to recognize incomplete lines.
+           ;;    The data is typically calucated and printed on a compute cluster, and from
+           ;;    time to time the jobs are killed.  It is unlikely, but possible that a job
+           ;;    gets killed in the middle of this call to format.   The
+           ;;    COMBINE-BDD-SIZE-RESULTS identifies such lines and refuses to copy
+           ;;    them.
+           (format stream "~A ~A ~36R ;~%" num-vars bdd-count truth-table)
+           (finish-output stream)))
     (typecase bdd-sizes-file
     (string
      (with-open-file (log-file bdd-sizes-file
@@ -373,7 +383,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
         (maphash (lambda (&rest args)
                    (push args histogram))
                  hash)
-        (setf histogram (sort histogram #'< :key #'car))
+        (setf histogram (sort (copy-list histogram) #'< :key #'car))
         (list* :seconds (if read-from-log-p
                             -1
                             (float (/ (- (get-internal-real-time) start-time) internal-time-units-per-second)))
@@ -446,7 +456,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 
 (defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1))
 
-(defun read-bdd-distribution-data (prefix &key (min 1) (max (length *bdd-boolean-variables*)) (kolmogorov '(8 11 18)) vars)
+(defun read-bdd-distribution-data (prefix &key (min 1) (max (length *bdd-boolean-variables*)) (kolmogorov '(8 11 16 17 18)) vars)
   (declare (ignore vars))
   (flet ((read-1-file (data-file exponent)
            (with-open-file (stream data-file
@@ -500,7 +510,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
   (ensure-directories-exist prefix)
   (let* ((colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "teal" "orange"))
          (data (if re-run
-                   (sort (measure-bdd-sizes vars num-samples min max) #'< :key (getter :num-vars))
+                   (sort (copy-list (measure-bdd-sizes vars num-samples min max)) #'< :key (getter :num-vars))
                    (read-bdd-distribution-data prefix :vars vars))))
     (when re-run
       (write-bdd-distribution-data data prefix))
@@ -575,7 +585,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (format stream "};~%"))
              (sqr (x)
                (* x x))
-             (individual-plot (stream num-vars &key(include-normal-distribution nil) (plist (find-plist num-vars 1)) (counts (getf plist :counts))
+             (individual-plot (stream num-vars &key (include-normal-distribution nil) (clip nil) (plist (find-plist num-vars 1)) (counts (getf plist :counts))
                                                  (comment nil)
                                                  (xlabel (lambda (num-vars)
                                                            (format nil "Node count for ~D variables" num-vars))))
@@ -611,7 +621,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                        (declare (ignore normalized))
                                                        (cond
                                                          ((and (<= number-of-bdds 2)
-                                                               (> num-vars 10))
+                                                               clip)
                                                           nil)
                                                          (t
                                                           ;; normalized = normalized number of bdds of this size as a fraction of total sample
@@ -625,17 +635,19 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                              "(~D,~Ae~A) % ~D"
                                              points)
                                     (when include-normal-distribution
-                                      (addplot stream
-                                               "theoretical normal distrubution"
-                                               '(("color" "orange"))
-                                               "(~D,~Ae~A)"
-                                               (mapcar (lambda (xy &aux (x (car xy)))
-                                                         (let ((normalized (* (/ 1.0 (sqrt (* 2 pi sigma^2)))
-                                                                              (exp (- (/ (sqr (- x mu))
-                                                                                         (* 2 sigma^2)))))))
-                                                           (destructuring-bind (a b) (to-sci-notation (* num-samples normalized))
-                                                             (list x a b))))
-                                                       points)))
+                                      (let* ((x-min (reduce #'min points :key #'car))
+                                            (x-max (reduce #'max points :key #'car))
+                                            (x-step (/ (- x-max x-min) (length points) 4)))
+                                        (addplot stream
+                                                 "theoretical normal distrubution"
+                                                 '(("color" "orange"))
+                                                 "(~D,~Ae~A)"
+                                                 (loop :for x :from x-min :to x-max :by x-step
+                                                       :collect (let ((normalized (* (/ 1.0 (sqrt (* 2 pi sigma^2)))
+                                                                                (exp (- (/ (sqr (- x mu))
+                                                                                           (* 2 sigma^2)))))))
+                                                             (destructuring-bind (a b) (to-sci-notation (* num-samples normalized))
+                                                               (list x a b)))))))
                                     (format stream "\\legend{}~%")))))))
              (sigma-plot (stream &key (max max) (logy t) (xmarks nil) (exponent 1) (data (get-data exponent)))
                (tikzpicture stream
@@ -682,7 +694,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                   '("scaled y ticks" "false")
                                   "yminorgrids"
                                   "xmajorgrids"
-                                  (list "xlabel" (format nil "{Sample size for \\numvars=~A}" num-vars)))
+                                  (list "xlabel" (format nil "{Sample size M for \\numvars=~A}" num-vars)))
                             (lambda (&aux (data (sort (copy-list data) #'< :key (getter :num-samples)))
                                        (min-value (getf (car data) :sigma))
                                        (max-value min-value)
@@ -719,7 +731,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                   '("scaled y ticks" "false")
                                   "yminorgrids"
                                   "xmajorgrids"
-                                  (list "xlabel" (format nil "{Sample size for \\numvars=~A}" num-vars)))
+                                  (list "xlabel" (format nil "{Sample size M for \\numvars=~A}" num-vars)))
                             (lambda (&aux (data (sort (copy-list data) #'< :key (getter :num-samples)))
                                        (min-value (getf (car data) :average-size))
                                        (max-value min-value)
@@ -908,12 +920,14 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
              (write-excursion-summary (stream average-excursion-summary sigma-excursion-summary)
                (format stream "\\begin{tabular}{crr}~%")
                (format stream "\\hline~%")
-               (format stream "$\numvars$~%")
+               (format stream "$\\numvars$~%")
                (format stream "& $\\frac{{\\mu_{\\numvars}}_{max} - {\\mu_{\\numvars}}_{min}}{{\\mu_{\\numvars}}_{final}} \\times 100\\%$~%")
                (format stream "& $\\frac{{\\sigma_{\\numvars}}_{max} - {\\sigma_{\\numvars}}_{min}}{{\\sigma_{\\numvars}}_{final}} \\times 100\\%$ \\\\~%")
                (format stream "\\hline~%")
-               (loop for sigma-excursion :in sigma-excursion-summary
-                     for average-excursion :in average-excursion-summary
+               (loop for sigma-excursion :in (sort (copy-list sigma-excursion-summary) #'<
+                                                   :key (getter :num-vars))
+                     for average-excursion :in (sort (copy-list average-excursion-summary) #'<
+                                                     :key (getter :num-vars))
                      do (format stream "~A~%" (getf sigma-excursion :num-vars))
                      do (dolist (summary (list average-excursion sigma-excursion))
                           (destructuring-bind (&key max-value min-value end-value excursion &allow-other-keys) summary
@@ -961,11 +975,12 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                            :direction :output :if-does-not-exist :create :if-exists :supersede)
                      (format t "writing to ~A~%" stream)
                      (individual-plot stream num-vars :include-normal-distribution nil
+                                                      :clip (> num-vars 10)
                                                       :counts (getf (find-plist num-vars 1) :counts)))
                    (warn "no data to plot, skipping ~A" (format nil "~A/bdd-distribution-~D.ltxdat" prefix num-vars))))
       (let (average-excursion-summary
             sigma-excursion-summary)
-        (dolist (num-vars '(8 11 18))
+        (dolist (num-vars '(8 11 16 17 18))
           (dolist (exponent '(1 2 3 4 5 6 7 8))
             (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D.ltxdat" prefix exponent num-vars)))
               (if (getf (find-plist num-vars exponent) :counts)
@@ -974,6 +989,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                     (format t "writing to ~A~%" stream)
                     (individual-plot stream num-vars
                                      :counts (getf (find-plist num-vars exponent) :counts)
+                                     :clip t
                                      :xlabel (lambda (num-vars)
                                                (format nil "~D-var distrib. w/ ~D samples"
                                                        num-vars (getf (find-plist num-vars exponent) :num-samples)))))
@@ -985,6 +1001,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                     (format t "writing to ~A~%" stream)
                     (individual-plot stream num-vars
                                      :include-normal-distribution t
+                                     :clip t
                                      :counts (getf (find-plist num-vars exponent) :counts)
                                      :xlabel (lambda (num-vars)
                                                (format nil "~D-var distrib. w/ ~D samples"
@@ -1075,8 +1092,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                   (close (getf stream :stream))
                   (setf (getf stream :num-vars) num-vars
                         (getf stream :file) (format nil "~a/bdd-sizes-unique-~D.new"
-                                                            output-directory
-                                                            num-vars)
+                                                    output-directory
+                                                    num-vars)
                         (getf stream :stream) (open (getf stream :file)
                                                     :if-does-not-exist :create
                                                     :if-exists :append
@@ -1087,12 +1104,22 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (with-open-file (log-stream fname :direction :input :if-does-not-exist :error)
                  (let (num-vars)
                    (loop :while (setf num-vars (read log-stream nil nil nil))
-                         :do (let ((out-stream (stream-to num-vars)))
+                         :do (let* ((out-stream (stream-to num-vars))
+                                    ;; get file write position
+                                    (start-of-line (file-position out-stream)))
 			       (format out-stream "~D " num-vars)
 			       (let ((char (read-char log-stream nil nil nil)))
-				 (loop :while (not (member char '(#\Linefeed #\Return)))
+				 (loop :while (not (member char '(#\; #\Linefeed #\Return)))
 				       :do (write-char char out-stream)
-				       :do (setf char (read-char log-stream nil nil nil))))
-			       (terpri out-stream)))))))
+				       :do (setf char (read-char log-stream nil nil nil)))
+                                 ;; we have read to the first occurnace of either EOL or ;,
+                                 ;; if we found EOL before ; then then line is corrupt
+                                 ;; and we need to discard it.
+                                 (cond
+                                   ((char= char '#\;)
+                                    (warn "ignoring corrupted line")
+                                    (file-position out-stream start-of-line))
+                                   (t
+                                    (terpri out-stream))))))))))
       (mapcar #'process-file input-paths))
     (close (getf stream :stream))))
