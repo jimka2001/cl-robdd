@@ -284,6 +284,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                               (t (format nil "~A-exponent-~D" bdd-sizes-file exponent)))
                             :direction :input
                             :if-does-not-exist :error)
+    (format t "reading from ~A~%" log-file)
     (let (num-vars bdd-size samples)
       (while (setf num-vars (read log-file nil nil nil))
         ;; read the bdd-size integer
@@ -294,7 +295,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
         ;; read to end of line
         (let (char)
           (while (not (member char '(#\Linefeed #\Return)))
-            (setf char (read-char log-file nil nil nil)))))
+            (setf char (read-char log-file t nil nil)))))
+      (format t "finished reading from ~A~%" log-file)
       samples)))
 
 (defun bdd-count-nodes (bdd)
