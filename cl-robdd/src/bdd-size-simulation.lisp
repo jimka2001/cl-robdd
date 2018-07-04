@@ -1156,11 +1156,13 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
              (process-file (fname)
                (format t "processing ~D ~A~%" (decf num-files) fname)
                (with-open-file (log-stream fname :direction :input :if-does-not-exist :error)
-                 (let (num-vars)
+                 (let (num-vars (line-num 1))
                    (loop :while (setf num-vars (read log-stream nil nil nil))
                          :do (let* ((out-stream (stream-to num-vars))
                                     ;; get file write position
-                                    (start-of-line (file-position out-stream)))
+                                    ;;(start-of-line (file-position out-stream))
+                                    )
+                               
 			       (format out-stream "~D " num-vars)
 			       (let ((char (read-char log-stream nil nil nil)))
 				 (loop :while (not (member char '(#\; #\Linefeed #\Return)))
@@ -1171,9 +1173,11 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                  ;; and we need to discard it.
                                  (cond
                                    ((char= char '#\;)
-                                    (warn "ignoring corrupted line")
-                                    (file-position out-stream start-of-line))
+                                    (terpri out-stream))
                                    (t
-                                    (terpri out-stream))))))))))
+                                    (error "ignoring corrupted line=~D of ~A" line-num log-stream)
+                                    ;;(file-position out-stream start-of-line)
+                                    ))))
+                         :do (incf line-num))))))
       (mapcar #'process-file input-paths))
     (close (getf stream :stream))))
