@@ -529,9 +529,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                         (find-plist num-vars exponent :data plists))))))
              (samples-table (stream)
                (format stream "\\begin{tabular}{r|r|r}~%")
-               (format stream "No.      & No.      & No. \\\\~%")
+               (format stream "No.       & No.     & No. \\\\~%")
                (format stream "Variables & Samples & Unique \\\\~%")
-               (format stream "$(n)$         &          & Sizes \\\\~%")
+               (format stream "$(n)$     & (M)     & Sizes \\\\~%")
                (format stream "\\hline~%")
                (loop :for n :from 5 :to max
                      :do (let ((sexp-file-name (format nil "~A/bdd-distribution-data-~D.sexp" prefix n)))
@@ -991,7 +991,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                      :counts (getf (find-plist num-vars exponent) :counts)
                                      :clip t
                                      :xlabel (lambda (num-vars)
-                                               (format nil "~D-var distrib. w/ ~D samples"
+                                               (format nil "~D-var distrib. w/ M=~D samples"
                                                        num-vars (getf (find-plist num-vars exponent) :num-samples)))))
                   (warn "no data to plot ~A~%" fname)))
             (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D+normal.ltxdat" prefix exponent num-vars)))
@@ -1004,7 +1004,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                      :clip t
                                      :counts (getf (find-plist num-vars exponent) :counts)
                                      :xlabel (lambda (num-vars)
-                                               (format nil "~D-var distrib. w/ ~D samples"
+                                               (format nil "~D-var distrib. w/ M=~D samples"
                                                        num-vars (getf (find-plist num-vars exponent) :num-samples)))))
                   (warn "no data to plot ~A~%" fname))))
           (let ((sigma-name (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
