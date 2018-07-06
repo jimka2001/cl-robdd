@@ -639,12 +639,12 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (format stream "\\begin{tikzpicture}~%")
                (prog1 (funcall continuation)
                  (format stream "\\end{tikzpicture}~%")))
-             (addplot (stream comment plot-options control-string points &key (addplot "addplot"))
-               (declare (type (or null string) comment)
+             (addplot (stream plot-comment plot-options control-string points &key (addplot "addplot"))
+               (declare (type (or null string) plot-comment)
                         (type string control-string)
                         (type list points plot-options))
-               (when comment
-                 (format stream "% ~A~%" comment))
+               (when plot-comment
+                 (format stream "% ~A~%" plot-comment))
                (format stream "\\~A[~A] coordinates {~%" addplot
                        (join-strings "," (mapcar #'print-option plot-options)))
                (dolist (point points)
@@ -653,7 +653,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (format stream "};~%"))
              (sqr (x)
                (* x x))
-             (individual-plot (stream num-vars &key (include-normal-distribution nil) (clip nil) (plist (find-plist num-vars 1))
+             (individual-plot (stream num-vars &key (include-normal-distribution nil) (clip nil) (exponent 1) (plist (find-plist num-vars exponent))
                                                  (num-samples (getf plist :num-samples)) (counts (getf plist :counts))
                                                  (logx nil) (logy nil)
                                                  (comment nil)
@@ -680,7 +680,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                      '("label style" "{font=\\large}")
                                      '("tick label style" "{font=\\Large}"))
                                     (lambda ()
-                                      (destructuring-bind (&key num-samples ((:density (alpha beta)) '(0 0)) sigma ((:average-size mu)) &allow-other-keys) plist
+                                      (destructuring-bind (&key num-samples ((:density (alpha beta)) '(0 0)) (exponent 1) sigma ((:average-size mu)) &allow-other-keys) plist
                                         (flet ((to-sci-notation (estimate)
                                                  (destructuring-bind (a b) (sci-notation (/ estimate alpha))
                                                    ;;   extrapolated estimate = normalized / density
@@ -706,8 +706,11 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                            counts)))
                                             (addplot stream
                                                      nil ; no comment
-                                                     '(("color" "blue")
-                                                       ("mark" "*"))
+                                                     (list
+                                                      (if include-normal-distribution
+                                                          '("color" "light-blue")
+                                                          '("color" "blue"))
+                                                      '("mark" "*"))
                                                      "(~D,~Ae~A) % ~D"
                                                      points)
                                             (when (and points include-normal-distribution)
@@ -717,8 +720,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                 (when (zerop x-step)
                                                   (setf x-step 1))
                                                 (addplot stream
-                                                         "theoretical normal distrubution"
-                                                         '(("color" "orange"))
+                                                         (format nil "theoretical normal distrubution with N=~D M=~D exponent=~D sigma=~D and mu=~D"
+                                                                 num-vars num-samples exponent sigma mu)
+                                                         '(("color" "black"))
                                                          "(~D,~Ae~A)"
                                                          (loop :for x :from x-min :to x-max :by x-step
                                                                :collect (let ((normalized (* (/ 1.0 (sqrt (* 2 pi sigma^2)))
@@ -1116,47 +1120,49 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
               :do
                  (loop :for exponent :from 1 :to max-exponent
                        :do
-            (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D.ltxdat" prefix exponent num-vars)))
-              (if (getf (find-plist num-vars exponent) :counts)
-                  (with-open-file (stream fname
-                                          :direction :output :if-does-not-exist :create :if-exists :supersede)
-                    (format t "writing to ~A~%" stream)
-                    (individual-plot stream num-vars
-                                     :counts (getf (find-plist num-vars exponent) :counts)
-                                     :clip t
-                                     :xlabel (lambda (num-vars)
-                                               (format nil "{~D-var distrib. w/ M=~D}"
-                                                       num-vars (getf (find-plist num-vars exponent) :num-samples)))))
-                  (warn "no data to plot ~A~%" fname)))
-            (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D+normal.ltxdat" prefix exponent num-vars)))
-              (if (getf (find-plist num-vars exponent) :counts)
-                  (with-open-file (stream fname
-                                          :direction :output :if-does-not-exist :create :if-exists :supersede)
-                    (format t "writing to ~A~%" stream)
-                    (individual-plot stream num-vars
-                                     :include-normal-distribution t
-                                     :logx nil
-                                     :logy nil
-                                     :clip t
-                                     :counts (getf (find-plist num-vars exponent) :counts)
-                                     :xlabel (lambda (num-vars)
-                                               (format nil "{~D-var distrib. w/ M=~D}"
-                                                       num-vars (getf (find-plist num-vars exponent) :num-samples)))))
-                  (warn "no data to plot ~A~%" fname))))
-          (let ((sigma-name (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
-                (average-name (format nil "~A/average-kolmogorov-~D.ltxdat" prefix num-vars))
-                (data (setof plist data
-                        (= num-vars (getf plist :num-vars)))))
-            (with-open-file (stream sigma-name :direction :output :if-does-not-exist :create :if-exists :supersede)
-              (format t "writing to ~A~%" stream)
-              (when data
-                (push (kolmogorov-sigma-plot stream num-vars :data data :logy nil)
-                      sigma-excursion-summary)))
-            (with-open-file (stream average-name :direction :output :if-does-not-exist :create :if-exists :supersede)
-              (format t "writing to ~A~%" stream)
-              (when data
-                (push (kolmogorov-average-plot stream num-vars :data data :logy nil)
-                      average-excursion-summary)))))
+                          (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D.ltxdat" prefix exponent num-vars)))
+                            (if (getf (find-plist num-vars exponent) :counts)
+                                (with-open-file (stream fname
+                                                        :direction :output :if-does-not-exist :create :if-exists :supersede)
+                                  (format t "writing to ~A~%" stream)
+                                  (individual-plot stream num-vars
+                                                   :exponent exponent
+                                                   :counts (getf (find-plist num-vars exponent) :counts)
+                                                   :clip t
+                                                   :xlabel (lambda (num-vars)
+                                                             (format nil "{~D-var distrib. w/ M=~D}"
+                                                                     num-vars (getf (find-plist num-vars exponent) :num-samples)))))
+                                (warn "no data to plot ~A~%" fname)))
+                          (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D+normal.ltxdat" prefix exponent num-vars)))
+                            (if (getf (find-plist num-vars exponent) :counts)
+                                (with-open-file (stream fname
+                                                        :direction :output :if-does-not-exist :create :if-exists :supersede)
+                                  (format t "writing to ~A~%" stream)
+                                  (individual-plot stream num-vars
+                                                   :include-normal-distribution t
+                                                   :exponent exponent
+                                                   :logx nil
+                                                   :logy nil
+                                                   :clip t
+                                                   :counts (getf (find-plist num-vars exponent) :counts)
+                                                   :xlabel (lambda (num-vars)
+                                                             (format nil "{~D-var distrib. w/ M=~D}"
+                                                                     num-vars (getf (find-plist num-vars exponent) :num-samples)))))
+                                (warn "no data to plot ~A~%" fname))))
+                 (let ((sigma-name (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
+                       (average-name (format nil "~A/average-kolmogorov-~D.ltxdat" prefix num-vars))
+                       (data (setof plist data
+                               (= num-vars (getf plist :num-vars)))))
+                   (with-open-file (stream sigma-name :direction :output :if-does-not-exist :create :if-exists :supersede)
+                     (format t "writing to ~A~%" stream)
+                     (when data
+                       (push (kolmogorov-sigma-plot stream num-vars :data data :logy nil)
+                             sigma-excursion-summary)))
+                   (with-open-file (stream average-name :direction :output :if-does-not-exist :create :if-exists :supersede)
+                     (format t "writing to ~A~%" stream)
+                     (when data
+                       (push (kolmogorov-average-plot stream num-vars :data data :logy nil)
+                             average-excursion-summary)))))
         (with-open-file (stream (format nil "~A/excursion-summary.ltxdat" prefix) :direction :output :if-does-not-exist :create :if-exists :supersede)
           (format t "writing to ~A~%" stream)
           (write-excursion-summary stream average-excursion-summary sigma-excursion-summary))))
