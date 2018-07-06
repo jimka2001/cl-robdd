@@ -767,6 +767,25 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                              (list (list num-vars
                                                                          (coerce sigma 'float))))))
                                                        data)))))))
+             (difference-plot (stream &key num-vars xys1 xys2 exponent)
+               (flet ((3-tuple-to-2 (3-tuple)
+                        (list (car 3-tuple) (cadr 3-tuple))))
+                 (tikzpicture stream
+                              (format nil "L1 distance between two successive curves N=~D M=~D vs M=~D"
+                                      num-vars exponent (1- exponent))
+                              (lambda ()
+                                (axis stream
+                                      (list (list "xlabel"
+                                                  (format nil "{Distance between curves M=~D vs M=~D}"
+                                                          exponent (1- exponent))))
+                                      (lambda (&aux normalized-1
+                                                 normalized-2)
+                                        (addplot stream
+                                                 nil ; no comment
+                                                 '(("color" "blue"))
+                                                 "(~D,~D)"
+                                                 (difference-plot (mapcar #'3-tuple-to-2 xys1)
+                                                                  (mapcar #'3-tuple-to-2 xys2)))))))))
              (kolmogorov-sigma-plot (stream num-vars &key (logx t) (logy t) data)
                (when data
                  (tikzpicture stream
@@ -1148,7 +1167,19 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                    :xlabel (lambda (num-vars)
                                                              (format nil "{~D-var distrib. w/ M=~D}"
                                                                      num-vars (getf (find-plist num-vars exponent) :num-samples)))))
-                                (warn "no data to plot ~A~%" fname))))
+                                (warn "no data to plot ~A~%" fname)))
+                          (when (> exponent 1)
+                            (let ((fname (format nil "~A/delta-N=~D-exp=~D-exp=~D.ltxdat" prefix num-vars exponent (1- exponent))))
+                              (if (getf (find-plist num-vars exponent) :counts)
+                                  (with-open-file (stream fname
+                                                          :direction :output :if-does-not-exist :create :if-exists :supersede)
+                                    (format t "writing to ~A~%" stream)
+                                    (difference-plot stream
+                                                     :num-vars num-vars
+                                                     :exponent exponent
+                                                     :xys1 (getf (find-plist num-vars exponent) :counts)
+                                                     :xys2 (getf (find-plist num-vars (1- exponent)) :counts)))
+                                  (warn "no data to plot ~A~%" fname)))))
                  (let ((sigma-name (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
                        (average-name (format nil "~A/average-kolmogorov-~D.ltxdat" prefix num-vars))
                        (data (setof plist data
