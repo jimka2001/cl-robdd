@@ -142,28 +142,29 @@ function (XYS-A - XYZ-B), which contains the union of the x values."
            (declare (type (cons number (cons number)) pt))
            (cadr pt))
          (extrapolate (xy0 x1 xy2)
-           (cl-user::print-vals xy0 x1 xy2)
            (destructuring-bind (x0 y0) xy0
              (destructuring-bind (x2 y2) xy2
-               (cl-user::print-vals x0 y0 x2 y2 (+ y0 (* (/ (- y2 y0) (- x2 x0)) (- x1 x0))))
                (+ y0 (* (/ (- y2 y0) (- x2 x0)) (- x1 x0)))))))
     
     (let ((xys-a (sort (copy-list xys-a) #'< :key #'x-coord))
           (xys-b (sort (copy-list xys-b) #'< :key #'x-coord))
           (a-b nil))
       (dolist (cmp (list #'< #'>))
-        (if (funcall cmp (x-coord (car xys-a))
-                     (x-coord (car xys-b)))
-            ;; push onto b
-            (push (car xys-a) xys-b)
+        (cond
+         ((= (x-coord (car xys-a))
+             (x-coord (car xys-b))))
+         ((funcall cmp (x-coord (car xys-a))
+                   (x-coord (car xys-b)))
+          ;; push onto b
+          (push (car xys-a) xys-b))
+         (t
             ;; else push onto a
-            (push (car xys-b) xys-a))
+            (push (car xys-b) xys-a)))
         (setf xys-a (reverse xys-a)
               xys-b (reverse xys-b)))
       
       (push (list (x-coord (car xys-a)) 0.0)
             a-b)
-      
       (while (or (cddr xys-a) (cddr xys-b))
         (destructuring-bind (a0 a1 &optional (a2 (nth 2 xys-b)) &rest _) xys-a
           (declare (ignore _))
@@ -187,8 +188,8 @@ function (XYS-A - XYZ-B), which contains the union of the x values."
         (declare (ignore _))
         (destructuring-bind (_ b2) xys-b
         (declare (ignore _))
-          (assert (equal a2 b2) (xys-a xys-b))
-          (push (list (x-coord a2) 0.0) a-b)))
+          (assert (equal (x-coord a2) (x-coord b2)) (xys-a xys-b))
+          (push (list (x-coord a2) (- (y-coord a2) (y-coord b2))) a-b)))
       (nreverse a-b))))
 
 (defun make-announcement-timer (min max interval announce)
@@ -625,7 +626,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                  (t
                   (error "unknown axis-option ~A" axis-option))))
              (axis (stream axis-options continuation)
-               (declare (type list axis-options))
+               (declare (type list axis-options)
+                        (type (function () t) continuation))
                (format stream "\\begin{axis}[~% ~A~%]~%"
                        (join-strings (format nil ",~% ") (mapcar  #'print-option (remove nil axis-options))))
                (prog1 (funcall continuation)
@@ -770,27 +772,51 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
              (difference-plot (stream &key num-vars xys1 xys2 exponent)
                (flet ((3-tuple-to-2 (3-tuple)
                         (list (car 3-tuple) (cadr 3-tuple))))
-                 (tikzpicture stream
-                              (format nil "L1 distance between two successive curves N=~D M=~D vs M=~D"
-                                      num-vars exponent (1- exponent))
-                              (lambda ()
-                                (axis stream
-                                      (list (list "xlabel"
-                                                  (format nil "{Distance between curves M=~D vs M=~D}"
-                                                          exponent (1- exponent))))
-                                      (lambda (&aux normalized-1
-                                                 normalized-2)
-                                        (addplot stream
-                                                 nil ; no comment
-                                                 '(("color" "blue"))
+                 (let* ((diff (difference-function (mapcar #'3-tuple-to-2 xys1)
+                                                   (mapcar #'3-tuple-to-2 xys2)))
+                        (sum 0.0)
+                        (integral (mapcon (lambda (pts)
+                                            (when (cdr pts)
+                                              (destructuring-bind (pt0 pt1 &rest _) pts
+                                                (declare (ignore _))
+                                                (destructuring-bind (x0 y0) pt0
+                                                  (destructuring-bind (x1 y1) pt1
+                                                    (incf sum (* (sqr (- y1 y0))
+                                                                 (- x1 x0)))
+                                                    (list (list x1 (sqrt sum))))))))
+                                          diff)))
+                   (tikzpicture stream
+                                (format nil "L1 distance between two successive curves N=~D M=~D vs M=~D"
+                                        num-vars exponent (1- exponent))
+                                (lambda ()
+                                  (axis stream
+                                        (list '("ylabel" "{\\color{blue}Difference function}")
+                                              '("scaled y ticks" "false")
+                                              (list "xlabel"
+                                                    (format nil "{Distance between curves M=~D vs M=~D}"
+                                                            exponent (1- exponent))))
+                                        (lambda ()
+                                          (addplot stream
+                                                   "difference function"
+                                                   '(("color" "blue"))
+                                                   "(~D,~D)"
+                                                   diff)))
+                                  (axis stream
+                                        (list "xmajorgrids"
+                                              (list "ylabel" "{\\color{red}L2 Norm}")
+                                              '("scaled y ticks" "false")
+                                              "ylabel near ticks"
+                                              '("yticklabel pos" "right"))
+                                        (lambda ()
+                                          (addplot stream
+                                                 "L2 norm"
+                                                 '(("color" "red"))
                                                  "(~D,~D)"
-                                                 (difference-plot (mapcar #'3-tuple-to-2 xys1)
-                                                                  (mapcar #'3-tuple-to-2 xys2)))))))))
+                                                 integral))))))))
              (kolmogorov-sigma-plot (stream num-vars &key (logx t) (logy t) data)
                (when data
                  (tikzpicture stream
                               "standard deviation with successively more point samples"
-                            
                               (lambda (&aux (data (sort (copy-list data) #'< :key (getter :num-samples)))
                                          (min-value (getf (car data) :sigma))
                                          (max-value min-value)
@@ -823,12 +849,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                           (format stream "% min-value = ~A~%" (float min-value 1.0)) ; min
                                           (format stream "% max-value = ~A~%" (float max-value 1.0)) ; max
                                           (format stream "% end-value = ~A~%" (float end-value 1.0)) ; final
-                                          (format stream "% excursion = ~A%~%" excursion-percent)
-                                          (list :num-vars num-vars
-                                                :min-value min-value
-                                                :max-value max-value
-                                                :end-value end-value
-                                                :excursion excursion-percent))))
+                                          (format stream "% excursion = ~A%~%" excursion-percent))))
                                 (axis stream
                                       (list "ymajorgrids"
                                             (when logx
