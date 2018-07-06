@@ -22,6 +22,7 @@
 (in-package :cl-robdd)
 
 (defun shadow-all-symbols (&key package-from package-into)
+  (declare (type (or package keyword) package-from package-into))
   (let ((package-into (or (find-package  package-into)
                           (error "cannot find package ~A" package-into)))
         (package-from (or (find-package  package-from)

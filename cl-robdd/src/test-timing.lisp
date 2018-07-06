@@ -21,6 +21,7 @@
 
 (in-package :cl-robdd-analysis-test)
 (shadow-all-symbols :package-from :cl-robdd-analysis
+                    :package-into :cl-robdd-analysis-test)
 
 (define-test analysis/call-with-timeout
   (assert-true (numberp (getf (call-with-timeout 2 (lambda () (sleep 10)) 1)

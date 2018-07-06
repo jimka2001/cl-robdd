@@ -104,3 +104,16 @@
   (test-with-z1-z6 "/tmp/jnewton/graph" 10 ;; 4000
                    ))
 
+(define-test test/difference-function
+  (assert-true (equal (difference-function '((1 1.0))
+                                           '((2 2.0)))
+                      '((1 0.0) (2 0.0))))
+  (assert-true (equal (difference-function '((2 2.0))
+                                           '((1 1.0)))
+                      '((1 0.0) (2 0.0))))
+  (assert-true (equal (difference-function '((1 1.0) (3 3.0))
+                                           '((2 2.0) (4 4.0)))
+                      '((1 1.0) (2 2.0) (3 3.0) (4 0.0))))
+  (assert-true (equal (difference-function '((2 2.0) (4 4.0))
+                                           '((1 1.0) (3 3.0)))
+                      '((1 -1.0) (2 -2.0) (3 -3.0) (4 0.0)))))

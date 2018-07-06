@@ -131,6 +131,66 @@ Why?  Because the truth table of this function is:
                                          :key #'car))))))
     (values (caar a-list) a-list)))
 
+(defun difference-function (xys-a xys-b)
+  "Given two lists of (x y) pairs, representing two functions, potentially
+each list has different (more, less, or same) x values, calculate the difference
+function (XYS-A - XYZ-B), which contains the union of the x values."
+  (flet ((x-coord (pt)
+           (declare (type (cons number (cons number)) pt))
+           (car pt))
+         (y-coord (pt)
+           (declare (type (cons number (cons number)) pt))
+           (cadr pt))
+         (extrapolate (xy0 x1 xy2)
+           (cl-user::print-vals xy0 x1 xy2)
+           (destructuring-bind (x0 y0) xy0
+             (destructuring-bind (x2 y2) xy2
+               (cl-user::print-vals x0 y0 x2 y2 (+ y0 (* (/ (- y2 y0) (- x2 x0)) (- x1 x0))))
+               (+ y0 (* (/ (- y2 y0) (- x2 x0)) (- x1 x0)))))))
+    
+    (let ((xys-a (sort (copy-list xys-a) #'< :key #'x-coord))
+          (xys-b (sort (copy-list xys-b) #'< :key #'x-coord))
+          (a-b nil))
+      (dolist (cmp (list #'< #'>))
+        (if (funcall cmp (x-coord (car xys-a))
+                     (x-coord (car xys-b)))
+            ;; push onto b
+            (push (car xys-a) xys-b)
+            ;; else push onto a
+            (push (car xys-b) xys-a))
+        (setf xys-a (reverse xys-a)
+              xys-b (reverse xys-b)))
+      
+      (push (list (x-coord (car xys-a)) 0.0)
+            a-b)
+      
+      (while (or (cddr xys-a) (cddr xys-b))
+        (destructuring-bind (a0 a1 &optional (a2 (nth 2 xys-b)) &rest _) xys-a
+          (declare (ignore _))
+          (destructuring-bind (b0 b1 &optional (b2 a2) &rest _) xys-b
+            (declare (ignore _))
+            (cond
+              ((= (x-coord a1) (x-coord b1))
+               (push (list (x-coord a1) (- (y-coord a1) (y-coord b1))) a-b)
+               (pop xys-a)
+               (pop xys-b))
+              ((< (x-coord a1) (x-coord b1))
+               (push (list (x-coord a1) (extrapolate b0 (x-coord a1) b2))
+                     a-b)
+               (pop xys-a))
+              (t                       ; (> (x-coord a1) (x-coord b1))
+               (push (list (x-coord b1) (extrapolate a0 (x-coord b1) a2))
+                     a-b)
+               (pop xys-b))))))
+      
+      (destructuring-bind (_ a2) xys-a
+        (declare (ignore _))
+        (destructuring-bind (_ b2) xys-b
+        (declare (ignore _))
+          (assert (equal a2 b2) (xys-a xys-b))
+          (push (list (x-coord a2) 0.0) a-b)))
+      (nreverse a-b))))
+
 (defun make-announcement-timer (min max interval announce)
   "Given a MIN and MAX iteration (integers) and an integer INTERVAL designating a number
  of seconds, and a unary function ANNOUNCE.
