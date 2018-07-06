@@ -709,9 +709,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                             (addplot stream
                                                      nil ; no comment
                                                      (list
-                                                      (if include-normal-distribution
-                                                          '("color" "light-blue")
-                                                          '("color" "blue"))
+                                                      '("color" "greeny")
                                                       '("mark" "*"))
                                                      "(~D,~Ae~A) % ~D"
                                                      points)
@@ -733,6 +731,22 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                           (destructuring-bind (a b) (to-sci-notation (* num-samples normalized))
                                                                             (list x a b)))))))
                                             (format stream "\\legend{}~%")))))))))
+             (integral-plot (stream integral-xys &key num-vars)
+               (tikzpicture stream
+                            (format nil "Integral plot of N=~D" num-vars)
+                            (lambda ()
+                              (axis stream
+                                    '("xmajorgrids"
+                                      "ymajorgrids"
+                                      ("xmode" "log")
+                                      ("xlabel" "M Number of points")
+                                      ("ylabel" "{L2 Distance M to M-1}"))
+                                    (lambda ()
+                                      (addplot stream
+                                               "integral plot"
+                                               '(("color" "blue"))
+                                               "(~D,~D)"
+                                               integral-xys))))))
              (sigma-plot (stream &key (max max) (logy t) (xmarks nil) (exponent 1) (data (get-data exponent)))
                (tikzpicture stream
                             "sigma plot"
@@ -774,45 +788,32 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                         (list (car 3-tuple) (cadr 3-tuple))))
                  (let* ((diff (difference-function (mapcar #'3-tuple-to-2 xys1)
                                                    (mapcar #'3-tuple-to-2 xys2)))
-                        (sum 0.0)
-                        (integral (mapcon (lambda (pts)
-                                            (when (cdr pts)
-                                              (destructuring-bind (pt0 pt1 &rest _) pts
-                                                (declare (ignore _))
-                                                (destructuring-bind (x0 y0) pt0
-                                                  (destructuring-bind (x1 y1) pt1
-                                                    (incf sum (* (sqr (- y1 y0))
-                                                                 (- x1 x0)))
-                                                    (list (list x1 (sqrt sum))))))))
-                                          diff)))
+                        (integral (loop :for pts :on diff
+                                        :when (cdr pts)
+                                          :summing (destructuring-bind (pt0 pt1 &rest _) pts
+                                                     (declare (ignore _))
+                                                     (destructuring-bind (x0 y0) pt0
+                                                       (destructuring-bind (x1 y1) pt1
+                                                         (* (sqr (- y1 y0))
+                                                                      (- x1 x0))))))))
                    (tikzpicture stream
                                 (format nil "L1 distance between two successive curves N=~D M=~D vs M=~D"
                                         num-vars exponent (1- exponent))
                                 (lambda ()
                                   (axis stream
-                                        (list '("ylabel" "{\\color{blue}Difference function}")
-                                              '("scaled y ticks" "false")
+                                        (list '("ylabel" "{Difference function}")
+                                              "ymajorgrids"
+                                              "xmajorgrids"
                                               (list "xlabel"
-                                                    (format nil "{Distance between curves M=~D vs M=~D}"
+                                                    (format nil "{L2 Distance M=~D vs M=~D}"
                                                             exponent (1- exponent))))
                                         (lambda ()
                                           (addplot stream
                                                    "difference function"
                                                    '(("color" "blue"))
                                                    "(~D,~D)"
-                                                   diff)))
-                                  (axis stream
-                                        (list "xmajorgrids"
-                                              (list "ylabel" "{\\color{red}L2 Norm}")
-                                              '("scaled y ticks" "false")
-                                              "ylabel near ticks"
-                                              '("yticklabel pos" "right"))
-                                        (lambda ()
-                                          (addplot stream
-                                                 "L2 norm"
-                                                 '(("color" "red"))
-                                                 "(~D,~D)"
-                                                 integral))))))))
+                                                   diff)
+                                          integral)))))))
              (kolmogorov-sigma-plot (stream num-vars &key (logx t) (logy t) data)
                (when data
                  (tikzpicture stream
@@ -1158,49 +1159,58 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
             sigma-excursion-summary)
         (loop :for num-vars :from min-kolmogorov :to max-kolmogorov
               :do
-                 (loop :for exponent :from 1 :to max-exponent
-                       :do
-                          (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D.ltxdat" prefix exponent num-vars)))
-                            (if (getf (find-plist num-vars exponent) :counts)
-                                (with-open-file (stream fname
-                                                        :direction :output :if-does-not-exist :create :if-exists :supersede)
-                                  (format t "writing to ~A~%" stream)
-                                  (individual-plot stream num-vars
-                                                   :exponent exponent
-                                                   :counts (getf (find-plist num-vars exponent) :counts)
-                                                   :clip t
-                                                   :xlabel (lambda (num-vars)
-                                                             (format nil "{~D-var distrib. w/ M=~D}"
-                                                                     num-vars (getf (find-plist num-vars exponent) :num-samples)))))
-                                (warn "no data to plot ~A~%" fname)))
-                          (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D+normal.ltxdat" prefix exponent num-vars)))
-                            (if (getf (find-plist num-vars exponent) :counts)
-                                (with-open-file (stream fname
-                                                        :direction :output :if-does-not-exist :create :if-exists :supersede)
-                                  (format t "writing to ~A~%" stream)
-                                  (individual-plot stream num-vars
-                                                   :include-normal-distribution t
-                                                   :exponent exponent
-                                                   :logx nil
-                                                   :logy nil
-                                                   :clip t
-                                                   :counts (getf (find-plist num-vars exponent) :counts)
-                                                   :xlabel (lambda (num-vars)
-                                                             (format nil "{~D-var distrib. w/ M=~D}"
-                                                                     num-vars (getf (find-plist num-vars exponent) :num-samples)))))
-                                (warn "no data to plot ~A~%" fname)))
-                          (when (> exponent 1)
-                            (let ((fname (format nil "~A/delta-N=~D-exp=~D-exp=~D.ltxdat" prefix num-vars exponent (1- exponent))))
+                 (let (integral-xys)
+                   (loop :for exponent :from 1 :to max-exponent
+                         :do
+                            (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D.ltxdat" prefix exponent num-vars)))
                               (if (getf (find-plist num-vars exponent) :counts)
                                   (with-open-file (stream fname
                                                           :direction :output :if-does-not-exist :create :if-exists :supersede)
                                     (format t "writing to ~A~%" stream)
-                                    (difference-plot stream
-                                                     :num-vars num-vars
+                                    (individual-plot stream num-vars
                                                      :exponent exponent
-                                                     :xys1 (getf (find-plist num-vars exponent) :counts)
-                                                     :xys2 (getf (find-plist num-vars (1- exponent)) :counts)))
-                                  (warn "no data to plot ~A~%" fname)))))
+                                                     :counts (getf (find-plist num-vars exponent) :counts)
+                                                     :clip t
+                                                     :xlabel (lambda (num-vars)
+                                                               (format nil "{~D-var distrib. w/ M=~D}"
+                                                                       num-vars (getf (find-plist num-vars exponent) :num-samples)))))
+                                  (warn "no data to plot ~A~%" fname)))
+                            (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D+normal.ltxdat" prefix exponent num-vars)))
+                              (if (getf (find-plist num-vars exponent) :counts)
+                                  (with-open-file (stream fname
+                                                          :direction :output :if-does-not-exist :create :if-exists :supersede)
+                                    (format t "writing to ~A~%" stream)
+                                    (individual-plot stream num-vars
+                                                     :include-normal-distribution t
+                                                     :exponent exponent
+                                                     :logx nil
+                                                     :logy nil
+                                                     :clip t
+                                                     :counts (getf (find-plist num-vars exponent) :counts)
+                                                     :xlabel (lambda (num-vars)
+                                                               (format nil "{~D-var distrib. w/ M=~D}"
+                                                                       num-vars (getf (find-plist num-vars exponent) :num-samples)))))
+                                  (warn "no data to plot ~A~%" fname)))
+                            (when (> exponent 1)
+                              (let ((fname (format nil "~A/delta-N=~D-exp=~D-exp=~D.ltxdat" prefix num-vars exponent (1- exponent))))
+                                (if (getf (find-plist num-vars exponent) :counts)
+                                    (with-open-file (stream fname
+                                                            :direction :output :if-does-not-exist :create :if-exists :supersede)
+                                      (format t "writing to ~A~%" stream)
+                                      (push (list (getf (find-plist num-vars exponent) :num-samples)
+                                                  (difference-plot stream
+                                                                   :num-vars num-vars
+                                                                   :exponent exponent
+                                                                   :xys1 (getf (find-plist num-vars exponent) :counts)
+                                                                   :xys2 (getf (find-plist num-vars (1- exponent)) :counts)))
+                                            integral-xys))
+                                    (warn "no data to plot ~A~%" fname)))))
+                   (let ((fname (format nil "~A/integral-~D.ltxdat" prefix num-vars)))
+                     (when (cdr integral-xys)
+                       (with-open-file (stream fname :direction :output :if-does-not-exist :create :if-exists :supersede)
+                         (format t "writing to ~A~%" stream)
+                         (integral-plot stream integral-xys :num-vars num-vars)))))
+              :do
                  (let ((sigma-name (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
                        (average-name (format nil "~A/average-kolmogorov-~D.ltxdat" prefix num-vars))
                        (data (setof plist data
