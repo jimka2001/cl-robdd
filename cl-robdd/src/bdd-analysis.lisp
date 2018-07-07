@@ -21,7 +21,8 @@
 
 
 (defpackage :cl-robdd-analysis
-  (:use :cl :cl-robdd :open-pipe-to-file)
+  (:use :cl :cl-robdd ;;:open-pipe-to-file
+	)
   (:export
    "CALL-WITH-DPROFILING"
    "CALL-WITH-SPROFILING"

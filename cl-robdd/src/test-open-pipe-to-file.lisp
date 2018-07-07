@@ -19,13 +19,21 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(asdf:defsystem :cl-robdd-test
-  :depends-on (:cl-robdd
-               (:version :lisp-unit "0.9.0"))
-  :components
-  ((:module "src"
-    :components
-    ((:file "test-bdd")
-     ;;(:file "test-open-pipe-to-file")
-     (:file "test-bdd-dot")
-     ))))
+
+(in-package :cl-robdd-test)
+
+(shadow-all-symbols :package-from :cl-robdd :package-into :cl-robdd-test)
+
+(define-test test/open-pipe-to-file
+  (let ((answer (with-output-to-string (str)
+                  (multiple-value-bind (stream clean-up)
+                      (open-pipe-to-file str
+                                         '(("grep" "-i" "a")
+                                           ("sort" "-u")))
+                    (loop for i from 0 to #xff
+                          do (format stream "0x~x~%" i))
+                    (loop for i from 0 to #xff
+                          do (format stream "0x~x~%" i))
+                    (funcall clean-up)
+                    ))))
+    (assert-false (string= "" answer))))
