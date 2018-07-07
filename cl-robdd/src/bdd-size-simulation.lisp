@@ -722,7 +722,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                 (addplot stream
                                                          (format nil "theoretical normal distrubution with N=~D M=~D exponent=~D sigma=~D and mu=~D"
                                                                  num-vars num-samples exponent sigma mu)
-                                                         '(("color" "black"))
+                                                         '(("color" "red"))
                                                          "(~D,~Ae~A)"
                                                          (loop :for x :from x-min :to x-max :by x-step
                                                                :collect (let ((normalized (* (/ 1.0 (sqrt (* 2 pi sigma^2)))
@@ -744,7 +744,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                     (lambda ()
                                       (addplot stream
                                                "integral plot"
-                                               '(("color" "blue"))
+                                               '(("mark" "triangle")
+                                                 ("color" "blue"))
                                                "(~D,~D)"
                                                integral-xys))))))
              (sigma-plot (stream &key (max max) (logy t) (xmarks nil) (exponent 1) (data (get-data exponent)))
@@ -1352,4 +1353,5 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                      :max-exponent max-exponent
                                                                      :max-kolmogorov max-num-vars
                                                                      :min-kolmogorov 5)
-  (run-program (format nil "~A/copy-latex.sh" bin-dir) ()))
+  (when bin-dir
+    (run-program (format nil "~A/copy-latex.sh" bin-dir) ())))
