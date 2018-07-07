@@ -655,6 +655,12 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (format stream "};~%"))
              (sqr (x)
                (* x x))
+	     (scale-points (xys &key expo)
+	       (destructuring-bind (expon scis) (scale-sci-notations (mapcar #'cdr xys) :expo expo)
+		 (list expon
+		       (mapcar (lambda (xy scaled)
+				 (cons (car xy) scaled))
+			       xys scis))))
              (individual-plot (stream num-vars &key (include-normal-distribution nil) (clip nil) (exponent 1) (plist (find-plist num-vars exponent))
                                                  (num-samples (getf plist :num-samples)) (counts (getf plist :counts))
                                                  (logx nil) (logy nil)
@@ -663,74 +669,86 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                            (format nil "{Node count for \\numvars=~D, M=~D}" num-vars num-samples))))
                (when comment
                  (format stream "%~A~%" comment))
-               ;; if exponent = 5, this means we only plot 1/(2^5= 1/32 of the points.
-               (tikzpicture stream
-                            (format nil "individual plot ~D vars" num-vars) ; comment
-                            (lambda ()
-                              (axis stream
-                                    (list 
-                                     (list "xlabel" (funcall xlabel num-vars))
-                                     "ymajorgrids"
-                                     "yminorgrids"
-                                     "xmajorgrids"
-                                     "xminorgrids"
-                                     (when logy
-                                       '("ymode" "log"))
-                                     (when logx
-                                       '("xmode" "log"))
-                                     '("ylabel" "Number of Boolean functions")
-                                     '("label style" "{font=\\large}")
-                                     '("tick label style" "{font=\\Large}"))
-                                    (lambda ()
-                                      (destructuring-bind (&key num-samples ((:density (alpha beta)) '(0 0)) (exponent 1) sigma ((:average-size mu)) &allow-other-keys) plist
-                                        (flet ((to-sci-notation (estimate)
-                                                 (destructuring-bind (a b) (sci-notation (/ estimate alpha))
-                                                   ;;   extrapolated estimate = normalized / density
-                                                   ;;                         = normalized/alpha   * 10 ^ beta
-                                                   ;;   if normalized/alpha   = a*10^b
-                                                   ;;   then         estimate = a * 10 ^(b - beta)
-                                                   (list (float a 1.0) (- b beta)))))
-
-                                          (let* ((sigma^2 (sqr sigma))
-                                                 (points 
-                                                   ;; density is in form (alpha beta) meaning alpha * 10 ^ beta
-                                                   (mapcan (lambda (item)
-                                                             (destructuring-bind (bdd-size normalized number-of-bdds) item
-                                                               (declare (ignore normalized))
-                                                               (cond
-                                                                 ((and (<= number-of-bdds 2)
-                                                                       clip)
-                                                                  nil)
-                                                                 (t
-                                                                  ;; normalized = normalized number of bdds of this size as a fraction of total sample
-                                                                  (destructuring-bind (a b) (to-sci-notation number-of-bdds)
-                                                                    (list (list bdd-size a b number-of-bdds)))))))
-                                                           counts)))
-                                            (addplot stream
-                                                     nil ; no comment
-                                                     (list
-                                                      '("color" "greeny")
-                                                      '("mark" "*"))
-                                                     "(~D,~Ae~A) % ~D"
-                                                     points)
-                                            (when (and points include-normal-distribution)
-                                              (let* ((x-min (reduce #'min points :key #'car))
-                                                     (x-max (reduce #'max points :key #'car))
-                                                     (x-step (/ (- x-max x-min) (length points) 4)))
-                                                (when (zerop x-step)
-                                                  (setf x-step 1))
-                                                (addplot stream
-                                                         (format nil "theoretical normal distrubution with N=~D M=~D exponent=~D sigma=~D and mu=~D"
-                                                                 num-vars num-samples exponent sigma mu)
-                                                         '(("color" "red"))
-                                                         "(~D,~Ae~A)"
-                                                         (loop :for x :from x-min :to x-max :by x-step
-                                                               :collect (let ((normalized (* (/ 1.0 (sqrt (* 2 pi sigma^2)))
-                                                                                             (exp (- (/ (sqr (- x mu))
-                                                                                                        (* 2 sigma^2)))))))
-                                                                          (destructuring-bind (a b) (to-sci-notation (* num-samples normalized))
-                                                                            (list x a b)))))))
-                                            (format stream "\\legend{}~%")))))))))
+	       (destructuring-bind (&key num-samples
+				      ((:density (alpha beta)) '(0 0))
+				      (exponent 1)
+				      sigma
+				      ((:average-size mu)) &allow-other-keys) plist
+		 (flet ((to-sci-notation (estimate)
+			  (destructuring-bind (a b) (sci-notation (/ estimate alpha))
+			    ;;   extrapolated estimate = normalized / density
+			    ;;                         = normalized/alpha   * 10 ^ beta
+			    ;;   if normalized/alpha   = a*10^b
+			    ;;   then         estimate = a * 10 ^(b - beta)
+			    (list (float a 1.0) (- b beta)))))
+		   
+		   (let* ((sigma^2 (sqr sigma))
+			  (points 
+			    ;; density is in form (alpha beta) meaning alpha * 10 ^ beta
+			    (mapcan (lambda (item)
+				      (destructuring-bind (bdd-size normalized number-of-bdds) item
+					(declare (ignore normalized))
+					(cond
+					  ((and (<= number-of-bdds 2)
+						clip)
+					   nil)
+					  (t
+					   ;; normalized = normalized number of bdds of this size as a fraction of total sample
+					   (destructuring-bind (a b) (to-sci-notation number-of-bdds)
+					     (list (list bdd-size a b)))))))
+				    counts)))
+		     
+		     ;; if exponent = 5, this means we only plot 1/(2^5= 1/32 of the points.
+		     (tikzpicture stream
+				  (format nil "individual plot ~D vars" num-vars) ; comment
+				  (destructuring-bind (expo scaled) (scale-points points)
+				    (lambda ()
+				      (axis stream
+					    (list 
+					     (list "xlabel" (funcall xlabel num-vars))
+					     "ymajorgrids"
+					     "yminorgrids"
+					     "xmajorgrids"
+					     "xminorgrids"
+					     (when logy
+					       '("ymode" "log"))
+					     (when logx
+					       '("xmode" "log"))
+					     (list "ylabel" (case expo
+							      ((0) (format nil "{No. of Boolean functions}"))
+							      ((1) (format nil "{No. of Boolean functions $\\times 10$}"))
+							      (t   (format nil "{No. of Boolean functions $\\times 10^{~D}$}" expo))))
+					     '("label style" "{font=\\large}")
+					     '("tick label style" "{font=\\Large}"))
+					    (lambda ()
+					      (addplot stream
+						       nil
+						       (list
+							'("color" "greeny")
+							'("mark" "*"))
+						       "(~D,~Ae~A)"
+						       scaled)
+					      (when (and points include-normal-distribution)
+						(let* ((x-min (reduce #'min points :key #'car))
+						       (x-max (reduce #'max points :key #'car))
+						       (x-step (/ (- x-max x-min) (length points) 4)))
+						  (when (zerop x-step)
+						    (setf x-step 1))
+						  (let ((points (loop :for x :from x-min :to x-max :by x-step
+								      :collect (let ((normalized (* (/ 1.0 (sqrt (* 2 pi sigma^2)))
+												    (exp (- (/ (sqr (- x mu))
+													       (* 2 sigma^2)))))))
+										 (destructuring-bind (a b) (to-sci-notation (* num-samples normalized))
+										   (list x a b))))))
+						    (destructuring-bind (expo2 scaled) (scale-points points :expo expo)
+						      (assert (= expo expo2) (expo expo2))
+						      (addplot stream
+							       (format nil "theoretical normal distrubution with N=~D M=~D exponent=~D sigma=~D and mu=~D"
+								       num-vars num-samples exponent sigma mu)
+							       '(("color" "red"))
+							       "(~D,~Ae~A)"
+							       scaled)))))
+					      (format stream "\\legend{}~%"))))))))))
              (integral-plot (stream integral-xys &key num-vars)
                (tikzpicture stream
                             (format nil "Integral plot of N=~D" num-vars)

@@ -135,6 +135,15 @@
   #+allegro (excl:gc t)
 )
 
+(defun scale-sci-notations (sci-notations &key expo)
+  (declare (type (or null fixnum) expo))
+  (let ((max-exponent (or expo
+			  (reduce #'max sci-notations :key #'cadr :initial-value (cadr (car sci-notations))))))
+    (list max-exponent
+	  (loop :for sci :in sci-notations
+	  :collect (destructuring-bind (mant exp) sci
+		     (list mant (- exp max-exponent)))))))
+    
 (defun sci-notation (bignum)
   (cond
     ((zerop bignum)
