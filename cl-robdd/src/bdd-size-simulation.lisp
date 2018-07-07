@@ -1353,4 +1353,5 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                      :max-exponent max-exponent
                                                                      :max-kolmogorov max-num-vars
                                                                      :min-kolmogorov 5)
-  (run-program (format nil "~A/copy-latex.sh" bin-dir) ()))
+  (when bin-dir
+    (run-program (format nil "~A/copy-latex.sh" bin-dir) ())))
