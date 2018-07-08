@@ -499,7 +499,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
   (let* ((num-vars (getf plist :num-vars))
          (data-file (case exponent
                       ((1) (format nil "~A/bdd-distribution-data-~D.sexp" prefix num-vars))
-                      (t (format nil "~A/bdd-distribution-data-~D-sample-~D.sexp" prefix num-vars exponent)))))
+                      (t   (format nil "~A/bdd-distribution-data-~D-sample-~D.sexp" prefix num-vars exponent)))))
     (with-open-file (stream data-file
                             :direction :output :if-does-not-exist :create :if-exists :supersede)
       (when stream
@@ -512,7 +512,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
               (format stream "    ~S ~A~%" keyword obj)))
           (pop plist)
           (pop plist))
-          (format stream "  )~%")))))
+	(format stream "  )~%")))))
 
 (defun write-bdd-distribution-data (data prefix &key (exponent 1))
   (declare (type list data)
@@ -609,9 +609,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                        n (getf sexp-plist :num-samples) (or (getf sexp-plist :unique-sizes)
                                                                             (length (getf sexp-plist :possible-sizes))))))))
                (format stream "\\hline~%")
-               (format stream "\\end{tabular}~%")
-
-               )
+               (format stream "\\end{tabular}~%"))
              (join-strings (delimeter strings)
                (with-output-to-string (str)
                  (when (car strings)
@@ -851,118 +849,85 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (when data
                  (tikzpicture stream
                               "standard deviation with successively more point samples"
-                              (lambda (&aux (data (sort (copy-list data) #'< :key (getter :num-samples)))
-                                         (min-value (getf (car data) :sigma))
-                                         (max-value min-value)
-                                         (end-value (getf (car (last data)) :sigma)))
-                                (declare (type number max-value min-value))
-                                (axis stream
-                                      (list "xmajorgrids"
-                                            (when logy
-                                              '("ymode" "log"))
-                                            (when logx
-                                              '("xmode" "log"))
-                                            '("scaled y ticks" "false")
-                                            "ylabel near ticks"
-                                            '("yticklabel pos" "right")
-                                            (list "ylabel" (format nil "{\\color{red} Average $\\mu_{~D}$}" num-vars))
-                                            (list "xlabel" (format nil "{Sample size M for \\numvars=~A}" num-vars)))
-                                      (lambda ()
-                                        (addplot stream
-                                                 nil ; no comment
-                                                 '(("color" "red")
-                                                   ("mark" "*"))
-                                                 "(~D,~D)"
-                                                 (mapcar (lambda (plist)
-                                                           (destructuring-bind (&key num-samples average-size &allow-other-keys) plist
-                                                             (setf min-value (min min-value (coerce average-size 'float))
-                                                                   max-value (max max-value (coerce average-size 'float)))
-                                                             (list num-samples (coerce average-size 'float))))
-                                                         data)
-						 :logx logx
-						 :logy logy)
-                                        (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
-                                          (format stream "% min-value = ~A~%" (float min-value 1.0)) ; min
-                                          (format stream "% max-value = ~A~%" (float max-value 1.0)) ; max
-                                          (format stream "% end-value = ~A~%" (float end-value 1.0)) ; final
-                                          (format stream "% excursion = ~A%~%" excursion-percent))))
-                                (axis stream
-                                      (list "ymajorgrids"
-                                            (when logx
-                                              '("xmode" "log"))
-                                            (when logy
-                                              '("ymode" "log"))
-                                            '("scaled y ticks" "false")
-                                            "yminorgrids"
-                                            "xmajorgrids"
-                                            (list "ylabel" (format nil "{\\color{blue} Standard Deviation $\\sigma_{~D}$}" num-vars))
-                                            (list "xlabel" (format nil "{Sample size M for \\numvars=~A}" num-vars)))
-                                      (lambda ()
-                                        (addplot stream
-                                                 nil ; no comment
-                                                 '(("color" "blue")
-                                                   ("mark" "*"))
-                                                 "(~D,~D)"
-                                                 (mapcar (lambda (plist)
-                                                           (destructuring-bind (&key num-samples sigma &allow-other-keys) plist
-                                                             (setf min-value (min min-value (coerce sigma 'float))
-                                                                   max-value (max max-value (coerce sigma 'float)))
-                                                             (list num-samples (coerce sigma 'float))))
-                                                         data)
-						 :logx logx
-						 :logy logy)
-                                        (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
-                                          (format stream "% min-value = ~A~%" min-value) ; min
-                                          (format stream "% max-value = ~A~%" max-value) ; max
-                                          (format stream "% end-value = ~A~%" end-value) ; final
-                                          (format stream "% excursion = ~A%~%" excursion-percent)
-                                          (list :num-vars num-vars
-                                                :min-value min-value
-                                                :max-value max-value
-                                                :end-value end-value
-                                                :excursion excursion-percent))))))))
-             (kolmogorov-average-plot (stream num-vars &key (logx t) (logy t) data)
-               (when data
-                 (tikzpicture stream
-                              "average with successively more point samples"
-                              (lambda (&aux (data (sort (copy-list data) #'< :key (getter :num-samples)))
-                                         (min-value (getf (car data) :average-size))
-                                         (max-value min-value)
-                                         (end-value (getf (car (last data)) :average-size)))
-                                (axis stream
-                                      (list "ymajorgrids"
-                                            (when logy
-                                              '("ymode" "log"))
-                                            (when logx
-                                              '("xmode" "log"))
-                                            '("scaled y ticks" "false")
-                                            "yminorgrids"
-                                            "xmajorgrids"
-                                            (list "xlabel" (format nil "{Sample size M for \\numvars=~A}" num-vars)))
-                                      (lambda ()
-                                        (addplot stream
-                                                 nil ; no comment
-                                                 '(("color" "blue")
-                                                   ("mark" "*"))
-                                                 "(~D,~D)"
-                                                 (mapcar (lambda (plist)
-                                                           (destructuring-bind (&key num-samples average-size &allow-other-keys) plist
-                                                             (setf min-value (min min-value (coerce average-size 'float))
-                                                                   max-value (max max-value (coerce average-size 'float)))
-                                                             (list num-samples (coerce average-size 'float))))
-                                                         data)
-						 :logx logx
-						 :logy logy)
-                                        (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
-                                          (format stream "% min-value = ~A~%" (float min-value 1.0)) ; min
-                                          (format stream "% max-value = ~A~%" (float max-value 1.0)) ; max
-                                          (format stream "% end-value = ~A~%" (float end-value 1.0)) ; final
-                                          (format stream "% excursion = ~A%~%" excursion-percent)
-                                          (list :num-vars num-vars
-                                                :min-value min-value
-                                                :max-value max-value
-                                                :end-value end-value
-                                                :excursion excursion-percent))))))))
+                              (lambda (&aux (data (sort (copy-list data) #'< :key (getter :num-samples))))
+				(list :average-excursion
+				      (axis stream
+					    (list "xmajorgrids"
+						  (when logy
+						    '("ymode" "log"))
+						  (when logx
+						    '("xmode" "log"))
+						  '("scaled y ticks" "false")
+						  "ylabel near ticks"
+						  '("yticklabel pos" "right")
+						  (list "ylabel" (format nil "{\\color{red} Average $\\mu_{~D}$}" num-vars))
+						  (list "xlabel" (format nil "{Sample size M for \\numvars=~A}" num-vars)))
+					    (lambda (&aux min-value max-value end-value)
+					      (addplot stream
+						       "average mu plot"
+						       '(("color" "red")
+							 ("mark" "*"))
+						       "(~D,~D)"
+						       (loop :for plist :in data
+							     :for num-samples = (getf plist :num-samples)
+							     :for average-size = (coerce (getf plist :average-size) 'float)
+							     :minimize average-size :into mi
+							     :maximize average-size :into ma
+							     :collect (list num-samples average-size)
+							     :finally (setf max-value ma
+									    min-value mi
+									    end-value average-size))
+						       :logx logx
+						       :logy logy)
+					      (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
+						(format stream "% mu min-value = ~A~%" (float min-value 1.0)) ; min
+						(format stream "% mu max-value = ~A~%" (float max-value 1.0)) ; max
+						(format stream "% mu end-value = ~A~%" (float end-value 1.0)) ; final
+						(format stream "% mu excursion = ~A%~%" excursion-percent)
+						(list :num-vars num-vars
+						      :min-value min-value
+						      :max-value max-value
+						      :excursion excursion-percent
+						      :end-value end-value))))
+				      :sigma-excursion
+				      (axis stream
+					    (list "ymajorgrids"
+						  (when logx
+						    '("xmode" "log"))
+						  (when logy
+						    '("ymode" "log"))
+						  '("scaled y ticks" "false")
+						  "yminorgrids"
+						  "xmajorgrids"
+						  (list "ylabel" (format nil "{\\color{blue} Standard Deviation $\\sigma_{~D}$}" num-vars))
+						  (list "xlabel" (format nil "{Sample size M for \\numvars=~A}" num-vars)))
+					    (lambda (&aux min-value max-value end-value)
+					      (addplot stream
+						       "standard deviation sigma plot"
+						       '(("color" "blue")
+							 ("mark" "*"))
+						       "(~D,~D)"
+						       (loop :for plist :in data
+							     :for num-samples = (getf plist :num-samples)
+							     :for sigma = (coerce (getf plist :sigma) 'float)
+							     :minimize sigma :into mi
+							     :maximize sigma :into ma
+							     :collect (list num-samples sigma)
+							     :finally (setf min-value mi
+									    max-value ma
+									    end-value sigma))
+						       :logx logx
+						       :logy logy)
+					      (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
+						(format stream "% sigma min-value = ~A~%" min-value) ; min
+						(format stream "% sigm max-value = ~A~%" max-value) ; max
+						(format stream "% sigma end-value = ~A~%" end-value) ; final
+						(format stream "% sigma excursion = ~A%~%" excursion-percent)
+						(list :num-vars num-vars
+						      :min-value min-value
+						      :max-value max-value
+						      :end-value end-value
+						      :excursion excursion-percent)))))))))
              (average-plot (stream &key (max max) (logy t) (xticks t) (exponent 1) (data (get-data exponent)))
                (when data
                  (tikzpicture stream
@@ -1144,8 +1109,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (format stream "& $\\frac{{\\mu_{\\numvars}}_{max} - {\\mu_{\\numvars}}_{min}}{{\\mu_{\\numvars}}_{final}} \\times 100\\%$~%")
                (format stream "& $\\frac{{\\sigma_{\\numvars}}_{max} - {\\sigma_{\\numvars}}_{min}}{{\\sigma_{\\numvars}}_{final}} \\times 100\\%$ \\\\~%")
                (format stream "\\hline~%")
-               (loop :for sigma-excursion :in (sort (copy-list sigma-excursion-summary) #'<
-                                                    :key (getter :num-vars))
+               (loop :for sigma-excursion   :in (sort (copy-list sigma-excursion-summary) #'<
+						      :key (getter :num-vars))
                      :for average-excursion :in (sort (copy-list average-excursion-summary) #'<
                                                       :key (getter :num-vars))
                      :do (format stream "~A~%" (getf sigma-excursion :num-vars))
@@ -1255,19 +1220,14 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                          (integral-plot stream integral-xys :num-vars num-vars)))))
               :do
                  (let ((sigma-name (format nil "~A/sigma-kolmogorov-~D.ltxdat" prefix num-vars))
-                       (average-name (format nil "~A/average-kolmogorov-~D.ltxdat" prefix num-vars))
                        (data (setof plist data
                                (= num-vars (getf plist :num-vars)))))
                    (with-open-file (stream sigma-name :direction :output :if-does-not-exist :create :if-exists :supersede)
                      (format t "writing to ~A~%" stream)
                      (when data
-                       (push (kolmogorov-sigma-plot stream num-vars :data data :logy nil)
-                             sigma-excursion-summary)))
-                   (with-open-file (stream average-name :direction :output :if-does-not-exist :create :if-exists :supersede)
-                     (format t "writing to ~A~%" stream)
-                     (when data
-                       (push (kolmogorov-average-plot stream num-vars :data data :logy nil)
-                             average-excursion-summary)))))
+		       (destructuring-bind (&key sigma-excursion average-excursion) (kolmogorov-sigma-plot stream num-vars :data data :logy nil)
+			 (push sigma-excursion sigma-excursion-summary)
+			 (push average-excursion average-excursion-summary))))))
         (with-open-file (stream (format nil "~A/excursion-summary.ltxdat" prefix) :direction :output :if-does-not-exist :create :if-exists :supersede)
           (format t "writing to ~A~%" stream)
           (write-excursion-summary stream average-excursion-summary sigma-excursion-summary))))
