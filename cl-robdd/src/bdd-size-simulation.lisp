@@ -817,7 +817,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                        data)
 					       :logx nil
 					       :logy logy))))))
-             (difference-plot (stream &key num-vars xys1 xys2 exponent)
+             (difference-plot (stream &key num-vars xys1 xys2 exponent m1 m2)
                (flet ((3-tuple-to-2 (3-tuple)
                         (list (car 3-tuple) (cadr 3-tuple))))
                  (let* ((diff (difference-function (mapcar #'3-tuple-to-2 xys1)
@@ -832,15 +832,16 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                       (- x1 x0))))))))
                    (tikzpicture stream
                                 (format nil "L1 distance between two successive curves N=~D M=~D vs M=~D"
-                                        num-vars exponent (1- exponent))
+                                        num-vars m1 m2)
                                 (lambda ()
                                   (axis stream
-                                        (list '("ylabel" "{Difference function}")
+                                        (list (list "ylabel" (format nil "{Difference function ${}^{~D}\\!H_{~D} - {}^{~D}\\!\\H_{~D}$}"
+								     m1  num-vars m2 num-vars))
                                               "ymajorgrids"
                                               "xmajorgrids"
                                               (list "xlabel"
                                                     (format nil "{L2 Distance M=~D vs M=~D}"
-                                                            exponent (1- exponent))))
+                                                            m1 m2)))
                                         (lambda ()
                                           (addplot stream
                                                    "difference function"
@@ -1212,6 +1213,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                   (difference-plot stream
                                                                    :num-vars num-vars
                                                                    :exponent exponent
+								   :m1 (getf (find-plist num-vars exponent) :num-samples)
+								   :m2 (getf (find-plist num-vars (1- exponent)) :num-samples)
                                                                    :xys1 (getf (find-plist num-vars exponent) :counts)
                                                                    :xys2 (getf (find-plist num-vars (1- exponent)) :counts)))
                                             integral-xys))
