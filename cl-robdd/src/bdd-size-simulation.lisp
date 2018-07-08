@@ -298,7 +298,7 @@ than INTERVAL number of seconds"
 
 (defun random-selection (data fraction)
   "DATA: list of objects
-FRACTION: number between 0 and 1 to indicate which portion of the given population to choose from"
+FRACTION: number between 0 and 1 to indicate which portion of the given population to choose"
   (declare (type (float 0.0 1.0) fraction)
            (type list data))
   (let* ((n (length data))
