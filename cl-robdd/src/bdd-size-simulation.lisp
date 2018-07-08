@@ -233,23 +233,20 @@ than INTERVAL number of seconds"
                                            (destructuring-bind (sample count) pair
                                              (list sample (/ count num-samples))))
                                          histogram))
-           (mean (reduce (lambda (sum this)
+           (mean-size (reduce (lambda (sum this)
                            (destructuring-bind (sample probability) this
                              (+ sum (* probability sample))))
                          normalized-histogram
                          :initial-value 0))
            (stdev (sqrt (reduce (lambda (sum this)
                                   (destructuring-bind (sample probability) this
-                                    (+ sum (* probability (sqr (- sample mean))))))
+                                    (+ sum (* probability (sqr (- sample mean-size))))))
                                 normalized-histogram :initial-value 0.0)))
            (ffff (1- (expt 2 (expt 2 num-vars))))
            (density (/ num-samples (1+ ffff))))
 
-      (let (sum average-size median)
+      (let (sum median)
         (setf sum (reduce #'+ histogram :initial-value 0 :key #'cadr))
-        (setf average-size (/ (reduce (lambda (old item)
-                                        (destructuring-bind (sample occurances) item
-                                          (+ old (* sample occurances)))) histogram :initial-value 0) sum))
         (setf median (median-a-list histogram))
         (list :sum sum
               :num-samples num-samples
@@ -257,7 +254,7 @@ than INTERVAL number of seconds"
               :randomp randomp
               :num-vars num-vars
               :density (sci-notation density)
-              :average-size mean
+              :average-size mean-size
               :sigma stdev
               :median median
               :possible-sizes (mapcar #'car histogram)
