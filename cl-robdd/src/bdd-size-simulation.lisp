@@ -1133,7 +1133,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (format stream "\\hline~%")
                (format stream "\\end{tabular}~%")))
 
-      (with-open-file (stream (format nil "~A/bdd-samples-table.ltx" prefix)
+      (with-open-file (stream (format nil "~A/bdd-samples-table.ltxdat" prefix)
                               :direction :output :if-does-not-exist :create :if-exists :supersede)
         (format t "writing to ~A~%" stream)
         (samples-table stream))
@@ -1211,7 +1211,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                        num-vars (getf (find-plist num-vars exponent) :num-samples)))))
                                   (warn "no data to plot ~A~%" fname)))
                             (when (> exponent 1)
-                              (let ((fname (format nil "~A/delta-N=~D-exp=~D-exp=~D.ltxdat" prefix num-vars exponent (1- exponent))))
+                              (let ((fname (format nil "~A/delta-N+~D-exp+~D-exp+~D.ltxdat" prefix num-vars exponent (1- exponent))))
                                 (if (getf (find-plist num-vars exponent) :counts)
                                     (with-open-file (stream fname
                                                             :direction :output :if-does-not-exist :create :if-exists :supersede)
