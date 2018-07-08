@@ -327,14 +327,20 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                      (t
                       (setf eof t))))))
              triples)
-           (gen-sample (exponent samples &aux (write-file (format nil "~A-exponent-~D" bdd-sizes-file exponent)))
+           (gen-sample (exponent samples
+			&key (m (length samples))
+			&aux
+			  (half-m (truncate m 2))
+			  (write-file (format nil "~A-exponent-~D" bdd-sizes-file exponent)))
              (when (<= exponent max-exponent)
                (with-open-file (wstream write-file :direction :output :if-exists :supersede :if-does-not-exist :create)
                  (format t "writing to ~A~%" wstream)
                  (dolist (triple samples)
                    (destructuring-bind (num-vars bdd-count index) triple
                      (format wstream "~A ~A ~A~%" num-vars bdd-count index))))
-               (gen-sample (1+ exponent) (random-selection samples 0.5)))))
+	       ;; the samples list is already shuffled, so just take half the list
+	       ;;   using nthcdr
+               (gen-sample (1+ exponent) (nthcdr half-m samples) :m half-m))))
     (gen-sample min-exponent (random-selection (read-samples) 0.5))))
 
 (defun read-counts-from-log (target-num-vars bdd-sizes-file &key (exponent 1))
