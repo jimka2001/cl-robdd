@@ -641,7 +641,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (format stream "\\begin{tikzpicture}~%")
                (prog1 (funcall continuation)
                  (format stream "\\end{tikzpicture}~%")))
-             (addplot (stream plot-comment plot-options control-string points &key (addplot "addplot"))
+             (addplot (stream plot-comment plot-options control-string points &key logx logy (addplot "addplot"))
                (declare (type (or null string) plot-comment)
                         (type string control-string)
                         (type list points plot-options))
@@ -650,9 +650,15 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                (format stream "\\~A[~A] coordinates {~%" addplot
                        (join-strings "," (mapcar #'print-option plot-options)))
                (dolist (point points)
-                 (apply #'format stream control-string point)
-                 (terpri stream))
-               (format stream "};~%"))
+		 (cond
+		   ((and logx
+			 (zerop (car point))))
+		   ((and logy
+			 (zerop (cadr point))))
+		   (t
+		    (apply #'format stream control-string point)
+		    (terpri stream))))
+	       (format stream "};~%"))
              (sqr (x)
                (* x x))
 	     (scale-points (xys &key expo)
@@ -727,7 +733,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 							'("color" "greeny")
 							'("mark" "*"))
 						       "(~D,~Ae~A)"
-						       scaled)
+						       scaled
+						       :logx logx
+						       :logy logy)
 					      (when (and points include-normal-distribution)
 						(let* ((x-min (reduce #'min points :key #'car))
 						       (x-max (reduce #'max points :key #'car))
@@ -747,7 +755,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 								       num-vars num-samples exponent sigma mu)
 							       '(("color" "red"))
 							       "(~D,~Ae~A)"
-							       scaled)))))
+							       scaled
+							       :logx logx
+							       :logy logy)))))
 					      (format stream "\\legend{}~%"))))))))))
              (integral-plot (stream integral-xys &key num-vars)
                (tikzpicture stream
@@ -765,7 +775,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                '(("mark" "triangle")
                                                  ("color" "blue"))
                                                "(~D,~D)"
-                                               integral-xys))))))
+                                               integral-xys
+					       :logx t
+					       :logy nil))))))
              (sigma-plot (stream &key (max max) (logy t) (xmarks nil) (exponent 1) (data (get-data exponent)))
                (tikzpicture stream
                             "sigma plot"
@@ -801,7 +813,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                            (when (<= num-vars max)
                                                              (list (list num-vars
                                                                          (coerce sigma 'float))))))
-                                                       data)))))))
+                                                       data)
+					       :logx nil
+					       :logy logy))))))
              (difference-plot (stream &key num-vars xys1 xys2 exponent)
                (flet ((3-tuple-to-2 (3-tuple)
                         (list (car 3-tuple) (cadr 3-tuple))))
@@ -864,7 +878,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                              (setf min-value (min min-value (coerce average-size 'float))
                                                                    max-value (max max-value (coerce average-size 'float)))
                                                              (list num-samples (coerce average-size 'float))))
-                                                         data))
+                                                         data)
+						 :logx logx
+						 :logy logy)
                                         (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
                                           (format stream "% min-value = ~A~%" (float min-value 1.0)) ; min
                                           (format stream "% max-value = ~A~%" (float max-value 1.0)) ; max
@@ -892,7 +908,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                              (setf min-value (min min-value (coerce sigma 'float))
                                                                    max-value (max max-value (coerce sigma 'float)))
                                                              (list num-samples (coerce sigma 'float))))
-                                                         data))
+                                                         data)
+						 :logx logx
+						 :logy logy)
                                         (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
                                           (format stream "% min-value = ~A~%" min-value) ; min
                                           (format stream "% max-value = ~A~%" max-value) ; max
@@ -932,7 +950,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                              (setf min-value (min min-value (coerce average-size 'float))
                                                                    max-value (max max-value (coerce average-size 'float)))
                                                              (list num-samples (coerce average-size 'float))))
-                                                         data))
+                                                         data)
+						 :logx logx
+						 :logy logy)
                                         (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
                                           (format stream "% min-value = ~A~%" (float min-value 1.0)) ; min
                                           (format stream "% max-value = ~A~%" (float max-value 1.0)) ; max
@@ -982,7 +1002,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                              (when (<= num-vars max)
                                                                (list (list num-vars
                                                                            (reduce #'max counts :key #'car :initial-value 0))))))
-                                                         data))
+                                                         data)
+						 :logy logy)
                                         (addplot stream
                                                  "average size"
                                                  '(("color" "teal")
@@ -993,7 +1014,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                              (when (<= num-vars max)
                                                                (list (list num-vars
                                                                            (coerce average-size 'float))))))
-                                                         data))
+                                                         data)
+						 :logy logy)
                                         (addplot stream
                                                  "median size"
                                                  '(("line width" "0.8pt")
@@ -1005,7 +1027,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                            (destructuring-bind (&key num-vars median &allow-other-keys) plist
                                                              (when (<= num-vars max)
                                                                (list (list num-vars median)))))
-                                                         data))
+                                                         data)
+						 :logy logy)
                                         (format stream "\\legend{Worst case, Average, Median}~%")))))))
              (efficiency-plot (stream &key (exponent 1) (data (get-data exponent)))
                (when data
@@ -1104,6 +1127,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                               "black"))))
                                                        "  (~D,~A)"
                                                        counts
+						       :logx logx
                                                        :addplot (if mark "addplot+" "addplot") )))))
                                       (format stream "\\legend{")
                                       (let ((first t))
