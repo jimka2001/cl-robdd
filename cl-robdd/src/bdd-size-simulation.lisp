@@ -722,10 +722,13 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 					     (when logx
 					       '("xmode" "log"))
 					     (list "ylabel" (case expo
-							      ((0) (format nil "{No. of Boolean functions}"))
-							      ((1) (format nil "{No. of Boolean functions $\\times 10$}"))
-							      (t   (format nil "{No. of Boolean functions $\\times 10^{~D}$}" expo))))
-					     '("label style" "{font=\\large}")
+							      ((0) (format nil "{\\color{greeny} $\\HH{~D}{~D}(x)$}"
+                                                                           num-samples num-vars))
+							      ((1) (format nil "{\\color{greeny} $\\HH{~D}{~D}(x) \\times 10$}"
+                                                                           num-samples num-vars))
+							      (t   (format nil "{\\color{greeny} $\\HH{~D}{~D}(x) \\times 10^{~D}$}"
+                                                                           num-samples num-vars expo))))
+					     '("label style" "{font=\\Large}")
 					     '("tick label style" "{font=\\Large}"))
 					    (lambda ()
 					      (addplot stream
@@ -765,11 +768,12 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                             (format nil "Integral plot of N=~D" num-vars)
                             (lambda ()
                               (axis stream
-                                    '("xmajorgrids"
-                                      "ymajorgrids"
-                                      ("xmode" "log")
-                                      ("xlabel" "M Number of points")
-                                      ("ylabel" "{L2 Distance M to M-1}"))
+                                    (list "xmajorgrids"
+                                          "ymajorgrids"
+                                          '("xmode" "log")
+                                          '("label style" "{font=\\Large}")
+                                          '("xlabel" "M Number of points")
+                                          (list "ylabel" (format nil "{$\\LL{M}{~D}$}" num-vars)))
                                     (lambda ()
                                       (addplot stream
                                                "integral plot"
@@ -831,17 +835,16 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                          (* (sqr (- y1 y0))
                                                                       (- x1 x0))))))))
                    (tikzpicture stream
-                                (format nil "L1 distance between two successive curves N=~D M=~D vs M=~D"
+                                (format nil "L2 distance between two successive curves N=~D M=~D vs M=~D"
                                         num-vars m1 m2)
                                 (lambda ()
                                   (axis stream
-                                        (list (list "ylabel" (format nil "{Difference function ${}^{~D}\\!H_{~D} - {}^{~D}\\!\\H_{~D}$}"
-								     m1  num-vars m2 num-vars))
+                                        (list (list "ylabel" (format nil "{$\\Delta\\HH{~D}{~D}$}" m1  num-vars))
                                               "ymajorgrids"
                                               "xmajorgrids"
+                                              '("label style" "{font=\\Large}")
                                               (list "xlabel"
-                                                    (format nil "{L2 Distance M=~D vs M=~D}"
-                                                            m1 m2)))
+                                                    (format nil "{~D-variable ROBDD size}" num-vars)))
                                         (lambda ()
                                           (addplot stream
                                                    "difference function"
@@ -1007,14 +1010,14 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                 "Residual compression ratio plot"
                                 (lambda ()
                                   (axis stream
-                                        (list '("ymin" 0)
+                                        (list '("ymode" "log")
                                               "ymajorgrids"
                                               "yminorgrids"
                                               "xmajorgrids"
                                               '("xlabel" "Number of variables")
                                               '("ylabel" "Residual compression ratio")
                                               '("legend style" "{at={(1,1)},anchor=north east,font=\\tiny}")
-                                              '("ytick" "{0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0}")
+                                              ;;'("ytick" "{0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0}")
                                               (list "xtick"
                                                     (format nil "{~A}"
                                                             (join-strings "," (list* "0" "1"
@@ -1184,7 +1187,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                      :counts (getf (find-plist num-vars exponent) :counts)
                                                      :clip t
                                                      :xlabel (lambda (num-vars)
-                                                               (format nil "{~D-var distrib. w/ M=~D}"
+                                                               (format nil "{~D-var ROBDD size}"
                                                                        num-vars (getf (find-plist num-vars exponent) :num-samples)))))
                                   (warn "no data to plot ~A~%" fname)))
                             (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D+normal.ltxdat" prefix exponent num-vars)))
@@ -1200,8 +1203,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                      :clip t
                                                      :counts (getf (find-plist num-vars exponent) :counts)
                                                      :xlabel (lambda (num-vars)
-                                                               (format nil "{~D-var distrib. w/ M=~D}"
-                                                                       num-vars (getf (find-plist num-vars exponent) :num-samples)))))
+                                                               (format nil "{~D-var ROBDD size}" num-vars))))
                                   (warn "no data to plot ~A~%" fname)))
                             (when (> exponent 1)
                               (let ((fname (format nil "~A/delta-N+~D-exp+~D-exp+~D.ltxdat" prefix num-vars exponent (1- exponent))))
