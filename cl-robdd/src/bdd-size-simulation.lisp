@@ -839,7 +839,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                         num-vars m1 m2)
                                 (lambda ()
                                   (axis stream
-                                        (list (list "ylabel" (format nil "{$\\Delta\\HH{~D}{~D}$}" m1  num-vars))
+                                        (list (list "ylabel" (format nil "{$\\Delta\\HH{~D}{~D}$}" m2  num-vars))
                                               "ymajorgrids"
                                               "xmajorgrids"
                                               '("label style" "{font=\\Large}")
