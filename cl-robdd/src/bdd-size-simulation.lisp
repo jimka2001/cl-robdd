@@ -1344,7 +1344,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
     (close (getf stream :stream))))
 
 (defun generate-latex-plots (&key (analysis-dir "/Users/jnewton/analysis")
-                              (bin-dir "/Users/jnewton/sw/regular-type-expression/bin")
+                               (bin-dir "/Users/jnewton/sw/regular-type-expression/bin")
+                               (autogen-dir "/Users/jnewton/newton.16.edtchs/src/autogen/.")
                               (max-num-vars 18)
                               (max-exponent 8))
   (loop :for n :from 5 :to max-num-vars
@@ -1364,4 +1365,4 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                      :max-kolmogorov max-num-vars
                                                                      :min-kolmogorov 5)
   (when bin-dir
-    (run-program (format nil "~A/copy-latex.sh" bin-dir) ())))
+    (run-program (format nil "~A/copy-latex.sh" bin-dir) (list autogen-dir))))
