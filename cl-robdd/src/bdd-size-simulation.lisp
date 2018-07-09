@@ -1017,7 +1017,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                               '("xlabel" "Number of variables")
                                               '("ylabel" "Residual compression ratio")
                                               '("legend style" "{at={(1,1)},anchor=north east,font=\\tiny}")
-                                              ;;'("ytick" "{0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0}")
+                                              '("xtick" "{2,4,6,8,10,12,14,16,18,20}")
                                               (list "xtick"
                                                     (format nil "{~A}"
                                                             (join-strings "," (list* "0" "1"
