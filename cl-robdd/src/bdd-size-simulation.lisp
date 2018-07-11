@@ -1352,7 +1352,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 
 (defun generate-latex-plots (&key (analysis-dir "/Users/jnewton/analysis")
                                (bin-dir "/Users/jnewton/sw/regular-type-expression/bin")
-                               (autogen-dir "/Users/jnewton/newton.16.edtchs/src/autogen/.")
+                               (autogen-dir "/Users/jnewton/research/src/autogen/.")
                               (max-num-vars 18)
                               (max-exponent 8))
   (loop :for n :from 5 :to max-num-vars
