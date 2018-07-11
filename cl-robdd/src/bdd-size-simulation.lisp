@@ -626,13 +626,22 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                  ((cons string (cons fixnum)) (format nil "~A=~D" (car axis-option) (cadr axis-option)))
                  (t
                   (error "unknown axis-option ~A" axis-option))))
-             (axis (stream axis-options continuation)
+             (axis (stream axis-options continuation &key logx logy)
                (declare (type list axis-options)
                         (type (function () t) continuation))
-               (format stream "\\begin{axis}[~% ~A~%]~%"
-                       (join-strings (format nil ",~% ") (mapcar  #'print-option (remove nil axis-options))))
-               (prog1 (funcall continuation)
-                 (format stream "\\end{axis}~%")))
+               (flet ((sanitize-axis-options (plot-options)
+                        (remove nil
+                                `(,@plot-options
+                                  ,@(when (or logx logy)
+                                      '(("lua backend" "false")))
+                                  ,@(when logx
+                                      '(("xmode" "log")))
+                                  ,@(when logy
+                                      '(("xmode" "log")))))))
+                 (format stream "\\begin{axis}[~% ~A~%]~%"
+                         (join-strings (format nil ",~% ") (mapcar  #'print-option (sanitize-axis-options axis-options))))
+                 (prog1 (funcall continuation)
+                   (format stream "\\end{axis}~%"))))
              (tikzpicture (stream comment continuation)
                ;; returns the values returned from CONTINUATION
                (declare (type (or null string) comment)
@@ -645,21 +654,28 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
              (addplot (stream plot-comment plot-options control-string points &key logx logy (addplot "addplot"))
                (declare (type (or null string) plot-comment)
                         (type string control-string)
-                        (type list points plot-options))
+                        (type list points plot-options)
+                        (type (function (list) number)))
+                          
+               ;; TODO check to see if all the point y values are equal, and if so
+               ;;   create y min and max or marks to avoid latex warning
+               ;; Package pgfplots Warning: Axis range for axis y is approximately empty;
+               ;;   enlarging it (it is [2.0000000000:2.0000000000]) on input line 17.
+               ;;
                (when plot-comment
                  (format stream "% ~A~%" plot-comment))
                (format stream "\\~A[~A] coordinates {~%" addplot
                        (join-strings "," (mapcar #'print-option plot-options)))
                (dolist (point points)
-		 (cond
-		   ((and logx
-			 (zerop (car point))))
-		   ((and logy
-			 (zerop (cadr point))))
-		   (t
-		    (apply #'format stream control-string point)
-		    (terpri stream))))
-	       (format stream "};~%"))
+                 (cond
+                   ((and logx
+                         (zerop (car point))))
+                   ((and logy
+                         (zerop (cadr point))))
+                   (t
+                    (apply #'format stream control-string point)
+                    (terpri stream))))
+               (format stream "};~%"))
              (sqr (x)
                (* x x))
 	     (scale-points (xys &key expo)
@@ -717,10 +733,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 					     "yminorgrids"
 					     "xmajorgrids"
 					     "xminorgrids"
-					     (when logy
-					       '("ymode" "log"))
-					     (when logx
-					       '("xmode" "log"))
 					     (list "ylabel" (case expo
 							      ((0) (format nil "{\\color{greeny} $\\HH{~D}{~D}(x)$}"
                                                                            num-samples num-vars))
@@ -762,7 +774,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 							       scaled
 							       :logx logx
 							       :logy logy)))))
-					      (format stream "\\legend{}~%"))))))))))
+					      (format stream "\\legend{}~%"))
+                                            :logx logx
+                                            :logy logy))))))))
              (integral-plot (stream integral-xys &key num-vars)
                (tikzpicture stream
                             (format nil "Integral plot of N=~D" num-vars)
@@ -770,10 +784,10 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                               (axis stream
                                     (list "xmajorgrids"
                                           "ymajorgrids"
-                                          '("xmode" "log")
                                           '("label style" "{font=\\Large}")
                                           '("xlabel" "M Number of points")
-                                          (list "ylabel" (format nil "{$\\LL{M}{~D}$}" num-vars)))
+                                          (list "ylabel" (format nil "{$\\LL{M}{~D}$}" num-vars))
+                                          :xmode t)
                                     (lambda ()
                                       (addplot stream
                                                "integral plot"
@@ -790,8 +804,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                               (axis stream
                                     (list "ymajorgrids"
                                           '("xmin" 0)
-                                          (when logy
-                                            '("ymode" "log"))
                                           "yminorgrids"
                                           "xmajorgrids"
                                           '("xlabel" "Number of variables")
@@ -806,7 +818,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                                              (max max (getf item :num-vars)))
                                                                                            (cdr data)
                                                                                            :initial-value (getf (car data) :num-vars))
-                                                                              collect (format nil "~D" xtick)))))))
+                                                                              collect (format nil "~D" xtick))))))
+                                          :ylog ylog)
                                     (lambda ()
                                       (addplot stream
                                                nil ; no comment
@@ -821,7 +834,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                        data)
 					       :logx nil
 					       :logy logy))))))
-             (difference-plot (stream &key num-vars xys1 xys2 exponent m1 m2)
+             (difference-plot (stream &key num-vars xys1 xys2 m1 m2)
                (flet ((3-tuple-to-2 (3-tuple)
                         (list (car 3-tuple) (cadr 3-tuple))))
                  (let* ((diff (difference-function (mapcar #'3-tuple-to-2 xys1)
@@ -860,10 +873,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 				(list :average-excursion
 				      (axis stream
 					    (list "xmajorgrids"
-						  (when logy
-						    '("ymode" "log"))
-						  (when logx
-						    '("xmode" "log"))
 						  '("scaled y ticks" "false")
 						  "ylabel near ticks"
 						  '("yticklabel pos" "right")
@@ -895,14 +904,12 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 						      :min-value min-value
 						      :max-value max-value
 						      :excursion excursion-percent
-						      :end-value end-value))))
+						      :end-value end-value)))
+                                            :logx logx
+                                            :logy logy)
 				      :sigma-excursion
 				      (axis stream
 					    (list "ymajorgrids"
-						  (when logx
-						    '("xmode" "log"))
-						  (when logy
-						    '("ymode" "log"))
 						  '("scaled y ticks" "false")
 						  "yminorgrids"
 						  "xmajorgrids"
@@ -934,7 +941,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 						      :min-value min-value
 						      :max-value max-value
 						      :end-value end-value
-						      :excursion excursion-percent)))))))))
+						      :excursion excursion-percent)))
+                                            :logx logx
+                                            :logy logy))))))
              (average-plot (stream &key (max max) (logy t) (xticks t) (exponent 1) (data (get-data exponent)))
                (when data
                  (tikzpicture stream
@@ -943,7 +952,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                               (lambda ()
                                 (axis stream
                                       (list (if logy
-                                                '("ymode" "log")
+                                                nil
                                                 '("ymin" "0"))
                                             "ymajorgrids"
                                             "yminorgrids"
@@ -1001,7 +1010,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                (list (list num-vars median)))))
                                                          data)
 						 :logy logy)
-                                        (format stream "\\legend{Worst case, Average, Median}~%")))))))
+                                        (format stream "\\legend{Worst case, Average, Median}~%"))
+                                      :logy logy)))))
              (efficiency-plot (stream &key (exponent 1) (data (get-data exponent)))
                (when data
                  (flet ((residual-compression-ratio (value num-vars)
@@ -1010,8 +1020,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                 "Residual compression ratio plot"
                                 (lambda ()
                                   (axis stream
-                                        (list '("ymode" "log")
-                                              "ymajorgrids"
+                                        (list "ymajorgrids"
                                               "yminorgrids"
                                               "xmajorgrids"
                                               '("xlabel" "Number of variables")
@@ -1063,16 +1072,15 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                (list num-vars
                                                                      (residual-compression-ratio median num-vars))))
                                                            data))
-                                          (format stream "\\legend{Worst case, Average, Median}~%"))))))))
+                                          (format stream "\\legend{Worst case, Average, Median}~%"))
+                                        :logy t))))))
              (size-plots (stream &key (max 19) (logx t) (mark t) (colors colors) ((:exponent given-exponent) 1) &aux legend)
                (declare (type unsigned-byte given-exponent))
                (tikzpicture stream
                             "normalized size plots"
                             (lambda ()
                               (axis stream
-                                    (list (when logx
-                                            '("xmode" "log"))
-                                          '("xlabel" "BDD Size")
+                                    (list '("xlabel" "BDD Size")
                                           "ymajorgrids"
                                           "yminorgrids"
                                           "xmajorgrids"
@@ -1108,7 +1116,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                             (format stream ","))
                                           (format stream "~S" label)
                                           (setf first nil)))
-                                      (format stream "}~%"))))))
+                                      (format stream "}~%"))
+                                    :logx logx))))
              (write-excursion-summary (stream average-excursion-summary sigma-excursion-summary)
                (format stream "\\begin{tabular}{crr}~%")
                (format stream "\\hline~%")
@@ -1187,8 +1196,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                      :counts (getf (find-plist num-vars exponent) :counts)
                                                      :clip t
                                                      :xlabel (lambda (num-vars)
-                                                               (format nil "{~D-var ROBDD size}"
-                                                                       num-vars (getf (find-plist num-vars exponent) :num-samples)))))
+                                                               (format nil "{~D-var ROBDD size}" num-vars))))
                                   (warn "no data to plot ~A~%" fname)))
                             (let ((fname (format nil "~A/bdd-distribution-kolmogorov-~D-~D+normal.ltxdat" prefix exponent num-vars)))
                               (if (getf (find-plist num-vars exponent) :counts)
@@ -1214,7 +1222,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                       (push (list (getf (find-plist num-vars exponent) :num-samples)
                                                   (difference-plot stream
                                                                    :num-vars num-vars
-                                                                   :exponent exponent
 								   :m1 (getf (find-plist num-vars exponent) :num-samples)
 								   :m2 (getf (find-plist num-vars (1- exponent)) :num-samples)
                                                                    :xys1 (getf (find-plist num-vars exponent) :counts)
