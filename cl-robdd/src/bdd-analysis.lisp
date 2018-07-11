@@ -24,6 +24,8 @@
   (:use :cl :cl-robdd ;;:open-pipe-to-file
 	)
   (:export
+   "ADDPLOT"
+   "AXIS"
    "CALL-WITH-DPROFILING"
    "CALL-WITH-SPROFILING"
    "CALL-WITH-TIMEOUT"
@@ -31,6 +33,7 @@
    "MEASURE-AND-WRITE-BDD-DISTRIBUTION"
    "QSTAT-F"
    "RANDOM-BOOLEAN-COMBINATION"
+   "TIKZPICTURE"
    "WITH-DUP-STREAM"
 ))
 

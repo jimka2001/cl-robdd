@@ -568,6 +568,75 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 (defun getter (field)
   (lambda (obj) (getf obj field)))
 
+
+(defun join-strings (delimeter strings)
+  (with-output-to-string (str)
+    (when (car strings)
+      (format str "~A" (car strings)))
+    (dolist (string (cdr strings))
+      (format str "~A~A" delimeter string))))
+
+(defun print-option (axis-option)
+  (typecase axis-option
+    (string (format nil "~A" axis-option))
+    ((cons string (cons string)) (format nil "~A=~A" (car axis-option) (cadr axis-option)))
+    ((cons string (cons fixnum)) (format nil "~A=~D" (car axis-option) (cadr axis-option)))
+    (t
+     (error "unknown axis-option ~A" axis-option))))
+
+(defun axis (stream axis-options continuation &key logx logy)
+  (declare (type list axis-options)
+           (type (function () t) continuation))
+  (flet ((sanitize-axis-options (plot-options)
+           (remove nil
+                   `(,@(when (or logx logy)
+                         '(("lua backend" "false")))
+                     ,@(when logx
+                         '(("xmode" "log")))
+                     ,@(when logy
+                         '(("ymode" "log")))
+                     ,@plot-options))))
+    (format stream "\\begin{axis}[~% ~A~%]~%"
+            (join-strings (format nil ",~% ") (mapcar  #'print-option (sanitize-axis-options axis-options))))
+    (prog1 (funcall continuation)
+      (format stream "\\end{axis}~%"))))
+
+(defun tikzpicture (stream comment continuation)
+  ;; returns the values returned from CONTINUATION
+  (declare (type (or null string) comment)
+           (type (function () t) continuation))
+  (when comment
+    (format stream "% ~A~%" comment))
+  (format stream "\\begin{tikzpicture}~%")
+  (prog1 (funcall continuation)
+    (format stream "\\end{tikzpicture}~%")))
+
+(defun addplot (stream plot-comment plot-options control-string points &key logx logy (addplot "addplot"))
+  (declare (type (or null string) plot-comment)
+           (type string control-string)
+           (type list points plot-options)
+           (type (function (list) number)))
+                          
+  ;; TODO check to see if all the point y values are equal, and if so
+  ;;   create y min and max or marks to avoid latex warning
+  ;; Package pgfplots Warning: Axis range for axis y is approximately empty;
+  ;;   enlarging it (it is [2.0000000000:2.0000000000]) on input line 17.
+  ;;
+  (when plot-comment
+    (format stream "% ~A~%" plot-comment))
+  (format stream "\\~A[~A] coordinates {~%" addplot
+          (join-strings "," (mapcar #'print-option plot-options)))
+  (dolist (point points)
+    (cond
+      ((and logx
+            (zerop (car point))))
+      ((and logy
+            (zerop (cadr point))))
+      (t
+       (apply #'format stream control-string point)
+       (terpri stream))))
+  (format stream "};~%"))
+
 (defun latex-measure-bdd-sizes (prefix vars num-samples &key (min 1) (max (length vars)) (re-run t) (max-exponent 8) (min-kolmogorov 5) (max-kolmogorov 18))
   ;; example values
   ;; prefix = "/Users/jnewton/newton.16.edtchs/src"
@@ -613,69 +682,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                             (length (getf sexp-plist :possible-sizes))))))))
                (format stream "\\hline~%")
                (format stream "\\end{tabular}~%"))
-             (join-strings (delimeter strings)
-               (with-output-to-string (str)
-                 (when (car strings)
-                   (format str "~A" (car strings)))
-                 (dolist (string (cdr strings))
-                   (format str "~A~A" delimeter string))))
-             (print-option (axis-option)
-               (typecase axis-option
-                 (string (format nil "~A" axis-option))
-                 ((cons string (cons string)) (format nil "~A=~A" (car axis-option) (cadr axis-option)))
-                 ((cons string (cons fixnum)) (format nil "~A=~D" (car axis-option) (cadr axis-option)))
-                 (t
-                  (error "unknown axis-option ~A" axis-option))))
-             (axis (stream axis-options continuation &key logx logy)
-               (declare (type list axis-options)
-                        (type (function () t) continuation))
-               (flet ((sanitize-axis-options (plot-options)
-                        (remove nil
-                                `(,@plot-options
-                                  ,@(when (or logx logy)
-                                      '(("lua backend" "false")))
-                                  ,@(when logx
-                                      '(("xmode" "log")))
-                                  ,@(when logy
-                                      '(("xmode" "log")))))))
-                 (format stream "\\begin{axis}[~% ~A~%]~%"
-                         (join-strings (format nil ",~% ") (mapcar  #'print-option (sanitize-axis-options axis-options))))
-                 (prog1 (funcall continuation)
-                   (format stream "\\end{axis}~%"))))
-             (tikzpicture (stream comment continuation)
-               ;; returns the values returned from CONTINUATION
-               (declare (type (or null string) comment)
-                        (type (function () t) continuation))
-               (when comment
-                 (format stream "% ~A~%" comment))
-               (format stream "\\begin{tikzpicture}~%")
-               (prog1 (funcall continuation)
-                 (format stream "\\end{tikzpicture}~%")))
-             (addplot (stream plot-comment plot-options control-string points &key logx logy (addplot "addplot"))
-               (declare (type (or null string) plot-comment)
-                        (type string control-string)
-                        (type list points plot-options)
-                        (type (function (list) number)))
-                          
-               ;; TODO check to see if all the point y values are equal, and if so
-               ;;   create y min and max or marks to avoid latex warning
-               ;; Package pgfplots Warning: Axis range for axis y is approximately empty;
-               ;;   enlarging it (it is [2.0000000000:2.0000000000]) on input line 17.
-               ;;
-               (when plot-comment
-                 (format stream "% ~A~%" plot-comment))
-               (format stream "\\~A[~A] coordinates {~%" addplot
-                       (join-strings "," (mapcar #'print-option plot-options)))
-               (dolist (point points)
-                 (cond
-                   ((and logx
-                         (zerop (car point))))
-                   ((and logy
-                         (zerop (cadr point))))
-                   (t
-                    (apply #'format stream control-string point)
-                    (terpri stream))))
-               (format stream "};~%"))
              (sqr (x)
                (* x x))
 	     (scale-points (xys &key expo)
