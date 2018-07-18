@@ -30,12 +30,12 @@
    "CALL-WITH-SPROFILING"
    "CALL-WITH-TIMEOUT"
    "DEMAND-ENV-VAR"
+   "JOIN-STRINGS"
    "MEASURE-AND-WRITE-BDD-DISTRIBUTION"
    "QSTAT-F"
    "RANDOM-BOOLEAN-COMBINATION"
    "TIKZPICTURE"
-   "WITH-DUP-STREAM"
-))
+   "WITH-DUP-STREAM"))
 
 (in-package :cl-robdd-analysis)
 
@@ -103,4 +103,12 @@ similar to where current Output_Path is indicating."
                                 :if-does-not-exist :create)
        (let ((,stream (make-broadcast-stream ,stream ,log-file)))
          ,@body))))
+
+
+(defun join-strings (delimeter strings)
+  (with-output-to-string (str)
+    (when (car strings)
+      (format str "~A" (car strings)))
+    (dolist (string (cdr strings))
+      (format str "~A~A" delimeter string))))
 

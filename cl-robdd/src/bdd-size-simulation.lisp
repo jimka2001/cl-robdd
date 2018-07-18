@@ -569,13 +569,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
   (lambda (obj) (getf obj field)))
 
 
-(defun join-strings (delimeter strings)
-  (with-output-to-string (str)
-    (when (car strings)
-      (format str "~A" (car strings)))
-    (dolist (string (cdr strings))
-      (format str "~A~A" delimeter string))))
-
 (defun print-option (axis-option)
   (typecase axis-option
     (string (format nil "~A" axis-option))
@@ -1110,14 +1103,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                        counts
 						       :logx logx
                                                        :addplot (if mark "addplot+" "addplot") )))))
-                                      (format stream "\\legend{")
-                                      (let ((first t))
-                                        (dolist (label (reverse legend))
-                                          (unless first
-                                            (format stream ","))
-                                          (format stream "~S" label)
-                                          (setf first nil)))
-                                      (format stream "}~%"))
+                                      (format stream "\\legend{~A}~%"
+                                              (join-strings "," (reverse legend))))
                                     :logx logx))))
              (write-excursion-summary (stream average-excursion-summary sigma-excursion-summary)
                (format stream "\\begin{tabular}{crr}~%")
