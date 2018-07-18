@@ -1363,5 +1363,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                            :max-kolmogorov max-num-vars
                            :min-kolmogorov 5)
   (when (and bin-dir
-             autogen-dir)
+             autogen-dir
+             (not (string= autogen-dir analysis-dir)))
     (run-program (format nil "~A/copy-latex.sh" bin-dir) (list autogen-dir))))
