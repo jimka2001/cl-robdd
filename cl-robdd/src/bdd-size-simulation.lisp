@@ -596,10 +596,12 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 
 (defun tikzpicture (stream comment continuation)
   ;; returns the values returned from CONTINUATION
-  (declare (type (or null string) comment)
+  (declare (type string comment)
            (type (function () t) continuation))
-  (when comment
-    (format stream "% ~A~%" comment))
+  (cond ((string= "" comment)
+         (error "inavalid comment empty-string for tikzpicture"))
+        (t
+         (format stream "% ~A~%" comment)))
   (format stream "\\begin{tikzpicture}~%")
   (prog1 (funcall continuation)
     (format stream "\\end{tikzpicture}~%")))
