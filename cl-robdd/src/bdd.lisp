@@ -60,8 +60,6 @@
 (defun bdd-ident (bdd)
   (slot-value bdd 'ident))
 
-
-
 (defclass bdd-node (bdd)
   ((positive :type bdd :initarg :positive ;;:reader bdd-positive
          )
@@ -182,7 +180,6 @@
           (setf (bdd-recent-count) new)))))
   (pushnew 'report-hash-lossage sb-ext:*after-gc-hooks*))
 
-
 (defmethod print-object ((bdd bdd) stream)
   (print-unreadable-object (bdd stream :type t :identity nil)
     (when (slot-boundp bdd 'ident)
@@ -191,8 +188,6 @@
 
 (defmethod bdd ((bdd bdd) &key &allow-other-keys)
   bdd)
-
-
 
 ;; reader for the label slot.  I've implemented this as a defun rather than :reader becase
 ;;  it seems to be in the critical performance loop and the normal function performs marginally
@@ -230,51 +225,50 @@
   (declare (type class-designator bdd-node-class))
   (%bdd-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
+(defun associative-reduce (function sequence &key initial-value (key #'identity))
+  (declare (type (function (t t) t) function))
+  (labels ((compactify (stack)
+	     (if (null (cdr stack))
+		 stack
+		 (destructuring-bind ((n1 obj1) (n2 obj2) &rest tail) stack
+                   (if (= n1 n2)
+		       (compactify (cons (list (1+ n1) (funcall function obj1 obj2)) tail))
+		       stack))))
+	   (finish-stack (acc stack)
+	     (if stack
+		 (finish-stack (funcall function acc (cadr (car stack)))
+			       (cdr stack))
+		 acc)))
+    (destructuring-bind ((_ obj) &rest tail) (reduce (lambda (stack item)
+						       (compactify (cons (list 1 (funcall key item)) stack)))
+						     sequence
+						     :initial-value (list (list 1 initial-value)))
+      (declare (ignore _))
+      (finish-stack obj tail))))
+
 (defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
 (defvar *bdd-operation-order* (the (member :divide-and-conquer
                                            :reduce) :divide-and-conquer ))
-(flet ((bdd-list-to-bdd-helper (len bdds zero op)
-         (labels ((divide-and-conquer (len bdds)
-                    ;; len is the length of the bdds list, this is redunant but prevents re-counting each time
-                    (case len
-                      ((0)
-                       zero)
-                      ((1)
-                       (car bdds))
-                      (t
-                       (let* ((half-length (truncate len 2))
-                              (trailing (nthcdr half-length bdds))
-                              (leading (ldiff bdds trailing)))
-                         (funcall op (divide-and-conquer half-length leading)
-                                  (divide-and-conquer (- len half-length) trailing)))))))
-           (ecase *bdd-operation-order*
-             ((:reduce)
-              (reduce op bdds :initial-value zero))
-             ((:divide-and-conquer)
-              (divide-and-conquer len bdds))))))
 
-  (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
-    (declare (type class-designator bdd-node-class))
-    (bdd-list-to-bdd-helper (length tail) (mapcar (bdd-factory bdd-node-class) tail) *bdd-true* #'bdd-xor))
-  
-  (defmethod bdd-list-to-bdd ((head (eql 'and)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
-    (declare (type class-designator bdd-node-class))
-    (bdd-list-to-bdd-helper (length tail) (mapcar (bdd-factory bdd-node-class) tail) *bdd-true* #'bdd-and))
+(defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
+  (declare (type class-designator bdd-node-class))
+  (associative-reduce #'bdd-xor tail :initial-value *bdd-false* :key (bdd-factory bdd-node-class)))
 
-  (defmethod bdd-list-to-bdd ((head (eql 'or)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
-    (declare (type class-designator bdd-node-class))
-    (bdd-list-to-bdd-helper (length tail) (mapcar (bdd-factory bdd-node-class) tail) *bdd-false* #'bdd-or))
+(defmethod bdd-list-to-bdd ((head (eql 'and)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
+  (declare (type class-designator bdd-node-class))
+  (associative-reduce #'bdd-and tail  :initial-value *bdd-true* :key (bdd-factory bdd-node-class)))
 
-  (defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
-    (declare (type class-designator bdd-node-class))
-    ;; (assert (<= 2 (length tail)) ()
-    ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
-    (destructuring-bind (bdd-head &rest bdd-tail) (mapcar (bdd-factory bdd-node-class) tail)
-      (ecase *bdd-operation-order*
-        ((:reduce)
-         (reduce #'bdd-and-not bdd-tail :initial-value bdd-head))
-        ((:divide-and-conquer)
-         (bdd-and-not bdd-head (bdd-list-to-bdd-helper (length bdd-tail) bdd-tail *bdd-true* #'bdd-and)))))))
+(defmethod bdd-list-to-bdd ((head (eql 'or)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
+  (declare (type class-designator bdd-node-class))
+  (associative-reduce #'bdd-or (mapcar (bdd-factory bdd-node-class) tail) :initial-value *bdd-false*  :key (bdd-factory bdd-node-class)))
+
+(defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
+  (declare (type class-designator bdd-node-class))
+  ;; (assert (<= 2 (length tail)) ()
+  ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
+  (destructuring-bind (bdd-head &rest bdd-tail) tail
+    (bdd-and-not (funcall (bdd-factory bdd-node-class) bdd-head)
+		 (associative-reduce #'bdd-and bdd-tail :initial-value *bdd-true* :key (bdd-factory bdd-node-class)))))
 
 (defmethod bdd-list-to-bdd ((head (eql 'not)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
@@ -447,53 +441,53 @@
   (the (member < > =)
        (funcall *bdd-cmp-function* t1 t2)))
 
-(flet ((bdd-op (op bdd-1 bdd-2)
-         (declare (type bdd bdd-1 bdd-2))
-         (let ((lab-1   (bdd-label bdd-1))
-               (positive-1  (bdd-positive bdd-1))
-               (negative-1 (bdd-negative bdd-1))
-               (lab-2   (bdd-label bdd-2))
-               (positive-2  (bdd-positive bdd-2))
-               (negative-2 (bdd-negative bdd-2)))
-           (declare (type bdd positive-1 positive-2 negative-1 negative-2))
-           (ecase (bdd-cmp lab-1 lab-2)
-             ((=)
-              ;; If the labels are equal, then the operations twice,
-              ;; once on the two positive branches, and once on the two negative branches.
-              (%bdd-node lab-1 (funcall op positive-1 positive-2) (funcall op negative-1 negative-2)
-                         :bdd-node-class (class-of bdd-1)))
-             ;; If the labels are not equal, then take the lesser label
-             ;; and perform the op on the lesser.positive vs greater  and lesser.negative vs greater,
-             ;; being careful not to change the order of the arguments as there is
-             ;; no guarantee that op is commutative, and in fact and-not is not commutative.
-             ;; This means (%bdd-node lesser.label (op lesser.positive greater) (op lesser.negative greater))
-             ;;   or       (%bdd-node lesser.label (op greater lesser.positive) (op greater lesser.negative))
-             ((<)
-              (%bdd-node lab-1 (funcall op positive-1 bdd-2) (funcall op negative-1 bdd-2)
-                         :bdd-node-class (class-of bdd-1)))
-             ((>)
-              (%bdd-node lab-2 (funcall op bdd-1 positive-2) (funcall op bdd-1 negative-2)
-                         :bdd-node-class (class-of bdd-2)))))))
+(defun bdd-op (op bdd-1 bdd-2)
+  (declare (type bdd bdd-1 bdd-2))
+  (let ((lab-1   (bdd-label bdd-1))
+	(positive-1  (bdd-positive bdd-1))
+	(negative-1 (bdd-negative bdd-1))
+	(lab-2   (bdd-label bdd-2))
+	(positive-2  (bdd-positive bdd-2))
+	(negative-2 (bdd-negative bdd-2)))
+    (declare (type bdd positive-1 positive-2 negative-1 negative-2))
+    (ecase (bdd-cmp lab-1 lab-2)
+      ((=)
+       ;; If the labels are equal, then the operations twice,
+       ;; once on the two positive branches, and once on the two negative branches.
+       (%bdd-node lab-1 (funcall op positive-1 positive-2) (funcall op negative-1 negative-2)
+		  :bdd-node-class (class-of bdd-1)))
+      ;; If the labels are not equal, then take the lesser label
+      ;; and perform the op on the lesser.positive vs greater  and lesser.negative vs greater,
+      ;; being careful not to change the order of the arguments as there is
+      ;; no guarantee that op is commutative, and in fact and-not is not commutative.
+      ;; This means (%bdd-node lesser.label (op lesser.positive greater) (op lesser.negative greater))
+      ;;   or       (%bdd-node lesser.label (op greater lesser.positive) (op greater lesser.negative))
+      ((<)
+       (%bdd-node lab-1 (funcall op positive-1 bdd-2) (funcall op negative-1 bdd-2)
+		  :bdd-node-class (class-of bdd-1)))
+      ((>)
+       (%bdd-node lab-2 (funcall op bdd-1 positive-2) (funcall op bdd-1 negative-2)
+		  :bdd-node-class (class-of bdd-2))))))
 
-  (defmethod bdd-or ((b1 bdd-node) (b2 bdd-node))
-    (if (eq b1 b2)
-        b1
-        (bdd-op #'bdd-or b1 b2)))
+(defmethod bdd-or ((b1 bdd-node) (b2 bdd-node))
+  (if (eq b1 b2)
+      b1
+      (bdd-op #'bdd-or b1 b2)))
 
-  (defmethod bdd-xor ((b1 bdd-node) (b2 bdd-node))
-    (if (eq b1 b2)
-        *bdd-false*
-        (bdd-op #'bdd-xor b1 b2)))
+(defmethod bdd-xor ((b1 bdd-node) (b2 bdd-node))
+  (if (eq b1 b2)
+      *bdd-false*
+      (bdd-op #'bdd-xor b1 b2)))
 
-  (defmethod bdd-and ((b1 bdd-node) (b2 bdd-node))
-    (if (eq b1 b2)
-        b1
-        (bdd-op #'bdd-and b1 b2)))
+(defmethod bdd-and ((b1 bdd-node) (b2 bdd-node))
+  (if (eq b1 b2)
+      b1
+      (bdd-op #'bdd-and b1 b2)))
 
-  (defmethod bdd-and-not ((b1 bdd-node) (b2 bdd-node))
-    (if (eq b1 b2)
-        *bdd-false*
-        (bdd-op #'bdd-and-not b1 b2))))
+(defmethod bdd-and-not ((b1 bdd-node) (b2 bdd-node))
+  (if (eq b1 b2)
+      *bdd-false*
+      (bdd-op #'bdd-and-not b1 b2))))
 
 (defmethod bdd-or (b1 b2)
   (error "bdd-or not implemented for ~A and ~A" b1 b2))

@@ -134,3 +134,24 @@
     (assert-true (eq '> (bdd-cmp 1/2 1/3)))
     )  )
 
+
+(define-test test/associative-reduce
+  (assert-true (= (+ 1 2 3 4 5 6 7 8 9 )
+		  (associative-reduce #'+ '(1 2 3 4 5 6 7 8 9)
+				      :initial-value 0)))
+  (assert-true (= (* 1 2 3 4 5 6 7 8 9 )
+		  (associative-reduce #'* '(1 2 3 4 5 6 7 8 9)
+				      :initial-value 1)))
+  (assert-true (= (* 1 2 3 4 5 6 7 8 )
+		  (associative-reduce #'* '(1 2 3 4 5 6 7 8)
+				      :initial-value 1)))
+  (assert-true (= (* 1 2 3 4 5 6 7)
+		  (associative-reduce #'* '(1 2 3 4 5 6 7)
+				      :initial-value 1)))
+  (assert-true (= 0
+		  (associative-reduce #'+ nil
+				      :initial-value 0)))
+  (assert-true (= 3
+		  (associative-reduce #'+ '(3)
+				      :initial-value 0)))
+  )

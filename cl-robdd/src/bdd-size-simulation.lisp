@@ -1343,15 +1343,19 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 (defun generate-latex-plots (&key (analysis-dir "/Users/jnewton/analysis")
                                (bin-dir "/Users/jnewton/sw/regular-type-expression/bin")
                                (autogen-dir "/Users/jnewton/research/autogen/.")
-                              (max-num-vars 18)
-                              (max-exponent 8))
+			       (gen-samples nil)
+			       (max-num-vars 18)
+			       (max-exponent 8))
   (loop :for n :from 5 :to max-num-vars
         :do (measure-and-write-bdd-distribution (format nil "~A/." analysis-dir) n 1 
                                                 (format nil "~A/bdd-sizes-unique-~D.2-columns" analysis-dir n)
                                                 :read-from-log-p t))
   
   (loop :for n :from 5 :to max-num-vars
-        :do (generate-sample-files (format nil "~A/bdd-sizes-unique-~D.2-columns" analysis-dir n) 2 max-exponent)
+	:for sample-fname = (format nil "~A/bdd-sizes-unique-~D.2-columns" analysis-dir n)
+        :when (or gen-samples
+		  (not (probe-file sample-fname)))
+	  :do (generate-sample-files sample-fname 2 max-exponent)
         :do (loop :for exponent :from 2 :to max-exponent
                   :do (measure-and-write-bdd-distribution analysis-dir n 1 
                                                           (format nil "~A/bdd-sizes-unique-~D.2-columns" analysis-dir n)
