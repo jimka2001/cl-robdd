@@ -70,7 +70,8 @@
                            (1+ (funcall get-n-stimes)))))
         (when profile
           (call-with-dprofiling thunk
-                                (append profile-packages '(subtypep sb-kernel:specifier-type))
+                                (append profile-packages '(subtypep ;;sb-kernel:specifier-type
+                                                           ))
                                 set-dprofile-plists
                                 set-n-dtimes))
         (setf result
