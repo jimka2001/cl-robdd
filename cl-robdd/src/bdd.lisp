@@ -487,7 +487,7 @@
 (defmethod bdd-and-not ((b1 bdd-node) (b2 bdd-node))
   (if (eq b1 b2)
       *bdd-false*
-      (bdd-op #'bdd-and-not b1 b2))))
+      (bdd-op #'bdd-and-not b1 b2)))
 
 (defmethod bdd-or (b1 b2)
   (error "bdd-or not implemented for ~A and ~A" b1 b2))
