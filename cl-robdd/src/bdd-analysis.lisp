@@ -145,10 +145,11 @@ similar to where current Output_Path is indicating."
 	  :do (let ((total-1 0)
 		    (total-2 0)
 		    (total-3 0))
-		(when verbose
-		  (format t "n=~D~%" n)
-		  (finish-output t))
-		(dotimes (_ repeat)
+		(dotimes (i repeat)
+		  (when verbose
+		    (format t "n=~D:~D~%" n i)
+		    (finish-output t))
+
 		  (destructuring-bind (plist-1 plist-2 plist-3) (cmp-xor-implementations-1 n)
 		    (incf total-1 (getf plist-1 time-key))
 		    (incf total-2 (getf plist-2 time-key))
@@ -163,8 +164,9 @@ similar to where current Output_Path is indicating."
 	  (nreverse xys-2)
 	  (nreverse xys-3))))
 
-(defun cmp-xor-implementations-latex (fname &key (max 22))
-  (destructuring-bind (f1-xys f2-xys f3-xys) (cmp-xor-implementations :max max :repeat 2 :verbose t)
+(defun cmp-xor-implementations-latex (fname &key (max 22) (repeat 1))
+  ;; fname "/Volumes/Disk2/jimka/research/autogen/xor-cmp.ltxdat"
+  (destructuring-bind (f1-xys f2-xys f3-xys) (cmp-xor-implementations :max max :repeat repeat :verbose t)
     (with-open-file (stream fname :direction :output :if-exists :supersede :if-does-not-exist :create)
       (format t "writing to ~A~%" fname)
       (tikzpicture stream
@@ -202,5 +204,78 @@ similar to where current Output_Path is indicating."
 				      :logy t
 				      :addplot "addplot+")
 			     (format stream "\\legend{${A\\xor B}$,${(A\\setminus B)\\vee(B\\setminus A)}$,${(A\\vee B)\\setminus(A\\wedge B)}$}~%"))
+			   :logy t)
+		     )))))
+
+(defun cmp-fold-implementations-1 (n)
+  (let ((bool-comb (random-boolean-combination n)))
+    (labels ((timing (thunk &aux plist)
+	       (sb-ext:call-with-timing (lambda (&rest timing-args)
+					  (setf plist timing-args))
+					thunk)
+	       plist)
+	     (cmp (cl-robdd::*bdd-reduce-function*)
+	       (garbage-collect)
+	       (bdd-with-new-hash ()
+		 (timing (lambda ()
+			   (bdd bool-comb))))))
+
+      (loop :for name :in '("linear" "tree")
+	    :for reduce-function   :in (list #'reduce #'cl-robdd::associative-reduce)
+	    :collect (list* :name name (cmp reduce-function))))))
+
+(defun cmp-fold-implementations (&key (min 2) (max 22) (repeat 1) (time-key :user-run-time-us) (verbose nil))
+  (let (xys-linear xys-tree)
+    (loop :for n :from min :to max
+	  :do (let ((total-linear 0)
+		    (total-tree 0))
+		(dotimes (i repeat)
+		  (when verbose
+		    (format t "n=~D:~D~%" n i)
+		    (finish-output t))
+
+		  (destructuring-bind (plist-linear plist-tree) (cmp-fold-implementations-1 n)
+		    (incf total-linear (getf plist-linear time-key))
+		    (incf total-tree   (getf plist-tree time-key))))
+		(let ((average-linear (/ total-linear (float repeat 1.0) 1000))
+		      (average-tree   (/ total-tree (float repeat 1.0) 1000)))
+		  (push (list n average-linear) xys-linear)
+		  (push (list n average-tree)   xys-tree))))
+    (list (nreverse xys-linear)
+	  (nreverse xys-tree))))
+
+(defun cmp-fold-latex (fname &key (max 22) (repeat 1))
+  ;; fname "/Volumes/Disk2/jimka/research/autogen/cmp-fold-bdd-construction.ltxdat"
+  (destructuring-bind (linear-xys tree-xys) (cmp-fold-implementations :max max :repeat repeat :verbose t)
+    (with-open-file (stream fname :direction :output :if-exists :supersede :if-does-not-exist :create)
+      (format t "writing to ~A~%" fname)
+      (tikzpicture stream
+		   "comparing linear vs tree fold implentation for bdd construction"
+		   (lambda ()
+		     (axis stream
+			   (list '("ylabel" "time (seconds)")
+				 '("xlabel" "{Number of Boolean variables $\\numvars$}")
+				 '("xtick" "{0,5,10,15,20}")
+				 "ymajorgrids"
+				 ;;"yminorgrids"
+				 "xmajorgrids"
+				 ;;"xminorgrids"
+				 '("legend style" "{at={(0,1)},anchor=north west,font=\\tiny}"))
+			   (lambda ()
+			     (addplot stream
+				      "linear-fold"
+				      ()
+				      "(~D,~D)"
+				      linear-xys
+				      :logy t
+				      :addplot "addplot+")
+			     (addplot stream
+				      "tree-fold" 
+				      ()
+				      "(~D,~D)"
+				      tree-xys
+				      :logy t
+				      :addplot "addplot+")
+			     (format stream "\\legend{linear-style fold,tree-style fold}~%"))
 			   :logy t)
 		     )))))

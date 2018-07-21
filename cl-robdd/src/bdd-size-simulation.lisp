@@ -119,6 +119,15 @@ If VARS is a number, it should be <= (length *bdd-boolean-variables*)"
      (int-to-boolean-expression (random (expt 2 (expt 2 (length vars))))
 				vars))))
 
+(defun random-minterm (vars &key (sparcity 1.0))
+  (cons 'and (mapcan (lambda (var)
+		      (cond ((> (random 1.0) sparcity)
+			     nil)
+			    ((zerop (random 2))
+			     (list `(not ,var)))
+			    (t
+			     (list var)))) vars)))
+
 (defun median-a-list (a-list)
   (let ((a-list (copy-list a-list)))
     (loop while (cdr a-list)

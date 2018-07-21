@@ -247,20 +247,23 @@
       (finish-stack obj tail))))
 
 (defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
-(defvar *bdd-operation-order* (the (member :divide-and-conquer
-                                           :reduce) :divide-and-conquer ))
+
+(defvar *bdd-reduce-function* #'associative-reduce)
 
 (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
-  (associative-reduce #'bdd-xor tail :initial-value *bdd-false* :key (bdd-factory bdd-node-class)))
+  (funcall *bdd-reduce-function* #'bdd-xor tail :initial-value *bdd-false* :key (bdd-factory bdd-node-class)))
 
 (defmethod bdd-list-to-bdd ((head (eql 'and)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
-  (associative-reduce #'bdd-and tail  :initial-value *bdd-true* :key (bdd-factory bdd-node-class)))
+  (funcall *bdd-reduce-function* #'bdd-and tail :initial-value *bdd-true* :key (bdd-factory bdd-node-class)))
 
 (defmethod bdd-list-to-bdd ((head (eql 'or)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
-  (associative-reduce #'bdd-or (mapcar (bdd-factory bdd-node-class) tail) :initial-value *bdd-false*  :key (bdd-factory bdd-node-class)))
+  (format t "using ~A~%" *bdd-reduce-function*)
+  (funcall *bdd-reduce-function* #'bdd-or (mapcar (bdd-factory bdd-node-class) tail)
+	   :initial-value *bdd-false*
+	   :key (bdd-factory bdd-node-class)))
 
 (defmethod bdd-list-to-bdd ((head (eql 'and-not)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
@@ -268,7 +271,7 @@
   ;;         "AND-NOT takes at least two arguments: cannot convert ~A to a BDD" expr)
   (destructuring-bind (bdd-head &rest bdd-tail) tail
     (bdd-and-not (funcall (bdd-factory bdd-node-class) bdd-head)
-		 (associative-reduce #'bdd-and bdd-tail :initial-value *bdd-true* :key (bdd-factory bdd-node-class)))))
+		 (bdd-list-to-bdd 'and bdd-tail :bdd-node-class bdd-node-class))))
 
 (defmethod bdd-list-to-bdd ((head (eql 'not)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
