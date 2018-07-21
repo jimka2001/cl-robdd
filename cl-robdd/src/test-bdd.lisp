@@ -135,23 +135,30 @@
     )  )
 
 
-(define-test test/associative-reduce
+(define-test test/tree-reduce
   (assert-true (= (+ 1 2 3 4 5 6 7 8 9 )
-		  (associative-reduce #'+ '(1 2 3 4 5 6 7 8 9)
+		  (tree-reduce #'+ '(1 2 3 4 5 6 7 8 9)
 				      :initial-value 0)))
   (assert-true (= (* 1 2 3 4 5 6 7 8 9 )
-		  (associative-reduce #'* '(1 2 3 4 5 6 7 8 9)
+		  (tree-reduce #'* '(1 2 3 4 5 6 7 8 9)
 				      :initial-value 1)))
   (assert-true (= (* 1 2 3 4 5 6 7 8 )
-		  (associative-reduce #'* '(1 2 3 4 5 6 7 8)
+		  (tree-reduce #'* '(1 2 3 4 5 6 7 8)
 				      :initial-value 1)))
   (assert-true (= (* 1 2 3 4 5 6 7)
-		  (associative-reduce #'* '(1 2 3 4 5 6 7)
+		  (tree-reduce #'* '(1 2 3 4 5 6 7)
 				      :initial-value 1)))
   (assert-true (= 0
-		  (associative-reduce #'+ nil
+		  (tree-reduce #'+ nil
 				      :initial-value 0)))
   (assert-true (= 3
-		  (associative-reduce #'+ '(3)
+		  (tree-reduce #'+ '(3)
 				      :initial-value 0)))
+  (let (nums)
+    (loop :for i :from 1 :to 100
+	  :do (push i nums)
+	  :do (assert-true (= (reduce #'+ nums :initial-value 0)
+			      (tree-reduce #'+ nums :initial-value 0)))
+	  :do (assert-true (= (reduce #'* nums :initial-value 1)
+			      (tree-reduce #'* nums :initial-value 1)))))
   )

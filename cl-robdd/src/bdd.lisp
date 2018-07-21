@@ -225,16 +225,20 @@
   (declare (type class-designator bdd-node-class))
   (%bdd-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
-(defun associative-reduce (function sequence &key initial-value (key #'identity))
-  (declare (type (function (t t) t) function))
+(defun tree-reduce (function sequence &key initial-value (key #'identity))
+  (declare (type (function (t t) t) function)
+	   (optimize (speed 3) (debug 0) (compilation-speed 0)))
   (labels ((compactify (stack)
+	     (format t "compactify stack = ~A~%" stack)
 	     (if (null (cdr stack))
 		 stack
 		 (destructuring-bind ((n1 obj1) (n2 obj2) &rest tail) stack
+		   (declare (type (and fixnum unsigned-byte) n1 n2))
                    (if (= n1 n2)
 		       (compactify (cons (list (1+ n1) (funcall function obj1 obj2)) tail))
 		       stack))))
 	   (finish-stack (acc stack)
+	     (format t "finish acc=~A stack = ~A~%" acc stack)
 	     (if stack
 		 (finish-stack (funcall function acc (cadr (car stack)))
 			       (cdr stack))
@@ -248,7 +252,7 @@
 
 (defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
 
-(defvar *bdd-reduce-function* #'associative-reduce)
+(defvar *bdd-reduce-function* #'tree-reduce)
 
 (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))

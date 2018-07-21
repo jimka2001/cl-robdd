@@ -105,28 +105,34 @@ Why?  Because the truth table of this function is:
                       nconc (list (gen-min-term i vars))))))
 
 
+(defun random-minterm (vars &key (density 1.0))
+  (cons 'and (mapcan (lambda (var)
+		      (cond ((> (random 1.0) density)
+			     nil)
+			    ((zerop (random 2))
+			     (list `(not ,var)))
+			    (t
+			     (list var)))) vars)))
+
 (defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1))
 
-(defun random-boolean-combination (vars)
+(defun random-boolean-combination (vars &key (density 1.0))
   "return a randomly selection boolean combination of the given BOOLEAN variables in sum-of-minterms form (or (and ...) (and ...) ...)
 VARS may be given as a positive integer, or as a list of symbols.
 If VARS is a number, it should be <= (length *bdd-boolean-variables*)"
   (typecase vars
     (unsigned-byte
      (assert (<= vars (length *bdd-boolean-variables*)))
-     (random-boolean-combination (nthcdr (- (length *bdd-boolean-variables*) vars) *bdd-boolean-variables*)))
+     (random-boolean-combination (nthcdr (- (length *bdd-boolean-variables*) vars) *bdd-boolean-variables*)
+				 :density density))
     (list
-     (int-to-boolean-expression (random (expt 2 (expt 2 (length vars))))
-				vars))))
-
-(defun random-minterm (vars &key (sparcity 1.0))
-  (cons 'and (mapcan (lambda (var)
-		      (cond ((> (random 1.0) sparcity)
-			     nil)
-			    ((zerop (random 2))
-			     (list `(not ,var)))
-			    (t
-			     (list var)))) vars)))
+     (case density
+       ((1.0)
+	(int-to-boolean-expression (random (expt 2 (expt 2 (length vars))))
+				   vars))
+       (t
+	(cons 'or (loop :for i :from 1 :to (expt 2 (length vars))
+			:collect (random-minterm vars :density density))))))))
 
 (defun median-a-list (a-list)
   (let ((a-list (copy-list a-list)))
