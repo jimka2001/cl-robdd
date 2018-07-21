@@ -624,7 +624,3 @@ set of BDDs."
     ((bdd-find (bdd-hash) label positive-bdd negative-bdd))
     (t
      (bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))))
-
-
-
-

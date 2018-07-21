@@ -105,11 +105,19 @@ Why?  Because the truth table of this function is:
                       nconc (list (gen-min-term i vars))))))
 
 
+(defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1))
+
 (defun random-boolean-combination (vars)
-  "return a randomly selection boolean combination of the given BOOLEAN variables in sum-of-minterms form (or (and ...) (and ...) ...)"
-  ;; vars is a list of symbols
-  (int-to-boolean-expression (random (expt 2 (expt 2 (length vars))))
-                             vars))
+  "return a randomly selection boolean combination of the given BOOLEAN variables in sum-of-minterms form (or (and ...) (and ...) ...)
+VARS may be given as a positive integer, or as a list of symbols.
+If VARS is a number, it should be <= (length *bdd-boolean-variables*)"
+  (typecase vars
+    (unsigned-byte
+     (assert (<= vars (length *bdd-boolean-variables*)))
+     (random-boolean-combination (nthcdr (- (length *bdd-boolean-variables*) vars) *bdd-boolean-variables*)))
+    (list
+     (int-to-boolean-expression (random (expt 2 (expt 2 (length vars))))
+				vars))))
 
 (defun median-a-list (a-list)
   (let ((a-list (copy-list a-list)))
@@ -522,8 +530,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
            (type string prefix))
   (dolist (plist data)
     (write-one-bdd-distribution-data plist prefix :exponent exponent)))
-
-(defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1))
 
 (defun read-bdd-distribution-data (prefix &key (min 1) (max (length *bdd-boolean-variables*)) (min-kolmogorov 8) (max-kolmogorov 18) (max-exponent 8) vars)
 

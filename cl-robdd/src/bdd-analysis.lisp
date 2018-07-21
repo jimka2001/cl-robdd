@@ -113,3 +113,94 @@ similar to where current Output_Path is indicating."
     (dolist (string (cdr strings))
       (format str "~A~A" delimeter string))))
 
+(defun cmp-xor-implementations-1 (n)
+  (let ((a (random-boolean-combination n))
+	(b (random-boolean-combination n)))
+    (labels ((f2 (a b)
+	       (bdd-or (bdd-and-not a b)
+		       (bdd-and-not b a)))
+	     (f3 (a b)
+	       (bdd-and-not (bdd-or a b)
+			    (bdd-and a b)))
+	     (timing (thunk &aux plist)
+	       (sb-ext:call-with-timing (lambda (&rest timing-args)
+					  (setf plist timing-args))
+					thunk)
+	       plist)
+	     (cmp (op)
+	       (garbage-collect)
+	       (bdd-with-new-hash ()
+		 (let ((bdd-a (bdd a))
+		       (bdd-b (bdd b)))
+		   (timing (lambda ()
+			     (funcall op bdd-a bdd-b)))))))
+
+      (loop :for name :in '("bdd-xor" "ab! or a!b" "(a+b)(ab)!")
+	    :for op   :in (list #'bdd-xor #'f2 #'f3)
+	    :collect (list* :name name (cmp op))))))
+
+(defun cmp-xor-implementations (&key (min 2) (max 22) (repeat 1) (time-key :user-run-time-us) (verbose nil))
+  (let (xys-1 xys-2 xys-3)
+    (loop :for n :from min :to max
+	  :do (let ((total-1 0)
+		    (total-2 0)
+		    (total-3 0))
+		(when verbose
+		  (format t "n=~D~%" n)
+		  (finish-output t))
+		(dotimes (_ repeat)
+		  (destructuring-bind (plist-1 plist-2 plist-3) (cmp-xor-implementations-1 n)
+		    (incf total-1 (getf plist-1 time-key))
+		    (incf total-2 (getf plist-2 time-key))
+		    (incf total-3 (getf plist-3 time-key))))
+		(let ((average-1 (/ total-1 (float repeat 1.0) 1000))
+		      (average-2 (/ total-2 (float repeat 1.0) 1000))
+		      (average-3 (/ total-3 (float repeat 1.0) 1000)))
+		  (push (list n average-1) xys-1)
+		  (push (list n average-2) xys-2)
+		  (push (list n average-3) xys-3))))
+    (list (nreverse xys-1)
+	  (nreverse xys-2)
+	  (nreverse xys-3))))
+
+(defun cmp-xor-implementations-latex (fname &key (max 22))
+  (destructuring-bind (f1-xys f2-xys f3-xys) (cmp-xor-implementations :max max :repeat 2 :verbose t)
+    (with-open-file (stream fname :direction :output :if-exists :supersede :if-does-not-exist :create)
+      (format t "writing to ~A~%" fname)
+      (tikzpicture stream
+		   "comparing 3 implementaions of bdd xor"
+		   (lambda ()
+		     (axis stream
+			   (list '("ylabel" "time (seconds)")
+				 '("xlabel" "{Number of Boolean variables $\\numvars$}")
+				 '("xtick" "{0,5,10,15,20}")
+				 "ymajorgrids"
+				 ;;"yminorgrids"
+				 "xmajorgrids"
+				 ;;"xminorgrids"
+				 '("legend style" "{at={(0,1)},anchor=north west,font=\\tiny}"))
+			   (lambda ()
+			     (addplot stream
+				      "xor"
+				      ()
+				      "(~D,~D)"
+				      f1-xys
+				      :logy t
+				      :addplot "addplot+")
+			     (addplot stream
+				      "ab! or a!b" 
+				      ()
+				      "(~D,~D)"
+				      f2-xys
+				      :logy t
+				      :addplot "addplot+")
+			     (addplot stream
+				      "(a+b)(ab)!"
+				      ()
+				      "(~D,~D)"
+				      f3-xys
+				      :logy t
+				      :addplot "addplot+")
+			     (format stream "\\legend{${A\\xor B}$,${(A\\setminus B)\\vee(B\\setminus A)}$,${(A\\vee B)\\setminus(A\\wedge B)}$}~%"))
+			   :logy t)
+		     )))))
