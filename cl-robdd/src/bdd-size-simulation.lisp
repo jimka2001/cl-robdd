@@ -595,6 +595,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
     (string (format nil "~A" axis-option))
     ((cons string (cons string)) (format nil "~A=~A" (car axis-option) (cadr axis-option)))
     ((cons string (cons fixnum)) (format nil "~A=~D" (car axis-option) (cadr axis-option)))
+    ((cons string cons) (format nil "~A={~A}" (car axis-option) 
+				(join-strings (format nil ",~% ") (mapcar  #'print-option (cadr axis-option)))))
     (t
      (error "unknown axis-option ~A" axis-option))))
 
@@ -829,7 +831,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                           "xmajorgrids"
                                           '("xlabel" "Number of variables")
                                           '("ylabel" "Standard deviation")
-                                          '("legend style" "{anchor=west,font=\\tiny}")
+                                          '("legend style" (("anchor" "west")
+							    ("font" "\\tiny")))
                                           (when xmarks
                                             (list "xtick"
                                                   (format nil "{~A}"
@@ -978,7 +981,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                             "xmajorgrids"
                                             '("xlabel" "Number of variables")
                                             '("ylabel" "ROBDD size")
-                                            '("legend style" "{at={(0,1)},anchor=north west,font=\\tiny}")
+                                            '("legend style" (("at" "{(0,1)}")
+							      ("anchor" "north west")
+							      ("font" "\\tiny")))
                                             (when xticks
                                               (list "xtick"
                                                     (format nil "{~A}"
@@ -1044,7 +1049,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                               "xmajorgrids"
                                               '("xlabel" "Number of variables")
                                               '("ylabel" "Residual compression ratio")
-                                              '("legend style" "{at={(1,1)},anchor=north east,font=\\tiny}")
+                                              '("legend style" (("at" "{(1,1)}")
+								("anchor" "north east")
+								("font" "\\tiny")))
                                               (list "xtick"
                                                     (format nil "{~A}"
                                                             (join-strings "," (loop for xtick from 2 by 2
@@ -1103,8 +1110,10 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                           "xmajorgrids"
                                           "xminorgrids"
                                           '("ylabel" "Probability")
-                                          '("legend style" "{font=\\tiny,at={(1,0)},anchor=south west}")
-                                          '("label style" "{font=\\tiny}"))
+                                          '("legend style" (("font" "\\tiny")
+							    ("at" "{(1,0)}")
+							    ("anchor" "south west")))
+                                          '("label style" (("font" "\\tiny"))))
                                     (lambda ()
                                       (dolist (datum data)
                                         (destructuring-bind (&key num-vars ((:exponent this-exponent) 1) counts &allow-other-keys) datum

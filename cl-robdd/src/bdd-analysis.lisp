@@ -173,14 +173,14 @@ similar to where current Output_Path is indicating."
 		   "comparing 3 implementaions of bdd xor"
 		   (lambda ()
 		     (axis stream
-			   (list '("ylabel" "time (seconds)")
-				 '("xlabel" "{Number of Boolean variables $\\numvars$}")
-				 '("xtick" "{0,5,10,15,20}")
-				 "ymajorgrids"
-				 ;;"yminorgrids"
-				 "xmajorgrids"
-				 ;;"xminorgrids"
-				 '("legend style" "{at={(0,1)},anchor=north west,font=\\tiny}"))
+			   '(("ylabel" "time (seconds)")
+			     ("xlabel" "{Number of Boolean variables $\\numvars$}")
+			     ("xtick" "{0,5,10,15,20}")
+			     "ymajorgrids"
+			     "xmajorgrids"
+			     ("legend style" (("at" "{(0,1)}")
+					      ("anchor" "north west")
+					      ("font" "\\tiny"))))
 			   (lambda ()
 			     (addplot stream
 				      "xor"
