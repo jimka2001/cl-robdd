@@ -115,6 +115,9 @@
        ;; footer
        (format stream "}~%")))))
      
+(defvar *dot* (if (probe-file "/opt/local/bin/dot")
+		  "/opt/local/bin/dot"
+		  "dot"))
 (defun bdd-to-png (bdd &key (reduced t) (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd))))
   (let ((dot-path (format nil "~A.dot" basename))
         (png-path (format nil "~A.png" basename)))
@@ -122,7 +125,7 @@
     (with-open-file (stream dot-path :direction :output :if-exists :supersede :if-does-not-exist :create)
       (bdd-to-dot bdd stream :reduced reduced))
     (format t "~A~%" png-path)
-    (run-program "dot"
+    (run-program *dot*
                  (list "-Tpng" dot-path
                        "-o" png-path)
                  :search t)
