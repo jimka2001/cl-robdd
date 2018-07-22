@@ -225,31 +225,36 @@
   (declare (type class-designator bdd-node-class))
   (%bdd-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
-(defun tree-reduce (function sequence &key initial-value (key #'identity))
+(defun tree-reduce (function bdd-list &key initial-value (key #'identity))
   (declare (type (function (t t) t) function)
+	   (type list bdd-list)
 	   (optimize (speed 3) (debug 0) (compilation-speed 0)))
-  (labels ((compactify (stack)
-	     (format t "compactify stack = ~A~%" stack)
-	     (if (null (cdr stack))
-		 stack
-		 (destructuring-bind ((n1 obj1) (n2 obj2) &rest tail) stack
-		   (declare (type (and fixnum unsigned-byte) n1 n2))
-                   (if (= n1 n2)
-		       (compactify (cons (list (1+ n1) (funcall function obj1 obj2)) tail))
-		       stack))))
-	   (finish-stack (acc stack)
-	     (format t "finish acc=~A stack = ~A~%" acc stack)
-	     (if stack
-		 (finish-stack (funcall function acc (cadr (car stack)))
-			       (cdr stack))
-		 acc)))
-    (destructuring-bind ((_ obj) &rest tail) (reduce (lambda (stack item)
-						       (compactify (cons (list 1 (funcall key item)) stack)))
-						     sequence
-						     :initial-value (list (list 1 initial-value)))
-      (declare (ignore _))
-      (finish-stack obj tail))))
-
+  (cond
+    ((cdr bdd-list)
+     (labels ((compactify (stack)
+		(if (null (cdr stack))
+		    stack
+		    (destructuring-bind ((n1 obj1) (n2 obj2) &rest tail) stack
+		      (declare (type (and fixnum unsigned-byte) n1 n2))
+		      (if (= n1 n2)
+			  (compactify (cons (list (1+ n1) (funcall function obj1 obj2)) tail))
+			  stack))))
+	      (finish-stack (acc stack)
+		(if stack
+		    (finish-stack (funcall function acc (cadr (car stack)))
+				  (cdr stack))
+		    acc)))
+       (destructuring-bind ((_ obj) &rest tail) (reduce (lambda (stack item)
+							  (compactify (cons (list 1 (funcall key item)) stack)))
+							(cdr bdd-list)
+							:initial-value (list (list 1 (funcall key (car bdd-list)))))
+	 (declare (ignore _))
+	 (finish-stack obj tail))))
+    (bdd-list
+     (car bdd-list))
+    (t
+     initial-value)))
+    
 (defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
 
 (defvar *bdd-reduce-function* #'tree-reduce)
@@ -264,7 +269,6 @@
 
 (defmethod bdd-list-to-bdd ((head (eql 'or)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
-  (format t "using ~A~%" *bdd-reduce-function*)
   (funcall *bdd-reduce-function* #'bdd-or (mapcar (bdd-factory bdd-node-class) tail)
 	   :initial-value *bdd-false*
 	   :key (bdd-factory bdd-node-class)))
