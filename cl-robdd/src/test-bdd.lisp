@@ -163,18 +163,4 @@
 			      (tree-reduce #'* nums :initial-value 1)))))
   )
 
-(define-test test/tree-reduce-bdd
-  (dolist (density '(0.2 0.5 1.0))
-    (loop :for n :from 2 to 9
-	  :for bool-comb = (cl-robdd-analysis::random-boolean-combination n :density density)
-	  :for dnf-linear = (let ((cl-robdd::*bdd-reduce-function* #'reduce))
-			      (bdd-with-new-hash ()
-				(bdd-to-dnf (bdd bool-comb))))
-	  :for dnf-tree = (let ((cl-robdd::*bdd-reduce-function* #'tree-reduce))
-			    (bdd-with-new-hash ()
-			      (bdd-to-dnf (bdd bool-comb))))
-	  :unless (equal dnf-linear dnf-tree)
-	    :do (assert nil (bool-comb dnf-linear dnf-tree)
-			"created 2 different dnf representations from ~A~%      reduce: ~A~% tree-reduce: ~A~%"
-			bool-comb dnf-linear dnf-tree)
-	  :do (assert-true (equal dnf-linear dnf-tree)))))
+
