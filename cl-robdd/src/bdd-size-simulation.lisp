@@ -126,12 +126,13 @@ If VARS is a number, it should be <= (length *bdd-boolean-variables*)"
      (random-boolean-combination (nthcdr (- (length *bdd-boolean-variables*) vars) *bdd-boolean-variables*)
 				 :density density))
     (list
-     (case density
-       ((1.0)
+     (cond
+       ((>= density 1.0)
 	(int-to-boolean-expression (random (expt 2 (expt 2 (length vars))))
 				   vars))
        (t
-	(cons 'or (loop :for i :from 1 :to (expt 2 (length vars))
+	(cons 'or (loop :for i :from 0
+			  :to (random (expt 2 (length vars))) ;; generate some random number of minterms <= 2^n
 			:collect (random-minterm vars :density density))))))))
 
 (defun median-a-list (a-list)

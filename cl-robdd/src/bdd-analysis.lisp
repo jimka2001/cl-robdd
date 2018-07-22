@@ -207,8 +207,8 @@ similar to where current Output_Path is indicating."
 			   :logy t)
 		     )))))
 
-(defun cmp-fold-implementations-1 (n)
-  (let ((bool-comb (random-boolean-combination n :density 0.2)))
+(defun cmp-fold-implementations-1 (n &key (density 1.0))
+  (let ((bool-comb (random-boolean-combination n :density density)))
     (labels ((timing (thunk &aux plist)
 	       (sb-ext:call-with-timing (lambda (&rest timing-args)
 					  (setf plist timing-args))
@@ -224,7 +224,36 @@ similar to where current Output_Path is indicating."
 		     :for reduce-function   :in (list #'cl-robdd::tree-reduce #'reduce)
 		     :collect (list* :name name (cmp reduce-function)))))))
 
-(defun cmp-fold-implementations (&key (min 2) (max 22) (repeat 1) (time-key :user-run-time-us) (verbose nil))
+(defun profile-linear-tree-like (n &key ((:reduce cl-robdd::*bdd-reduce-function*) #'reduce))
+  (sb-profile:profile "CL-ROBDD" "CL-ROBDD-ANALYSIS")
+
+  (let ((bool-comb (random-boolean-combination n :density 0.2)))
+    (garbage-collect)
+    ;; (sb-sprof:reset)
+    ;; (sb-sprof:profile-call-counts "CL-ROBDD" "CL-ROBDD-ANALYSIS")
+    ;; (sb-sprof:with-profiling (:loop nil)
+    ;;   (dotimes (_ 1000)
+    ;; 	(bdd-with-new-hash ()
+    ;; 	  (bdd bool-comb))))
+    ;; (sb-sprof:report :type :flat)
+
+    (let ((cl-robdd::*bdd-reduce-function* #'reduce))
+      (format t "=== profile with ~A~%" cl-robdd::*bdd-reduce-function*)
+      (sb-profile:reset)
+      (bdd-with-new-hash ()
+	(bdd bool-comb))
+      (sb-profile:report :print-no-call-list nil))
+
+    (garbage-collect)
+    (let ((cl-robdd::*bdd-reduce-function* #'tree-reduce))
+      (format t "=== profile with ~A~%" cl-robdd::*bdd-reduce-function*)
+      (sb-profile:reset)
+      (bdd-with-new-hash ()
+	(bdd bool-comb))
+      (sb-profile:report :print-no-call-list nil)
+      )))
+  
+(defun cmp-fold-implementations (&key (min 2) (max 22) (repeat 1) (density 1.0) (time-key :user-run-time-us) (scale 1e6) (verbose nil))
   (let (xys-linear xys-tree)
     (loop :for n :from min :to max
 	  :do (let ((total-linear 0)
@@ -233,12 +262,11 @@ similar to where current Output_Path is indicating."
 		  (when verbose
 		    (format t "n=~D:~D~%" n i)
 		    (finish-output t))
-
-		  (destructuring-bind (plist-linear plist-tree) (cmp-fold-implementations-1 n)
+		  (destructuring-bind (plist-linear plist-tree) (cmp-fold-implementations-1 n :density density)
 		    (incf total-linear (getf plist-linear time-key))
 		    (incf total-tree   (getf plist-tree time-key))))
-		(let ((average-linear (/ total-linear (float repeat 1.0) 1e6))
-		      (average-tree   (/ total-tree (float repeat 1.0) 1e6)))
+		(let ((average-linear (/ total-linear (float repeat 1.0) scale))
+		      (average-tree   (/ total-tree (float repeat 1.0) scale)))
 		  (push (list n average-linear) xys-linear)
 		  (push (list n average-tree)   xys-tree))))
     (list (nreverse xys-linear)
@@ -246,36 +274,42 @@ similar to where current Output_Path is indicating."
 
 (defun cmp-fold-latex (fname &key (max 22) (repeat 1))
   ;; fname "/Volumes/Disk2/jimka/research/autogen/cmp-fold-bdd-construction.ltxdat"
-  (destructuring-bind (linear-xys tree-xys) (cmp-fold-implementations :max max :repeat repeat :verbose t)
-    (with-open-file (stream fname :direction :output :if-exists :supersede :if-does-not-exist :create)
-      (format t "writing to ~A~%" fname)
-      (tikzpicture stream
-		   "comparing linear vs tree fold implentation for bdd construction"
-		   (lambda ()
-		     (axis stream
-			   (list '("ylabel" "time (seconds)")
-				 '("xlabel" "{Number of Boolean variables $\\numvars$}")
-				 '("xtick" "{0,5,10,15,20}")
-				 "ymajorgrids"
-				 ;;"yminorgrids"
-				 "xmajorgrids"
-				 ;;"xminorgrids"
-				 '("legend style" "{at={(0,1)},anchor=north west,font=\\tiny}"))
-			   (lambda ()
-			     (addplot stream
-				      "linear-fold"
-				      ()
-				      "(~D,~D)"
-				      linear-xys
-				      :logy t
-				      :addplot "addplot+")
-			     (addplot stream
-				      "tree-fold" 
-				      ()
-				      "(~D,~D)"
-				      tree-xys
-				      :logy t
-				      :addplot "addplot+")
-			     (format stream "\\legend{linear-style fold,tree-style fold}~%"))
-			   :logy t)
-		     )))))
+  (with-open-file (stream fname :direction :output :if-exists :supersede :if-does-not-exist :create)
+    (format t "writing to ~A~%" fname)
+    (tikzpicture stream
+		 "comparing linear vs tree fold implentation for bdd construction"
+		 (lambda ()
+		   (axis stream
+			 '(("ylabel" "time (seconds)")
+			   ("xlabel" "{Number of Boolean variables $\\numvars$}")
+			   ("xtick" "{0,5,10,15,20}")
+			   "ymajorgrids"
+			   "xmajorgrids"
+			   ("legend style" (("at" "{(1,0)}")
+					    ("anchor" "south west")
+					    ("font" "\\tiny"))))
+			 (lambda (&aux legend)
+			   (dolist (density '(1.0 0.22 0.05))
+			     (format t "density=~A~%" density)
+			     (destructuring-bind (linear-xys tree-xys) (cmp-fold-implementations :max max :repeat repeat
+												 :verbose t :density density)
+			       (push (format nil "{linear-fold $\\eta=~A$}" density) legend)
+			       (addplot stream
+					(car legend)
+					()
+					"(~D,~D)"
+					linear-xys
+					:logy t
+					:addplot "addplot+")
+			       (push (format nil "{tree-fold $\\eta=~A$}" density) legend)
+			       (addplot stream
+ 					(car legend)
+					() 
+					"(~D,~D)"
+					tree-xys
+					:logy t
+					:addplot "addplot+")))
+			   (format stream "\\legend{~A}~%"
+				   (join-strings "," (reverse legend))))
+			 :logy t)
+		   ))))
