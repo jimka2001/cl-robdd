@@ -25,14 +25,16 @@
 
 
 (define-test bdd-to-png
-  (bdd-to-png (bdd t))
-  (bdd-to-png (bdd nil))
-  (bdd-to-png (bdd '(and x1 (or x2 (not x3))))))
+  (bdd-with-new-hash ()
+    (bdd-to-png (bdd t))
+    (bdd-to-png (bdd nil))
+    (bdd-to-png (bdd '(and x1 (or x2 (not x3)))))))
 
 
 (define-test bdd-to-dot
-  (bdd-to-png (bdd t))
-  (bdd-to-png (bdd nil))
-  (bdd-to-png (bdd '(and x1 (or x2 (not x3))))))
+  (bdd-with-new-hash ()
+    (bdd-to-png (bdd t))
+    (bdd-to-png (bdd nil))
+    (bdd-to-png (bdd '(and x1 (or x2 (not x3)))))))
 
 
