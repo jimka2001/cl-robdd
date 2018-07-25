@@ -798,6 +798,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 							 ("mark" "*"))
 						       "(~D,~Ae~A)"
 						       scaled
+						       :thick t
 						       :logx logx
 						       :logy logy)
 					      (when (and points include-normal-distribution)
@@ -820,6 +821,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 							       '(("color" "red"))
 							       "(~D,~Ae~A)"
 							       scaled
+							       :thick t
 							       :logx logx
 							       :logy logy)))))
 					      (format stream "\\legend{}~%"))
@@ -834,7 +836,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                           "ymajorgrids"
                                           '("label style" "{font=\\Large}")
                                           '("xlabel" "M Number of points")
-                                          (list "ylabel" (format nil "{$\\LL{M}{~D}$}" num-vars)))
+                                          (list "ylabel" (format nil "{\\color{blue} $\\LL{M}{~D}$}" num-vars)))
                                     (lambda ()
                                       (addplot stream
                                                "integral plot"
@@ -842,6 +844,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                  ("color" "blue"))
                                                "(~D,~D)"
                                                integral-xys
+					       :thick t
 					       :logx t))
                                     :logx t))))
              (sigma-plot (stream &key (max max) (logy t) (xmarks nil) (exponent 1) (data (get-data exponent)))
@@ -895,11 +898,11 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                          (* (sqr (- y1 y0))
                                                                       (- x1 x0))))))))
                    (tikzpicture stream
-                                (format nil "L2 distance between two successive curves N=~D M=~D vs M=~D"
+                                (format nil "Difference function for two successive curves N=~D M=~D vs M=~D"
                                         num-vars m1 m2)
                                 (lambda ()
                                   (axis stream
-                                        (list (list "ylabel" (format nil "{$\\Delta\\HH{~D}{~D}$}" m2  num-vars))
+                                        (list (list "ylabel" (format nil "{\\color{blue} $\\Delta\\HH{~D}{~D}$}" m2  num-vars))
                                               "ymajorgrids"
                                               "xmajorgrids"
                                               '("label style" "{font=\\Large}")
@@ -910,7 +913,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                    "difference function"
                                                    '(("color" "blue"))
                                                    "(~D,~D)"
-                                                   diff)
+                                                   diff
+						   :thick t)
                                           integral)))))))
              (kolmogorov-sigma-plot (stream num-vars &key (logx t) (logy t) data)
                (when data
@@ -1145,7 +1149,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                           (when (and (> num-vars 1)
                                                      (= this-exponent given-exponent)
                                                      (<= num-vars max))
-                                            (let ((label (format nil "Size with ~D variables" num-vars)))
+                                            (let ((label (format nil "{$\\HHb{}{~D}$}" num-vars)))
                                               (push label legend)
                                               (addplot stream
                                                        label
