@@ -630,10 +630,25 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
   (prog1 (funcall continuation)
     (format stream "\\end{tikzpicture}~%")))
 
-(defun addplot (stream plot-comment plot-options control-string points &key logx logy (addplot "addplot"))
+(defun color-to-rgb (color)
+  (typecase color
+    ((cons number (cons number (cons number null)))
+     color)
+    (string
+     (let* ((decimal (parse-integer color :radix 16))
+	    (red   (/ (logand decimal #xff0000) #x10000))
+	    (green (/ (logand decimal #x00ff00) #x100))
+	    (blue  (logand decimal #x0000ff)))
+       (list red green blue)))
+    (t
+     (error "invalid color designator: ~A" color))))
+     
+
+(defun addplot (stream plot-comment plot-options control-string points &key logx logy (addplot "addplot") thick color)
   (declare (type (or null string) plot-comment)
            (type string control-string)
            (type list points plot-options)
+	   (type (or null string) color) ;; e.g.    "3cb44b"      ;; Green from *colors*
            (type (function (list) number)))
                           
   ;; TODO check to see if all the point y values are equal, and if so
@@ -643,6 +658,15 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
   ;;
   (when plot-comment
     (format stream "% ~A~%" plot-comment))
+  (when color
+    (push (list "color" (format nil "color~A" color))
+	  plot-options)
+    (destructuring-bind (red green blue) (color-to-rgb color)
+      (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
+	      color red green blue)))
+  (when thick
+    ;; default width is 0.4pt
+    (push '("line width" "0.8pt") plot-options))
   (format stream "\\~A[~A] coordinates {~%" addplot
           (join-strings "," (mapcar #'print-option plot-options)))
   (dolist (point points)
@@ -770,9 +794,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 					    (lambda ()
 					      (addplot stream
 						       nil
-						       (list
-							'("color" "greeny")
-							'("mark" "*"))
+						       '(("color" "greeny")
+							 ("mark" "*"))
 						       "(~D,~Ae~A)"
 						       scaled
 						       :logx logx
@@ -1099,11 +1122,11 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                            data))
                                           (format stream "\\legend{Worst case, Average, Median}~%"))
                                         :logy t))))))
-             (size-plots (stream &key (max 19) (logx t) (mark t) (colors colors) ((:exponent given-exponent) 1) &aux legend)
+             (size-plots (stream &key (max 19) (logx t) (mark t) ((:exponent given-exponent) 1) &aux legend)
                (declare (type unsigned-byte given-exponent))
                (tikzpicture stream
                             "normalized size plots"
-                            (lambda ()
+                            (lambda (&aux (colors *colors*))
                               (axis stream
                                     (list '("xlabel" "BDD Size")
                                           "ymajorgrids"
@@ -1126,14 +1149,11 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                               (push label legend)
                                               (addplot stream
                                                        label
-                                                       (list (list "color" (cond
-                                                                             ((null mark)
-                                                                              "black")
-                                                                             ((pop colors))
-                                                                             (t
-                                                                              "black"))))
+                                                       nil ; plot-options
                                                        "  (~D,~A)"
                                                        counts
+						       :color (pop colors)
+						       :thick t
 						       :logx logx
                                                        :addplot (if mark "addplot+" "addplot") )))))
                                       (format stream "\\legend{~A}~%"

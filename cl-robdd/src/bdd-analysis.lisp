@@ -33,12 +33,56 @@
    "DEMAND-ENV-VAR"
    "JOIN-STRINGS"
    "MEASURE-AND-WRITE-BDD-DISTRIBUTION"
+   "*COLORS*"
    "QSTAT-F"
    "RANDOM-BOOLEAN-COMBINATION"
    "TIKZPICTURE"
    "WITH-DUP-STREAM"))
 
 (in-package :cl-robdd-analysis)
+
+(defvar *colors* 
+ '(
+   ;; TODO add these colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "teal" "orange"))
+    ;;"000000"
+   ;; this list comes from
+   ;;  http://godsnotwheregodsnot.blogspot.com/2012/09/color-distribution-methodology.html
+   "FFFF00" "1CE6FF" "FF34FF" "FF4A46" "008941" "006FA6" "A30059"
+   "FFDBE5" "7A4900" "0000A6" "63FFAC" "B79762" "004D43" "8FB0FF" "997D87"
+   "5A0007" "809693" "FEFFE6" "1B4400" "4FC601" "3B5DFF" "4A3B53" "FF2F80"
+   "61615A" "BA0900" "6B7900" "00C2A0" "FFAA92" "FF90C9" "B903AA" "D16100"
+   "DDEFFF" "000035" "7B4F4B" "A1C299" "300018" "0AA6D8" "013349" "00846F"
+   "372101" "FFB500" "C2FFED" "A079BF" "CC0744" "C0B9B2" "C2FF99" "001E09"
+   "00489C" "6F0062" "0CBD66" "EEC3FF" "456D75" "B77B68" "7A87A1" "788D66"
+   "885578" "FAD09F" "FF8A9A" "D157A0" "BEC459" "456648" "0086ED" "886F4C"
+   "34362D" "B4A8BD" "00A6AA" "452C2C" "636375" "A3C8C9" "FF913F" "938A81"
+   "575329" "00FECF" "B05B6F" "8CD0FF" "3B9700" "04F757" "C8A1A1" "1E6E00"
+   "7900D7" "A77500" "6367A9" "A05837" "6B002C" "772600" "D790FF" "9B9700"
+   "549E79" "FFF69F" "201625" "72418F" "BC23FF" "99ADC0" "3A2465" "922329"
+   "5B4534" "FDE8DC" "404E55" "0089A3" "CB7E98" "A4E804" "324E72" "6A3A4C"
+   ;; I don't remember where this list comes from
+   
+   "e6194b"      ;;Red	(230, 25, 75)	(0, 100, 66, 0)
+   "3cb44b"      ;;Green	(60, 180, 75)	(75, 0, 100, 0)
+   "ffe119"	;;Yellow	(255, 225, 25)	(0, 25, 95, 0)
+   "0082c8"	;;Blue	(0, 130, 200)	(100, 35, 0, 0)
+   "f58231"	;;Orange	(245, 130, 48)	(0, 60, 92, 0)
+   "911eb4"	;;Purple	(145, 30, 180)	(35, 70, 0, 0)
+   "46f0f0"	;;Cyan	(70, 240, 240)	(70, 0, 0, 0)
+   "f032e6"	;;Magenta	(240, 50, 230)	(0, 100, 0, 0)
+   "d2f53c"	;;Lime	(210, 245, 60)	(35, 0, 100, 0)
+   "fabebe"	;;Pink	(250, 190, 190)	(0, 30, 15, 0)
+   "008080"	;;Teal	(0, 128, 128)	(100, 0, 0, 50)
+   "e6beff"	;;Lavender	(230, 190, 255)	(10, 25, 0, 0)
+   "aa6e28"	;;Brown	(170, 110, 40)	(0, 35, 75, 33)
+   "fffac8"	;;Beige	(255, 250, 200)	(5, 10, 30, 0)
+   "800000"	;;Maroon	(128, 0, 0)	(0, 100, 100, 50)
+   "aaffc3"	;;Mint	(170, 255, 195)	(33, 0, 23, 0)
+   "808000"	;;Olive	(128, 128, 0)	(0, 0, 100, 50)
+   "ffd8b1"	;;Coral	(255, 215, 180)	(0, 15, 30, 0)
+   "000080"	;;Navy	(0, 0, 128)	(100, 100, 0, 50)
+   "808080"	;;Grey	(128, 128, 128)	(0, 0, 0, 50)
+    ))
 
 (defun replace-all (string part replacement &key (test #'char=))
   "Returns a new string in which all the occurences of the part 
@@ -278,7 +322,7 @@ similar to where current Output_Path is indicating."
     (format t "writing to ~A~%" fname)
     (tikzpicture stream
 		 "comparing linear vs tree fold implentation for bdd construction"
-		 (lambda ()
+		 (lambda (&aux (colors *colors*))
 		   (axis stream
 			 '(("ylabel" "time (seconds)")
 			   ("xlabel" "{Number of Boolean variables $\\numvars$}")
@@ -299,6 +343,7 @@ similar to where current Output_Path is indicating."
 					()
 					"(~D,~D)"
 					linear-xys
+					:color (pop colors)
 					:logy t
 					:addplot "addplot+")
 			       (push (format nil "{tree-fold $\\eta=~A$}" density) legend)
@@ -307,6 +352,7 @@ similar to where current Output_Path is indicating."
 					() 
 					"(~D,~D)"
 					tree-xys
+					:color (pop colors)
 					:logy t
 					:addplot "addplot+")))
 			   (format stream "\\legend{~A}~%"
