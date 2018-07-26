@@ -668,7 +668,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
     ;; default width is 0.4pt
     (push '("line width" "0.8pt") plot-options))
   (format stream "\\~A[~A] coordinates {~%" addplot
-          (join-strings "," (mapcar #'print-option plot-options)))
+          (join-strings (format nil ",~% ") (mapcar #'print-option plot-options)))
   (dolist (point points)
     (cond
       ((and logx
