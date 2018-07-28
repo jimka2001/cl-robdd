@@ -645,40 +645,59 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
      
 
 (defun addplot (stream plot-comment plot-options control-string points &key logx logy (addplot "addplot") thick color)
+  ;; If logx (logy) is specified as t, the result is that if 0 (or 0.0) appears as as the x (y) coordinate
+  ;; of a point, then that point is omitted, as it cannot be plotted on a log scale.
+  ;; Sometimes the points representing profiling or timing data, and the number is 0 just because it is
+  ;; below the measuring threshold of the system.   So in this case, the calling function may specify
+  ;; a number rather than t for logx (logy), and that number will be substituted for the the 0.
+  ;; If the smallest time measurable is 0.001, then passing :logy 0.0005 will substitute 0.0005 for 0 as
+  ;; any y value where it occurs.
   (declare (type (or null string) plot-comment)
            (type string control-string)
            (type list points plot-options)
 	   (type (or null string) color) ;; e.g.    "3cb44b"      ;; Green from *colors*
+	   (type (or number null (eql t)) logx logy)
            (type (function (list) number)))
+  (flet ((x-coord (point)
+	   (car point))
+	 (y-coord (point)
+	   (cadr point)))
+	   
                           
-  ;; TODO check to see if all the point y values are equal, and if so
-  ;;   create y min and max or marks to avoid latex warning
-  ;; Package pgfplots Warning: Axis range for axis y is approximately empty;
-  ;;   enlarging it (it is [2.0000000000:2.0000000000]) on input line 17.
-  ;;
-  (when plot-comment
-    (format stream "% ~A~%" plot-comment))
-  (when color
-    (push (list "color" (format nil "color~A" color))
-	  plot-options)
-    (destructuring-bind (red green blue) (color-to-rgb color)
-      (format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
-	      color red green blue)))
-  (when thick
-    ;; default width is 0.4pt
-    (push '("line width" "0.8pt") plot-options))
-  (format stream "\\~A[~A] coordinates {~%" addplot
-          (join-strings (format nil ",~% ") (mapcar #'print-option plot-options)))
-  (dolist (point points)
-    (cond
-      ((and logx
-            (zerop (car point))))
-      ((and logy
-            (zerop (cadr point))))
-      (t
-       (apply #'format stream control-string point)
-       (terpri stream))))
-  (format stream "};~%"))
+    ;; TODO check to see if all the point y values are equal, and if so
+    ;;   create y min and max or marks to avoid latex warning
+    ;; Package pgfplots Warning: Axis range for axis y is approximately empty;
+    ;;   enlarging it (it is [2.0000000000:2.0000000000]) on input line 17.
+    ;;
+    (when plot-comment
+      (format stream "% ~A~%" plot-comment))
+    (when color
+      (push (list "color" (format nil "color~A" color))
+	    plot-options)
+      (destructuring-bind (red green blue) (color-to-rgb color)
+	(format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
+		color red green blue)))
+    (when thick
+      ;; default width is 0.4pt
+      (push '("line width" "0.8pt") plot-options))
+    (format stream "\\~A[~A] coordinates {~%" addplot
+	    (join-strings (format nil ",~% ") (mapcar #'print-option plot-options)))
+    (dolist (point points)
+      (when (and (numberp logx)
+		 (zerop (x-coord point)))
+	(setf point (list logx (y-coord point))))
+      (when (and (numberp logy)
+		 (zerop (y-coord point)))
+	(setf point (list (x-coord point) logy)))
+      (cond
+	((and logx
+	      (zerop (car point))))
+	((and logy
+	      (zerop (cadr point))))
+	(t
+	 (apply #'format stream control-string point)
+	 (terpri stream))))
+    (format stream "};~%")))
 
 (defun latex-measure-bdd-sizes (prefix vars num-samples &key (min 1) (max (length vars)) (re-run t) (max-exponent 8) (min-kolmogorov 5) (max-kolmogorov 18))
   ;; example values
