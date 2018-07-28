@@ -560,7 +560,7 @@ set of BDDs."
                (t
                 (wrap 'or nil (list positive negative))))))
     
-    (let ((positive-terms  (prepend (bdd-label bdd) (bdd-to-dnf (bdd-positive bdd))))
+    (let ((positive-terms (prepend (bdd-label bdd) (bdd-to-dnf (bdd-positive bdd))))
           (negative-terms (prepend `(not ,(bdd-label bdd)) (bdd-to-dnf (bdd-negative bdd)))))
       (disjunction positive-terms
                    negative-terms))))
