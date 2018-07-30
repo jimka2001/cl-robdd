@@ -662,7 +662,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 	   (car point))
 	 (y-coord (point)
 	   (cadr point)))
-	   
                           
     ;; TODO check to see if all the point y values are equal, and if so
     ;;   create y min and max or marks to avoid latex warning
@@ -675,6 +674,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
       (push (list "color" (format nil "color~A" color))
 	    plot-options)
       (destructuring-bind (red green blue) (color-to-rgb color)
+	;; TODO not sure what happens if we define the same color again?
+	;;    do we need to check whether this color is already defined?
 	(format stream "\\definecolor{color~A}{RGB}{~A,~A,~A}~%"
 		color red green blue)))
     (when thick
