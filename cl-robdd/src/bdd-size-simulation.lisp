@@ -602,7 +602,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
      (error "unknown axis-option ~A" axis-option))))
 
 (defun axis (stream axis-options continuation &key logx logy)
-  (declare (type list axis-options)
+  (declare (type stream stream)
+	   (type list axis-options)
            (type (function () t) continuation))
   (flet ((sanitize-axis-options (plot-options)
            (remove nil
