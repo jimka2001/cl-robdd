@@ -681,7 +681,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 		color red green blue)))
     (when thick
       ;; default width is 0.4pt
-      (push '("line width" "0.8pt") plot-options))
+      (push '("line width" "1.2pt") plot-options))
     (format stream "\\~A[~A] coordinates {~%" addplot
 	    (join-strings (format nil ",~% ") (mapcar #'print-option plot-options)))
     (dolist (point points)
@@ -711,11 +711,10 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
            (type fixnum num-samples)
            #+sbcl (notinline sort))
   (ensure-directories-exist prefix)
-  (let* ((colors '("red" "goldenrod" "olive" "blue" "lavender" "greeny" "dark-cyan" "teal" "orange"))
-         (data (if re-run
-                   (sort (copy-list (measure-bdd-sizes vars num-samples min max)) #'< :key (getter :num-vars))
-                   (read-bdd-distribution-data prefix :vars vars :max-exponent max-exponent
-                                                      :min-kolmogorov min-kolmogorov :max-kolmogorov max-kolmogorov))))
+  (let ((data (if re-run
+		  (sort (copy-list (measure-bdd-sizes vars num-samples min max)) #'< :key (getter :num-vars))
+		  (read-bdd-distribution-data prefix :vars vars :max-exponent max-exponent
+						     :min-kolmogorov min-kolmogorov :max-kolmogorov max-kolmogorov))))
     (when re-run
       (write-bdd-distribution-data data prefix))
 
@@ -1046,7 +1045,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                       (lambda ()
                                         (addplot stream
                                                  "worst case size"
-                                                 '(("line width" "0.8pt")
+						 ;; 0.4pt is the default line width
+                                                 '(("line width" "1.2pt")
                                                    ("style" "densely dotted")
                                                    ("color" "blue")
                                                    ("mark" "*"))
@@ -1072,7 +1072,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 						 :logy logy)
                                         (addplot stream
                                                  "median size"
-                                                 '(("line width" "0.8pt")
+                                                 '(("line width" "1.2pt")
                                                    ("style" "dashed")
                                                    ("color" "greeny")
                                                    ("mark" "diamond"))
@@ -1112,7 +1112,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                         (lambda ()
                                           (addplot stream
                                                    "worst case"
-                                                   '(("line width" "0.8pt")
+                                                   '(("line width" "1.2pt")
                                                      ("style" "densely dotted")
                                                      ("color" "blue")
                                                      ("mark" "*"))
@@ -1135,7 +1135,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                            data))
                                           (addplot stream
                                                    "median"
-                                                   '(("line width" "0.8pt")
+                                                   '(("line width" "1.2pt")
                                                      ("style" "dashed")
                                                      ("color" "greeny")
                                                      ("mark" "diamond"))
