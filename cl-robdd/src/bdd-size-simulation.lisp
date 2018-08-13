@@ -965,6 +965,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 									    min-value mi
 									    end-value average-size))
 						       :thick t
+                                                       :thick t
 						       :logx logx
 						       :logy logy)
 					      (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
