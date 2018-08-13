@@ -758,7 +758,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                  (logx nil) (logy nil)
                                                  (comment nil)
                                                  (xlabel (lambda (num-vars)
-                                                           (format nil "{Node count for \\numvars=~D, M=~D}" num-vars num-samples))))
+                                                           (format nil "{Node count for \\numvars=~D}" num-vars))))
                (when comment
                  (format stream "%~A~%" comment))
 	       (destructuring-bind (&key num-samples
@@ -964,6 +964,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 							     :finally (setf max-value ma
 									    min-value mi
 									    end-value average-size))
+                                                       :thick t
 						       :logx logx
 						       :logy logy)
 					      (let ((excursion-percent (float (* 100.0 (/ (- max-value min-value) end-value)) 1.0)))
