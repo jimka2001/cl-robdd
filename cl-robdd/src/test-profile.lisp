@@ -48,3 +48,59 @@
         (assert-true (getf item :function))))))
       
 
+(defvar *profile/2-text*
+"
+Number of samples:   1
+Sample interval:     0.01 seconds
+Total sampling time: 0.01 seconds
+Number of cycles:    0
+Sampled threads:
+ #<SB-THREAD:THREAD \"main thread\" RUNNING {1001970083}>
+
+           Self        Total        Cumul
+  Nr  Count     %  Count     %  Count     %    Calls  Function
+------------------------------------------------------------------------
+   1      1 100.0      1 100.0      1 100.0        -  \"#<trampoline #<CLOSURE (SB-KERNEL::CONDITION-SLOT-READER
+                        COMMON-LISP:SIMPLE-CONDITION-FORMAT-CONTROL) {100012C11B}> {2039012F}>\"
+   2      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:LABELS SB-IMPL::HANDLE-IT :IN SB-KERNEL:OUTPUT-OBJECT)
+   3      0   0.0      1 100.0      1 100.0        -  COMMON-LISP:PRINC
+   4      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:FLET \"H0\" :IN CL-ROBDD-ANALYSIS:CALL-WITH-SPROFILING)
+   5      0   0.0      1 100.0      1 100.0        -  SB-KERNEL::%SIGNAL
+   6      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:FLET SB-KERNEL::%WARN :IN \"SYS:SRC;CODE;WARM-ERROR.LISP\")
+   7      0   0.0      1 100.0      1 100.0        -  CL-ROBDD-ANALYSIS:CALL-WITH-SPROFILING
+   8      0   0.0      1 100.0      1 100.0        -  CL-ROBDD-ANALYSIS::BEST-TIME
+   9      0   0.0      1 100.0      1 100.0        -  CL-ROBDD-ANALYSIS::%CALL-WITH-TIMEOUT
+  10      0   0.0      1 100.0      1 100.0        -  LISP-TYPES-ANALYSIS:TYPES/CMP-PERF
+  11      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:LAMBDA COMMON-LISP:NIL :IN LISP-TYPES-ANALYSIS:TYPES/CMP-PERFS)
+  12      0   0.0      1 100.0      1 100.0        -  LISP-TYPES-ANALYSIS:TYPES/CMP-PERFS
+  13      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:LAMBDA COMMON-LISP:NIL :IN LISP-TYPES-ANALYSIS::BIG-TEST-REPORT)
+  14      0   0.0      1 100.0      1 100.0        -  CL-ROBDD:BDD-CALL-WITH-NEW-HASH
+  15      0   0.0      1 100.0      1 100.0        -  SB-EXT:CALL-WITH-TIMING
+  16      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:LAMBDA COMMON-LISP:NIL :IN \"/var/spool/torque6/mom_priv/jobs/451946.master.lrde.epita.fr.SC\")
+  17      0   0.0      1 100.0      1 100.0        -  SB-INT:SIMPLE-EVAL-IN-LEXENV
+  18      0   0.0      1 100.0      1 100.0        -  SB-EXT:EVAL-TLF
+  19      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:LABELS SB-FASL::EVAL-FORM :IN SB-INT:LOAD-AS-SOURCE)
+  20      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:LAMBDA (SB-KERNEL:FORM COMMON-LISP:&KEY :CURRENT-INDEX COMMON-LISP:&ALLOW-OTHER-KEYS) :IN SB-INT:LOAD-AS-SOURCE)
+  21      0   0.0      1 100.0      1 100.0        -  SB-C::%DO-FORMS-FROM-INFO
+  22      0   0.0      1 100.0      1 100.0        -  SB-INT:LOAD-AS-SOURCE
+  23      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:FLET SB-FASL::THUNK :IN COMMON-LISP:LOAD)
+  24      0   0.0      1 100.0      1 100.0        -  SB-FASL::CALL-WITH-LOAD-BINDINGS
+  25      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:FLET SB-FASL::LOAD-STREAM :IN COMMON-LISP:LOAD)
+  26      0   0.0      1 100.0      1 100.0        -  COMMON-LISP:LOAD
+  27      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:FLET SB-IMPL::LOAD-SCRIPT :IN SB-IMPL::PROCESS-SCRIPT)
+  28      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:FLET SB-UNIX::BODY :IN SB-IMPL::PROCESS-SCRIPT)
+  29      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:FLET \"WITHOUT-INTERRUPTS-BODY-3\" :IN SB-IMPL::PROCESS-SCRIPT)
+  30      0   0.0      1 100.0      1 100.0        -  SB-IMPL::PROCESS-SCRIPT
+  31      0   0.0      1 100.0      1 100.0        -  SB-IMPL::TOPLEVEL-INIT
+  32      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:FLET SB-UNIX::BODY :IN SB-EXT:SAVE-LISP-AND-DIE)
+  33      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:FLET \"WITHOUT-INTERRUPTS-BODY-27\" :IN SB-EXT:SAVE-LISP-AND-DIE)
+  34      0   0.0      1 100.0      1 100.0        -  (COMMON-LISP:LABELS SB-IMPL::RESTART-LISP :IN SB-EXT:SAVE-LISP-AND-DIE)
+------------------------------------------------------------------------
+          0   0.0                                     elsewhere
+")
+
+(defun profile/test2 ()
+  (CL-ROBDD-ANALYSIS::parse-sprofiler-output *profile/2-text*)))
+
+(define-test profile/test2
+  (profile/test2))

@@ -68,14 +68,27 @@
 
 (defun parse-sprofiler-output (profiler-text)
   "PROFILER-TEXT is the string printed by sb-sprof:report"
-  (flet ((read-next (stream)
-           (handler-case (read stream nil nil)
-             (error (e)
-               (error "Error ~S encountered while reading the string profiler-text=~S"
-                      e profiler-text))))
-         (dashes (str)
-           (every (lambda (c)
-                    (char= c #\-)) str)))
+  (labels ((read-next (stream)
+             (handler-case (list (read stream nil nil))
+               (error (e)
+                 (warn "Error ~S encountered while reading the string profiler-text=~S"
+                       e profiler-text)
+                 nil)))
+           (dashes (str)
+             (every (lambda (c)
+                      (char= c #\-)) str))
+           (collect (n stream)
+             (cond
+               ((zerop n)
+                nil)
+               (t
+                (let ((data (read-next stream)))
+                  (cond
+                    ((null data)
+                     nil)
+                    (t
+                     (cons (car data)
+                           (collect (1- n) stream)))))))))
     (let* ((lines-str profiler-text)
            ;; dash-1 and dash-2 are lists starting with the  1st and 2nd
            ;; occurance of "-----..." in line-str after being split into a list of lines.
@@ -84,29 +97,32 @@
            ;; profile-lines is the list of lines between the dashes
            (profile-lines (ldiff (cdr dash-1) dash-2))
            (*package* (find-package :cl-user)))
-           
       ;; "           Self        Total        Cumul"
       ;; "  Nr  Count     %  Count     %  Count     %    Calls  Function"
       ;; "------------------------------------------------------------------------"
       ;; "   1    121  15.6    121  15.6    121  15.6        -  LDIFF"
       ;; "   2    113  14.5    176  22.6    234  30.1        -  (LABELS TO-DNF :IN TYPE-TO-DNF)"
-      ;; "   3     69   8.9    553  71.1    303  38.9        -  DISJOINT-TYPES-P"
-      ;; "   4     66   8.5    199  25.6    369  47.4        -  CACHED-SUBTYPEP"
+      ;; "   3      1  12.2      1  11.3      1  32.1        -  \"#<trampoline #<CLOSURE (SB-KERNEL::CONDITION-SLOT-READER"
+      ;; "                    COMMON-LISP:SIMPLE-CONDITION-FORMAT-CONTROL) {100012C11B}> {2039012F}>\""
+      ;; "   4     69   8.9    553  71.1    303  38.9        -  DISJOINT-TYPES-P"
+      ;; "   5     66   8.5    199  25.6    369  47.4        -  CACHED-SUBTYPEP"
       ;; "------------------------------------------------------------------------"
       ;; "          0   0.0                                     elsewhere")
       (loop :for line :in profile-lines
             :for stream = (make-string-input-stream line)
-            :collect (prog1 (clean-sprofiling-plist
-                             (list :nr (read-next stream)
-                                   :self (list :count (read-next stream)
-                                               :percent (read-next stream))
-                                   :total (list :count (read-next stream)
-                                                :percent (read-next stream))
-                                   :cumul (list :count (read-next stream)
-                                                :percent (read-next stream))
-                                   :function (progn (read-next stream) ;; skip calls because don't know whether to call / or truncate
-                                                    (format nil "~A" (read-next stream)))))
-                       (close stream))))))
+            :for parsed = (collect 8 stream)
+            :when (= 8 (length parsed)) ;; skip incomplete lines, e.g., the line between 3 and 4 above.
+              :collect (prog1 (clean-sprofiling-plist
+                               (list :nr (pop parsed)
+                                     :self (list :count (pop parsed)
+                                                 :percent (pop parsed))
+                                     :total (list :count (pop parsed)
+                                                  :percent (pop parsed))
+                                     :cumul (list :count (pop parsed)
+                                                  :percent (pop parsed))
+                                     :function (progn (pop parsed) ;; skip calls because don't know whether to call / or truncate
+                                                      (format nil "~A" (pop parsed)))))
+                         (close stream))))))
 
 (defun call-with-sprofiling (thunk consume-prof consume-n)
   (declare (type (function () t) thunk)
