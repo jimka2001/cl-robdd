@@ -809,8 +809,8 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                                            num-samples num-vars))
 							      (t   (format nil "{\\color{greeny} $\\HH{~D}{~D}(x) \\times 10^{~D}$}"
                                                                            num-samples num-vars expo))))
-					     '("label style" "{font=\\Large}")
-					     '("tick label style" "{font=\\Large}"))
+					     '("label style" (("font" "\\Large")))
+					     '("tick label style" (("font" "\\Large"))))
 					    (lambda ()
 					      (addplot stream
 						       nil
@@ -854,7 +854,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                               (axis stream
                                     (list "xmajorgrids"
                                           "ymajorgrids"
-                                          '("label style" "{font=\\Large}")
+                                          '("label style" (("font" "\\Large")))
                                           '("xlabel" "M Number of points")
                                           (list "ylabel" (format nil "{\\color{blue} $\\LL{M}{~D}$}" num-vars)))
                                     (lambda ()
@@ -925,7 +925,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                         (list (list "ylabel" (format nil "{\\color{blue} $\\Delta\\HH{~D}{~D}$}" m2  num-vars))
                                               "ymajorgrids"
                                               "xmajorgrids"
-                                              '("label style" "{font=\\Large}")
+                                              '("label style" (("font" "\\Large")))
                                               (list "xlabel"
                                                     (format nil "{~D-variable ROBDD size}" num-vars)))
                                         (lambda ()
@@ -1103,7 +1103,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                               '("ylabel" "Residual compression ratio")
                                               '("legend style" (("at" "{(1,1)}")
 								("anchor" "north east")
-								("label style" ("font" "\\tiny"))
+								("label style" (("font" "\\tiny")))
 								("font" "\\tiny")))
                                               (list "xtick"
                                                     (format nil "{~A}"
