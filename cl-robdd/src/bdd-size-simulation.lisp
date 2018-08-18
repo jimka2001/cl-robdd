@@ -597,7 +597,9 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
     ((cons string (cons string)) (format nil "~A=~A" (car axis-option) (cadr axis-option)))
     ((cons string (cons fixnum)) (format nil "~A=~D" (car axis-option) (cadr axis-option)))
     ((cons string cons) (format nil "~A={~A}" (car axis-option) 
-				(join-strings (format nil ",~% ") (mapcar  #'print-option (cadr axis-option)))))
+				(join-strings (format nil ",~% ")
+					      (mapcar  #'print-option
+						       (remove nil (cadr axis-option))))))
     (t
      (error "unknown axis-option ~A" axis-option))))
 
@@ -683,7 +685,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
       ;; default width is 0.4pt
       (push '("line width" "1.2pt") plot-options))
     (format stream "\\~A[~A] coordinates {~%" addplot
-	    (join-strings (format nil ",~% ") (mapcar #'print-option plot-options)))
+	    (join-strings (format nil ",~% ") (mapcar #'print-option (remove nil plot-options))))
     (dolist (point points)
       (when (and (numberp logx)
 		 (zerop (x-coord point)))
@@ -814,8 +816,10 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 					    (lambda ()
 					      (addplot stream
 						       nil
-						       '(("color" "greeny")
-							 ("mark" "*"))
+						       `(("color" "greeny")
+							 ,(when (<= num-vars 10)
+							    '("mark" "*")
+							 ))
 						       "(~D,~Ae~A)"
 						       scaled
 						       :thick t
