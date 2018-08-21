@@ -818,8 +818,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 						       nil
 						       `(("color" "greeny")
 							 ,(when (<= num-vars 10)
-							    '("mark" "*")
-							 ))
+							    '("mark" "*")))
 						       "(~D,~Ae~A)"
 						       scaled
 						       :thick t
