@@ -60,6 +60,10 @@
                 (list key value))))))
     `(,@(when (getf plist :nr)
           (list :nr (getf plist :nr)))
+      ,@(when (getf plist :text)
+	  (list :text (getf plist :text)))
+      ,@(when (getf plist :calls)
+	  (list :calls (getf plist :calls)))
       ,@(when (getf plist :function)
           (list :function (getf plist :function)))
       ,@(clean-count-percent :self)
@@ -110,18 +114,19 @@
       ;; "          0   0.0                                     elsewhere")
       (loop :for line :in profile-lines
             :for stream = (make-string-input-stream line)
-            :for parsed = (collect 8 stream)
+            :for parsed = (collect 9 stream)
             :when (= 8 (length parsed)) ;; skip incomplete lines, e.g., the line between 3 and 4 above.
               :collect (prog1 (clean-sprofiling-plist
                                (list :nr (pop parsed)
+				     :text line
                                      :self (list :count (pop parsed)
                                                  :percent (pop parsed))
                                      :total (list :count (pop parsed)
                                                   :percent (pop parsed))
                                      :cumul (list :count (pop parsed)
                                                   :percent (pop parsed))
-                                     :function (progn (pop parsed) ;; skip calls because don't know whether to call / or truncate
-                                                      (format nil "~A" (pop parsed)))))
+				     :calls (pop parsed)
+                                     :function (format nil "~A" (pop parsed))))
                          (close stream))))))
 
 (defun call-with-sprofiling (thunk consume-prof consume-n)
@@ -232,12 +237,21 @@
                             (remove #\| (remove #\,  line)
                                     :count 5))
              :collect (prog1 (clean-dprofiling-plist
-                              (list :seconds (read-next stream)
-                                    :gc      (read-next stream)
-                                    :cons    (read-next stream)
-                                    :calls   (read-next stream)
-                                    :sec/call (read-next stream)
-                                    :name    (format nil "~A" (read-next stream))))
+			      (let ((seconds (read-next stream))
+				    (gc (read-next stream))
+				    (cons (read-next stream))
+				    (calls (read-next stream))
+				    (sec/call (read-next stream))
+				    (name (read-next stream)))
+				(list :seconds seconds
+				      :gc      gc
+				      :cons    cons
+				      :calls   calls
+				      :sec/call sec/call
+				      :package (when (and (symbolp name)
+							  (symbol-package name))
+						 (package-name (symbol-package name)))
+				      :name    (format nil "~A" name))))
                         (close stream)))
        ;; value-1
        (let ((stream (make-string-input-stream (remove #\| (remove #\,  total-line-str)
