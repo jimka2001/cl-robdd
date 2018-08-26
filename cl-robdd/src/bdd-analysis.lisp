@@ -49,12 +49,27 @@
    ;; this list comes from
    ;;  http://godsnotwheregodsnot.blogspot.com/2012/09/color-distribution-methodology.html
    ;;"FFFF00"
-   "1CE6FF" "FF34FF" "6A3A4C" "008941" "006FA6" "A30059"
+   "1CE6FF"
+   "FF34FF" ;; decompose-types
+   "6A3A4C" ;; decompose-types-rtev2
+   "008941" ;; decompose-types-sat
+   "006FA6" ;; decompose-types-graph
+   "A30059" ;; bdd-decompose-types-strong
    ;;"FFDBE5"
-   "7A4900" "0000A6" "63FFAC" "B79762" "004D43" "8FB0FF" "997D87"
-   "5A0007" "809693"
+   "7A4900" ;; bdd-decompose-types-weak
+   "0000A6" ;; bdd-decompose-types-weak-dynamic
+   "63FFAC" ;; bdd-decompose-types
+   "B79762" ;; decompose-types-bdd-graph-strong
+   "004D43" ;; decompose-types-bdd-graph-weak-dynamic
+   "8FB0FF" ;; decompose-types-bdd-graph
+   "997D87" ;; decompose-types-bdd-graph-weak
+   ;; "5A0007" 
+   ;; "809693" 
    ;; "FEFFE6"
-   "1B4400" "4FC601" "3B5DFF" "4A3B53" "FF2F80"
+   ;;"1B4400"
+   "3B5DFF" ;; decompose-types-bdd-graph-baker
+   "4FC601" ;; decompose-types-graph-baker
+   "4A3B53" "FF2F80"
    "61615A" "BA0900" "6B7900" "00C2A0" "FFAA92" "FF90C9" "B903AA" "D16100"
    "DDEFFF" "000035" "7B4F4B" "A1C299" "300018" "0AA6D8" "013349" "00846F"
    "372101" "FFB500" "C2FFED" "A079BF" "CC0744" "C0B9B2" "C2FF99" "001E09"
