@@ -52,13 +52,17 @@
   "returns a plist with the fields :wall-time :run-time :value"
   (declare (type (and fixnum unsigned-byte) num-tries)
            (type (function () t) thunk))
-  (let (result)
+  (let (result
+	(profile (case profile
+		   ((nil) nil)
+		   ((t) '(:dprof :sprof))
+		   (t profile))))
     (dotimes (try num-tries)
       (funcall set-n-stimes 1)
       (funcall set-n-dtimes 1)
       (let* ((run-time-t1 (get-internal-run-time))
              (start-real-time (get-internal-real-time))
-             (s2 (if profile
+             (s2 (if (member :sprof profile)
                      (call-with-sprofiling thunk
                                            set-sprofile-plists
                                            set-n-stimes)
@@ -68,10 +72,10 @@
                            (1+ (funcall get-n-stimes))))
              (run-time  (/ (- run-time-t2 run-time-t1) internal-time-units-per-second
                            (1+ (funcall get-n-stimes)))))
-        (when profile
+        (when (member :dprof profile)
           (call-with-dprofiling thunk
                                 (append profile-packages '(cl:subtypep ;;sb-kernel:specifier-type
-                                                           baker:subtypep
+							   baker:baker-subtypep
                                                            ))
                                 set-dprofile-plists
                                 set-n-dtimes))
