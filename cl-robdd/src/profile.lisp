@@ -340,7 +340,8 @@
       
       (call-with-dprofiling (lambda ()
                               (test-profiler))
-                            '("LISP-TYPES" "LISP-TYPES.TEST" "CL")
+                            '("LISP-TYPES" "LISP-TYPES-TEST" "CL" ;;"FR.EPITA.LRDE.SUBTYPEP"
+			      )
                             #'set-dprofile-plists
                             #'set-n-dtimes)
       )))

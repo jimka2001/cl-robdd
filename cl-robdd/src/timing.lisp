@@ -24,6 +24,7 @@
 (defun best-time (num-tries thunk
                   &key profile
                     (profile-packages (remove-if-not #'find-package '("CL-ROBDD" "CL-ROBDD-TEST" "CL-ROBDD-ANALYSIS-TEST" "CL-ROBDD-ANALYSIS"
+								      ;; "FR.EPITA.LRDE.SUBTYPEP"
                                                                       "LISP-TYPES" "LISP-TYPES.TEST")))
                     (sprofile-plists nil)
                     (dprofile-plists nil)
