@@ -683,7 +683,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 		color red green blue)))
     (when thick
       ;; default width is 0.4pt
-      (push '("line width" "1.2pt") plot-options))
+      (push '("line width" "1.8pt") plot-options))
     (format stream "\\~A[~A] coordinates {~%" addplot
 	    (join-strings (format nil ",~% ") (mapcar #'print-option (remove nil plot-options))))
     (dolist (point points)
