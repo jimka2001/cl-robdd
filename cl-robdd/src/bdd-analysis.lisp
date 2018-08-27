@@ -67,9 +67,9 @@
    ;; "809693" 
    ;; "FEFFE6"
    ;;"1B4400"
-   "3B5DFF" ;; decompose-types-bdd-graph-baker
+   "FF2F80" ;; decompose-types-bdd-graph-baker
    "4FC601" ;; decompose-types-graph-baker
-   "4A3B53" "FF2F80"
+   "4A3B53"
    "61615A" "BA0900" "6B7900" "00C2A0" "FFAA92" "FF90C9" "B903AA" "D16100"
    "DDEFFF" "000035" "7B4F4B" "A1C299" "300018" "0AA6D8" "013349" "00846F"
    "372101" "FFB500" "C2FFED" "A079BF" "CC0744" "C0B9B2" "C2FF99" "001E09"
@@ -79,6 +79,7 @@
    "575329" "00FECF" "B05B6F" "8CD0FF" "3B9700" "04F757" "C8A1A1" "1E6E00"
    "7900D7" "A77500" "6367A9" "A05837" "6B002C" "772600" "D790FF" "9B9700"
    "549E79" "FFF69F" "201625" "72418F" "BC23FF" "99ADC0" "3A2465" "922329"
+   "3B5DFF"
    "5B4534" "FDE8DC" "404E55" "0089A3" "CB7E98" "A4E804" "324E72" ;; "FF4A46"
    ;; I don't remember where this list comes from
    
