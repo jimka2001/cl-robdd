@@ -57,23 +57,27 @@
    "A30059" ;; bdd-decompose-types-strong
    ;;"FFDBE5"
    "7A4900" ;; bdd-decompose-types-weak
-   "0000A6" ;; bdd-decompose-types-weak-dynamic
+
+   "001E09" ;; bdd-decompose-types-weak-dynamic
    "63FFAC" ;; bdd-decompose-types
    "B79762" ;; decompose-types-bdd-graph-strong
-   "004D43" ;; decompose-types-bdd-graph-weak-dynamic
+   "CB7900" ;; ;; decompose-types-bdd-graph-weak-dynamic
    "8FB0FF" ;; decompose-types-bdd-graph
-   "997D87" ;; decompose-types-bdd-graph-weak
-   ;; "5A0007" 
+   "00489C" ;; decompose-types-bdd-graph-weak
+   ;; "5A0007"
+   ;; "997D87"
    ;; "809693" 
    ;; "FEFFE6"
-   ;;"1B4400"
+   ;; "1B4400"
+   ;; "004D43"
+   ;; "0000A6"
    "FF2F80" ;; decompose-types-bdd-graph-baker
    "4FC601" ;; decompose-types-graph-baker
    "4A3B53"
    "61615A" "BA0900" "6B7900" "00C2A0" "FFAA92" "FF90C9" "B903AA" "D16100"
    "DDEFFF" "000035" "7B4F4B" "A1C299" "300018" "0AA6D8" "013349" "00846F"
-   "372101" "FFB500" "C2FFED" "A079BF" "CC0744" "C0B9B2" "C2FF99" "001E09"
-   "00489C" "6F0062" "0CBD66" "EEC3FF" "456D75" "B77B68" "7A87A1" "788D66"
+   "372101" "FFB500" "C2FFED" "A079BF" "CC0744" "C0B9B2" "C2FF99" 
+   "6F0062" "0CBD66" "EEC3FF" "456D75" "B77B68" "7A87A1" "788D66"
    "885578" "FAD09F" "FF8A9A" "D157A0" "BEC459" "456648" "0086ED" "886F4C"
    "34362D" "B4A8BD" "00A6AA" "452C2C" "636375" "A3C8C9" "FF913F" "938A81"
    "575329" "00FECF" "B05B6F" "8CD0FF" "3B9700" "04F757" "C8A1A1" "1E6E00"
