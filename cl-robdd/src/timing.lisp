@@ -76,7 +76,13 @@
         (when (member :dprof profile)
           (call-with-dprofiling thunk
                                 (append profile-packages '(cl:subtypep ;;sb-kernel:specifier-type
-							   baker:baker-subtypep
+							   baker::baker-subtypep
+							   baker::numeric-types->ranges
+							   baker::split-type
+							   baker::recursively-expand-type
+							   baker::literal-type-null?
+							   baker::type-keep-if
+							   baker::type/map-atomic-types
                                                            ))
                                 set-dprofile-plists
                                 set-n-dtimes))
