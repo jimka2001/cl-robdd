@@ -131,7 +131,9 @@ is replaced with replacement."
 (defun qstat-f ()
   "call qstat -f and write the output to a file with the .sXXXX extension
 similar to where current Output_Path is indicating."
-  (let ((pbs-jobid (sb-posix:getenv "PBS_JOBID"))
+  (let ((pbs-jobid (or (sb-posix:getenv "PBS_JOBID")
+		       ;; if being called not-from cluster job, simply return, no harm done
+		       (return-from qstat-f nil)))
         (delimeter (format nil "~%~a" '#\Tab )))
     ;; call qstat -f and get the output;
     ;; qstat -f wraps long lines, so we first have to unwrap them by finding
