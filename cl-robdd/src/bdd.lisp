@@ -33,7 +33,7 @@
 (defgeneric bdd-not (b))
 (defgeneric %bdd-node (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys))
 (defgeneric bdd-allocate (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys))
-
+(defgeneric bdd-dnf-wrap (bdd op zero forms))
 
 (deftype class-designator ()
   `(or (and symbol (not null)) class))
@@ -515,35 +515,36 @@
 (defun bdd-to-expr (bdd)
   (slot-value bdd 'expr))
 
+(defmethod bdd-dnf-wrap ((bdd bdd) op zero forms)
+  (cond ((cdr forms)
+	 (cons op forms))
+	(forms
+	 (car forms))
+	(t
+	 zero)))
+
 (defun %bdd-to-dnf (bdd)
   "Convert a BDD to logical expression in DNF (disjunctive normal form), i.e. an OR of ANDs.
 The construction attempts re-use cons cells in order to reduce the memory footprint of a large
 set of BDDs."
   (declare (type bdd bdd))
   (labels (
-           (wrap (op zero forms)
-             (cond ((cdr forms)
-                    (cons op forms))
-                   (forms
-                    (car forms))
-                   (t
-                    zero)))
-           (prepend (head dnf)
-             (typecase dnf
-               ((cons (eql or))
-                (wrap
-                 'or nil
-                 (mapcar (lambda (tail)
-                           (prepend head tail))
-                         (cdr dnf))))
-               ((cons (eql and))
-                (wrap 'and t (cons head (cdr dnf))))
-               ((eql t)
-                head)
-               ((eql nil)
-                nil)
-               (t
-                (wrap 'and t (list head dnf)))))
+	   (prepend (head dnf)
+	     (typecase dnf
+	       ((cons (eql or))
+		(bdd-dnf-wrap
+		 bdd 'or nil
+		 (mapcar (lambda (tail)
+			   (prepend head tail))
+			 (cdr dnf))))
+	       ((cons (eql and))
+		(bdd-dnf-wrap bdd 'and t (cons head (cdr dnf))))
+	       ((eql t)
+		head)
+	       ((eql nil)
+		nil)
+	       (t
+		(bdd-dnf-wrap bdd 'and t (list head dnf)))))
            (disjunction (positive negative)
              (cond
                ((null positive)
@@ -554,11 +555,11 @@ set of BDDs."
                      (typep negative '(cons (eql or))))
                 (cons 'or (nconc (copy-list (cdr positive)) (cdr negative))))
                ((typep positive '(cons (eql or)))
-                (wrap 'or nil (cons negative (cdr positive))))
+                (bdd-dnf-wrap bdd 'or nil (cons negative (cdr positive))))
                ((typep negative '(cons (eql or)))
-                (wrap 'or nil (cons positive (cdr negative))))
+                (bdd-dnf-wrap bdd 'or nil (cons positive (cdr negative))))
                (t
-                (wrap 'or nil (list positive negative))))))
+                (bdd-dnf-wrap bdd 'or nil (list positive negative))))))
     
     (let ((positive-terms (prepend (bdd-label bdd) (bdd-to-dnf (bdd-positive bdd))))
           (negative-terms (prepend `(not ,(bdd-label bdd)) (bdd-to-dnf (bdd-negative bdd)))))

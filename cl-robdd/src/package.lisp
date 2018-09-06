@@ -30,6 +30,7 @@
    "*BDD-HASH-STRUCT*"
    "*BDD-TRUE*"
    "BDD"
+   "BDD-DNF-WRAP"
    "BDD-ALLOCATE"
    "BDD-AND"
    "BDD-AND-NOT"
