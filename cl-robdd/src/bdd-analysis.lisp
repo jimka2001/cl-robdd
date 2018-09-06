@@ -50,20 +50,20 @@
    ;;  http://godsnotwheregodsnot.blogspot.com/2012/09/color-distribution-methodology.html
    ;;"FFFF00"
    "1CE6FF"
-   "FF34FF" ;; decompose-types
-   "6A3A4C" ;; decompose-types-rtev2
-   "008941" ;; decompose-types-sat
-   "006FA6" ;; decompose-types-graph
-   "A30059" ;; bdd-decompose-types-strong
+   "FF34FF" ;; mdtd-baseline
+   "6A3A4C" ;; mdtd-rtev2
+   "008941" ;; mdtd-sat
+   "006FA6" ;; mdtd-graph
+   "A30059" ;; mdtd-bdd-strong
    ;;"FFDBE5"
-   "7A4900" ;; bdd-decompose-types-weak
+   "7A4900" ;; mdtd-bdd-weak
 
-   "001E09" ;; bdd-decompose-types-weak-dynamic
-   "63FFAC" ;; bdd-decompose-types
-   "B79762" ;; decompose-types-bdd-graph-strong
-   "CB7900" ;; ;; decompose-types-bdd-graph-weak-dynamic
-   "8FB0FF" ;; decompose-types-bdd-graph
-   "00489C" ;; decompose-types-bdd-graph-weak
+   "001E09" ;; mdtd-bdd-weak-dynamic
+   "63FFAC" ;; mdtd-bdd-baseline
+   "B79762" ;; mdtd-bdd-graph-strong
+   "CB7900" ;; ;; mdtd-bdd-graph-weak-dynamic
+   "8FB0FF" ;; mdtd-bdd-graph
+   "00489C" ;; mdtd-bdd-graph-weak
    ;; "5A0007"
    ;; "997D87"
    ;; "809693" 
@@ -71,8 +71,8 @@
    ;; "1B4400"
    ;; "004D43"
    ;; "0000A6"
-   "FF2F80" ;; decompose-types-bdd-graph-baker
-   "4FC601" ;; decompose-types-graph-baker
+   "FF2F80" ;; mdtd-bdd-graph-baker
+   "4FC601" ;; mdtd-graph-baker
    "4A3B53"
    "61615A" "BA0900" "6B7900" "00C2A0" "FFAA92" "FF90C9" "B903AA" "D16100"
    "DDEFFF" "000035" "7B4F4B" "A1C299" "300018" "0AA6D8" "013349" "00846F"
