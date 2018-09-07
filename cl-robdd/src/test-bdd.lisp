@@ -21,7 +21,7 @@
 
 
 (defpackage :cl-robdd-test
-  (:use :cl :cl-robdd :lisp-unit ;;:open-pipe-to-file
+  (:use :cl :cl-robdd :jimka-test
 	)
   )
   
@@ -30,11 +30,7 @@
 (shadow-all-symbols :package-from :cl-robdd :package-into :cl-robdd-test)
 
 (defun test ()
-  (let ((*print-summary* t)
-	(*print-failures* t)
-	(*summarize-results* t)
-	(*print-errors* t))
-    (run-tests :all :cl-robdd-test)))
+  (run-package-tests :cl-robdd-test))
 
 
 (define-test test/bdd-and
