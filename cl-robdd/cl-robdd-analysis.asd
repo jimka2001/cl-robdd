@@ -20,8 +20,9 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :cl-robdd-analysis
-  :depends-on (:cl-robdd :sb-sprof ;;:open-pipe-to-file
-			 )
+    :depends-on (:cl-robdd
+		 #+sbcl :sb-sprof
+		 :jimka-addons)
   :components
   ((:module "src"
     :components
@@ -29,7 +30,7 @@
      (:file "bdd-size-simulation" :depends-on ("bdd-analysis"))
      (:file "timing" :depends-on ("bdd-analysis"))
      (:file "bdd-ops-test" :depends-on ("bdd-analysis"))
-     (:file "profile" :depends-on ("bdd-analysis"))
+     #+sbcl (:file "profile" :depends-on ("bdd-analysis"))
      (:file "bdd-worst-case" :depends-on ("bdd-analysis"))
      (:file "theta" :depends-on ("bdd-analysis"))
      ))))

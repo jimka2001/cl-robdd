@@ -55,47 +55,11 @@
                                                  (find-symbol name package-from)))))
                                  names))
       (when names
-        (error "The following distinct symbols exist in both packages: ~A" names)))))
-
-(defun lconc (buf items)
-  (cond
-    ((null buf)
-     (cons items (last items)))
-    ((null (car buf))
-     (setf (car buf) items)
-     (setf (cdr buf) (last items))
-     buf)
-    ((null items)
-     buf)
-    (t
-     (setf (cdr (cdr buf)) items)
-     (setf (cdr buf) (last items))
-     buf)))
-
-(defun tconc (buf &rest items)
-  (lconc buf items))
-
-(defmacro while (test &body body)
-  `(loop :while ,test
-	 :do (progn ,@body)))
-
-(defmacro setof (var data &body body)
-  `(remove-if-not (lambda (,var) ,@body) ,data))
-
-(defun getter (field)
-  (lambda (obj) (getf obj field)))
-
-(defun run-program (program args &rest options)
-  #+sbcl (apply #'sb-ext:run-program program args :search t options)
-  #+allegro (apply #'excl:run-shell-command
-                   (apply #'vector (cons program args))
-                   :wait t
-                   options
-                   )
-  )
+        (error "The following distinct symbols exist in both packages ~A and ~A: ~A"
+	       package-from package-into names)))))
 
 
-(defvar *tmp-dir* (format nil "/tmp/~A/" (or (sb-posix:getenv "USER")
+(defvar *tmp-dir* (format nil "/tmp/~A/" (or (getenv "USER")
                                              "unknown-user")))
 
 (defun make-temp-dir (suffix)

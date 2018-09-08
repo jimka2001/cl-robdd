@@ -21,6 +21,7 @@
 
 (asdf:defsystem :cl-robdd-analysis-test
   :depends-on (:cl-robdd-analysis
+	       :jimka-addons
                :jimka-test)
   :components
   ((:module "src"
