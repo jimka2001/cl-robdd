@@ -79,7 +79,7 @@
 	#+sbcl
         (when (member :dprof profile)
           (call-with-dprofiling thunk
-                                (append profile-packages *profile-functions)
+                                (append profile-packages *profile-functions*)
                                 set-dprofile-plists
                                 set-n-dtimes))
         (setf result
