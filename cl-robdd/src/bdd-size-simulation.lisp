@@ -23,16 +23,6 @@
 (in-package :cl-robdd-analysis)
 
 
-(defmacro setof (var data &body body)
-  `(remove-if-not (lambda (,var) ,@body) ,data))
-
-(defmacro while (test &body body)
-  `(loop :while ,test
-	 :do (progn ,@body)))
-
-(defmacro forall (var data &body body)
-  `(every #'(lambda (,var) ,@body) ,data))
-
 (defun gen-min-term (i vars)
   ;; interpret the given I as a bit-mask
   ;; and generate an (AND ...) expression

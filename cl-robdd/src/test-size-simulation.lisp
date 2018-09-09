@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (defpackage :cl-robdd-analysis-test
-  (:use :cl :cl-robdd :cl-robdd-analysis :lisp-unit))
+  (:use :cl :cl-robdd :cl-robdd-analysis :jimka-test))
 
 (in-package :cl-robdd-analysis-test)
 
@@ -29,11 +29,7 @@
 
 
 (defun test ()
-  (let ((*print-summary* t)
-	(*print-failures* t)
-	(*summarize-results* t)
-	(*print-errors* t))
-    (run-tests :all (list :cl-robdd-analysis-test))))
+  (run-package-tests :cl-robdd-analysis-test))
 
 
 (defun test-operation-order ()

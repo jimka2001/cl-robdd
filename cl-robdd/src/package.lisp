@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (cl:defpackage :cl-robdd
-  (:use :cl)
+  (:use :cl :jimka-addons)
   (:export
    "%BDD-CMP"
    "%BDD-NODE"

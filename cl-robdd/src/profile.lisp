@@ -316,6 +316,7 @@
           ((> n 1000) m)
         (setf m (max m (loc1 x y)))))))
 
+#+sbcl
 (defun test-profile ()
   (let (s-prof-plists
         d-prof-plists

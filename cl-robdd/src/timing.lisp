@@ -21,6 +21,8 @@
 
 (in-package :cl-robdd-analysis)
 
+(defvar *profile-functions* '(cl:subtypep))
+
 (defun best-time (num-tries thunk
                   &key profile
                     (profile-packages (remove-if-not #'find-package '("CL-ROBDD" "CL-ROBDD-TEST" "CL-ROBDD-ANALYSIS-TEST" "CL-ROBDD-ANALYSIS"
@@ -63,27 +65,21 @@
       (funcall set-n-dtimes 1)
       (let* ((run-time-t1 (get-internal-run-time))
              (start-real-time (get-internal-real-time))
-             (s2 (if (member :sprof profile)
-                     (call-with-sprofiling thunk
-                                           set-sprofile-plists
-                                           set-n-stimes)
-                     (funcall thunk)))
+             (s2 #+sbcl (if (member :sprof profile)
+			    (call-with-sprofiling thunk
+						  set-sprofile-plists
+						  set-n-stimes)
+			    (funcall thunk))
+		 #+allegro (funcall thunk))
              (run-time-t2 (get-internal-run-time))
              (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second
                            (1+ (funcall get-n-stimes))))
              (run-time  (/ (- run-time-t2 run-time-t1) internal-time-units-per-second
                            (1+ (funcall get-n-stimes)))))
+	#+sbcl
         (when (member :dprof profile)
           (call-with-dprofiling thunk
-                                (append profile-packages '(cl:subtypep ;;sb-kernel:specifier-type
-							   baker::baker-subtypep
-							   baker::numeric-types->ranges
-							   baker::split-type
-							   baker::recursively-expand-type
-							   baker::literal-type-null?
-							   baker::type-keep-if
-							   baker::type/map-atomic-types
-                                                           ))
+                                (append profile-packages *profile-functions)
                                 set-dprofile-plists
                                 set-n-dtimes))
         (setf result

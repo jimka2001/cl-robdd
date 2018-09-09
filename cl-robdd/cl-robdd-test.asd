@@ -21,7 +21,8 @@
 
 (asdf:defsystem :cl-robdd-test
   :depends-on (:cl-robdd
-               (:version :lisp-unit "0.9.0"))
+	       :jimka-addons
+               :jimka-test)
   :components
   ((:module "src"
     :components

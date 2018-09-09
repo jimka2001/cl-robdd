@@ -23,15 +23,14 @@
 
 (shadow-all-symbols :package-from :cl-robdd :package-into :cl-robdd-test)
 
-
-(define-test bdd-to-png
+(define-test test/bdd-to-png
   (bdd-with-new-hash ()
     (bdd-to-png (bdd t))
     (bdd-to-png (bdd nil))
     (bdd-to-png (bdd '(and x1 (or x2 (not x3)))))))
 
 
-(define-test bdd-to-dot
+(define-test test/bdd-to-dot
   (bdd-with-new-hash ()
     (bdd-to-png (bdd t))
     (bdd-to-png (bdd nil))

@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :cl-robdd
-  :depends-on ()
+  :depends-on (:jimka-addons)
   :components
   ((:module "src"
     :components

@@ -21,20 +21,22 @@
 
 
 (defpackage :cl-robdd-analysis
-  (:use :cl :cl-robdd ;;:open-pipe-to-file
+  (:use :cl :cl-robdd 
+	:jimka-addons
 	)
   (:export
+   "*COLORS*"
+   "*PROFILE-FUNCTIONS*"
    "ADDPLOT"
    "AXIS"
-   "COLOR-TO-RGB"
-   "CALL-WITH-DPROFILING"
-   "CALL-WITH-SPROFILING"
-   "GENERATE-LATEX-PLOTS"
+   #+sbcl "CALL-WITH-DPROFILING"
+   #+sbcl "CALL-WITH-SPROFILING"
    "CALL-WITH-TIMEOUT"
+   "COLOR-TO-RGB"
    "DEMAND-ENV-VAR"
+   "GENERATE-LATEX-PLOTS"
    "JOIN-STRINGS"
    "MEASURE-AND-WRITE-BDD-DISTRIBUTION"
-   "*COLORS*"
    "QSTAT-F"
    "RANDOM-BOOLEAN-COMBINATION"
    "TIKZPICTURE"
@@ -125,9 +127,10 @@ is replaced with replacement."
             while pos)))
 
 (defun demand-env-var (env-var-name)
-  (or (sb-posix:getenv env-var-name)
+  (or (getenv env-var-name)
       (error "Missing env var ~s" env-var-name)))
 
+#+sbcl
 (defun qstat-f ()
   "call qstat -f and write the output to a file with the .sXXXX extension
 similar to where current Output_Path is indicating."
@@ -184,6 +187,7 @@ similar to where current Output_Path is indicating."
     (dolist (string (cdr strings))
       (format str "~A~A" delimeter string))))
 
+#+sbcl
 (defun cmp-xor-implementations-1 (n)
   (let ((a (random-boolean-combination n))
 	(b (random-boolean-combination n)))
@@ -278,6 +282,7 @@ similar to where current Output_Path is indicating."
 			   :logy t)
 		     )))))
 
+#+sbcl
 (defun cmp-fold-implementations-1 (n &key (density 1.0))
   (let ((bool-comb (random-boolean-combination n :density density)))
     (labels ((timing (thunk &aux plist)
@@ -295,18 +300,12 @@ similar to where current Output_Path is indicating."
 		     :for reduce-function   :in (list #'cl-robdd::tree-reduce #'reduce)
 		     :collect (list* :name name (cmp reduce-function)))))))
 
+#+sbcl
 (defun profile-linear-tree-like (n &key ((:reduce cl-robdd::*bdd-reduce-function*) #'reduce))
   (sb-profile:profile "CL-ROBDD" "CL-ROBDD-ANALYSIS")
 
   (let ((bool-comb (random-boolean-combination n :density 0.2)))
     (garbage-collect)
-    ;; (sb-sprof:reset)
-    ;; (sb-sprof:profile-call-counts "CL-ROBDD" "CL-ROBDD-ANALYSIS")
-    ;; (sb-sprof:with-profiling (:loop nil)
-    ;;   (dotimes (_ 1000)
-    ;; 	(bdd-with-new-hash ()
-    ;; 	  (bdd bool-comb))))
-    ;; (sb-sprof:report :type :flat)
 
     (let ((cl-robdd::*bdd-reduce-function* #'reduce))
       (format t "=== profile with ~A~%" cl-robdd::*bdd-reduce-function*)
@@ -324,6 +323,7 @@ similar to where current Output_Path is indicating."
       (sb-profile:report :print-no-call-list nil)
       )))
   
+#+sbcl
 (defun cmp-fold-implementations (&key (min 2) (max 22) (repeat 1) (density 1.0) (time-key :user-run-time-us) (scale 1e6) (verbose nil))
   (let (xys-linear xys-tree)
     (loop :for n :from min :to max
@@ -343,6 +343,7 @@ similar to where current Output_Path is indicating."
     (list (nreverse xys-linear)
 	  (nreverse xys-tree))))
 
+#+sbcl
 (defun cmp-fold-latex (fname &key (max 22) (repeat 1))
   ;; fname "/Volumes/Disk2/jimka/research/autogen/cmp-fold-bdd-construction.ltxdat"
   (with-open-file (stream fname :direction :output :if-exists :supersede :if-does-not-exist :create)

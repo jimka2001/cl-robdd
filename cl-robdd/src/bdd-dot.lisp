@@ -127,8 +127,7 @@
     (format t "~A~%" png-path)
     (run-program *dot*
                  (list "-Tpng" dot-path
-                       "-o" png-path)
-                 :search t)
+                       "-o" png-path))
     png-path))
   
 
