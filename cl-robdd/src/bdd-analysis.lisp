@@ -29,8 +29,8 @@
    "*PROFILE-FUNCTIONS*"
    "ADDPLOT"
    "AXIS"
-   "CALL-WITH-DPROFILING"
-   "CALL-WITH-SPROFILING"
+   #+sbcl "CALL-WITH-DPROFILING"
+   #+sbcl "CALL-WITH-SPROFILING"
    "CALL-WITH-TIMEOUT"
    "COLOR-TO-RGB"
    "DEMAND-ENV-VAR"
@@ -323,6 +323,7 @@ similar to where current Output_Path is indicating."
       (sb-profile:report :print-no-call-list nil)
       )))
   
+#+sbcl
 (defun cmp-fold-implementations (&key (min 2) (max 22) (repeat 1) (density 1.0) (time-key :user-run-time-us) (scale 1e6) (verbose nil))
   (let (xys-linear xys-tree)
     (loop :for n :from min :to max
@@ -342,6 +343,7 @@ similar to where current Output_Path is indicating."
     (list (nreverse xys-linear)
 	  (nreverse xys-tree))))
 
+#+sbcl
 (defun cmp-fold-latex (fname &key (max 22) (repeat 1))
   ;; fname "/Volumes/Disk2/jimka/research/autogen/cmp-fold-bdd-construction.ltxdat"
   (with-open-file (stream fname :direction :output :if-exists :supersede :if-does-not-exist :create)

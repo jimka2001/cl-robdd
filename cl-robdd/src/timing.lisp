@@ -65,16 +65,18 @@
       (funcall set-n-dtimes 1)
       (let* ((run-time-t1 (get-internal-run-time))
              (start-real-time (get-internal-real-time))
-             (s2 (if (member :sprof profile)
-                     (call-with-sprofiling thunk
-                                           set-sprofile-plists
-                                           set-n-stimes)
-                     (funcall thunk)))
+             (s2 #+sbcl (if (member :sprof profile)
+			    (call-with-sprofiling thunk
+						  set-sprofile-plists
+						  set-n-stimes)
+			    (funcall thunk))
+		 #+allegro (funcall thunk))
              (run-time-t2 (get-internal-run-time))
              (wall-time (/ (- (get-internal-real-time) start-real-time) internal-time-units-per-second
                            (1+ (funcall get-n-stimes))))
              (run-time  (/ (- run-time-t2 run-time-t1) internal-time-units-per-second
                            (1+ (funcall get-n-stimes)))))
+	#+sbcl
         (when (member :dprof profile)
           (call-with-dprofiling thunk
                                 (append profile-packages *profile-functions)
