@@ -577,10 +577,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                prefix
                                :exponent exponent))
 
-(defun getter (field)
-  (lambda (obj) (getf obj field)))
-
-
 (defun print-option (axis-option)
   (typecase axis-option
     (string (format nil "~A" axis-option))
