@@ -20,6 +20,9 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :open-pipe-to-file
+  :version "1.0"
+  :description ""
+  :license ""
   ;;:depends-on ()
   :components
   ((:module "src"

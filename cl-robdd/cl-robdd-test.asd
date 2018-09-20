@@ -20,6 +20,9 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :cl-robdd-test
+  :version "1.0"
+  :description ""
+  :license ""
   :depends-on (:cl-robdd
 	       :jimka-addons
                :jimka-test)
