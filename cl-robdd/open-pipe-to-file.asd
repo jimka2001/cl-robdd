@@ -22,7 +22,7 @@
 (asdf:defsystem :open-pipe-to-file
   :version "1.0"
   :description ""
-  :license ""
+  :license "MIT"
   ;;:depends-on ()
   :components
   ((:module "src"

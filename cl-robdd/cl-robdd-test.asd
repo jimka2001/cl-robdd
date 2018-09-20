@@ -22,7 +22,7 @@
 (asdf:defsystem :cl-robdd-test
   :version "1.0"
   :description ""
-  :license ""
+  :license "MIT"
   :depends-on (:cl-robdd
 	       :jimka-addons
                :jimka-test)
