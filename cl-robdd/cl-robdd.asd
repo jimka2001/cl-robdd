@@ -21,7 +21,7 @@
 
 (asdf:defsystem :cl-robdd
   :version "1.0"
-  :description ""
+  :description "a CL implementation of Reduced Ordered Binary Decision Diagrams, ROBDD"
   :license "MIT"
   :depends-on (:jimka-addons)
   :components
