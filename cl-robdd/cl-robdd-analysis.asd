@@ -20,9 +20,12 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :cl-robdd-analysis
-    :depends-on (:cl-robdd
-		 #+sbcl :sb-sprof
-		 :jimka-addons)
+  :version "1.0"
+  :description "Code for generating plots and analysis in PhD thesis regarding cl-robdd package/system"
+  :license "MIT"
+  :depends-on (:cl-robdd
+	       #+sbcl :sb-sprof
+	       :jimka-addons)
   :components
   ((:module "src"
     :components
