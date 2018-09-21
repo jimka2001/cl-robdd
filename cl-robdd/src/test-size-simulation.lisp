@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (defpackage :cl-robdd-analysis-test
-  (:use :cl :cl-robdd :cl-robdd-analysis :jimka-test))
+  (:use :cl :jimka-addons :cl-robdd :cl-robdd-analysis :jimka-test))
 
 (in-package :cl-robdd-analysis-test)
 
@@ -32,29 +32,8 @@
   (run-package-tests :cl-robdd-analysis-test))
 
 
-(defun test-operation-order ()
-  (labels ((local (vars)
-             (when vars
-               (local (cdr vars)))
-             (let ((*bdd-operation-order* :reduce))
-               (format t "size=~A ~A~%" (length vars) *bdd-operation-order*)
-               (bdd-with-new-hash ()
-                 (time (bdd (random-boolean-combination vars)))))
-             (let ((*bdd-operation-order* :divide-and-conquer))
-               (format t "size=~A ~A~%" (length vars)
-                       *bdd-operation-order*)
-               (bdd-with-new-hash ()
-                 (time (bdd (random-boolean-combination vars)))))))
-    (local '(Z1 Z2 Z3 Z4 Z5 Z6 Z7 Z8 Z9))))
 
 
-(define-test test/random-combination
-  (flet ((test-it (*bdd-operation-order*)
-           (bdd-with-new-hash ()
-             (let ((vars '(Z1 Z2 Z3 Z4 Z5 Z6)))
-               (bdd (random-boolean-combination vars))))))
-    (test-it :reduce)
-    (test-it :divide-and-conquer)))
 
 (define-test test/median
   (assert-true (= 1 (median-a-list '((1 3)))))

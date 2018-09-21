@@ -742,11 +742,12 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 				 (cons (car xy) scaled))
 			       xys scis))))
              (individual-plot (stream num-vars &key (include-normal-distribution nil) (clip nil) (exponent 1) (plist (find-plist num-vars exponent))
-                                                 (num-samples (getf plist :num-samples)) (counts (getf plist :counts))
+						 (counts (getf plist :counts))
                                                  (logx nil) (logy nil)
                                                  (comment nil)
                                                  (xlabel (lambda (num-vars)
-                                                           (format nil "{Node count for \\numvars=~D}" num-vars))))
+                                                           (format nil "{Node count for \\numvars=~D}" num-vars)))
+			       &allow-other-keys)
                (when comment
                  (format stream "%~A~%" comment))
 	       (destructuring-bind (&key num-samples
@@ -886,7 +887,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                  ("mark" "*"))
                                                "(~D,~D)"
                                                (mapcan (lambda (plist)
-                                                         (destructuring-bind (&key num-vars sigma &allow-other-keys) plist
+                                                         (destructuring-bind (&key (num-vars 1) (sigma 1.0) &allow-other-keys) plist
                                                            (when (<= num-vars max)
                                                              (list (list num-vars
                                                                          (coerce sigma 'float))))))
@@ -1056,7 +1057,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                    ("mark" "triangle"))
                                                  "(~D,~D)"
                                                  (mapcan (lambda (plist)
-                                                           (destructuring-bind (&key num-vars average-size &allow-other-keys) plist
+                                                           (destructuring-bind (&key (num-vars 1) (average-size 1) &allow-other-keys) plist
                                                              (when (<= num-vars max)
                                                                (list (list num-vars
                                                                            (coerce average-size 'float))))))
@@ -1122,7 +1123,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                      ("mark" "triangle"))
                                                    "(~D , ~D)"
                                                    (mapcar (lambda (plist)
-                                                             (destructuring-bind (&key num-vars average-size &allow-other-keys) plist
+                                                             (destructuring-bind (&key (num-vars 1) (average-size 1) &allow-other-keys) plist
                                                                (list num-vars
                                                                      (residual-compression-ratio (coerce average-size 'float) num-vars))))
                                                            data))
@@ -1190,7 +1191,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                                                       :key (getter :num-vars))
                      :do (format stream "~A~%" (getf sigma-excursion :num-vars))
                      :do (dolist (summary (list average-excursion sigma-excursion))
-                           (destructuring-bind (&key max-value min-value end-value excursion &allow-other-keys) summary
+                           (destructuring-bind (&key (max-value 1.0) (min-value 1.0) (end-value 1.0) (excursion 1.0) &allow-other-keys) summary
                              (format stream "& $\\frac{~,3f - ~,3f}{~,3f} = ~,2f\\%$~%"
                                      (float max-value 1.0) (float min-value 1.0) (float end-value 1.0) (float excursion 1.0))))
                      :do (format stream "\\\\~%"))
