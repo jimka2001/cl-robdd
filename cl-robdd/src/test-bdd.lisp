@@ -21,7 +21,7 @@
 
 
 (defpackage :cl-robdd-test
-  (:use :cl :cl-robdd :jimka-test
+  (:use :cl :cl-robdd :scrutiny
 	)
   )
   

@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (defpackage :cl-robdd-analysis-test
-  (:use :cl :jimka-addons :cl-robdd :cl-robdd-analysis :jimka-test))
+  (:use :cl :jimka-addons :cl-robdd :cl-robdd-analysis :scrutiny))
 
 (in-package :cl-robdd-analysis-test)
 

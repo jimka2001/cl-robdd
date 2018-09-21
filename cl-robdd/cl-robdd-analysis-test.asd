@@ -25,7 +25,7 @@
   :license "MIT"
   :depends-on (:cl-robdd-analysis
 	       :jimka-addons
-               :jimka-test)
+               :scrutiny)
   :components
   ((:module "src"
     :components
