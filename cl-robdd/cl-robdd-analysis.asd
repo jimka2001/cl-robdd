@@ -25,7 +25,7 @@
   :license "MIT"
   :depends-on (:cl-robdd
 	       #+sbcl :sb-sprof
-	       :jimka-addons)
+	       :adjuvant)
   :components
   ((:module "src"
     :components

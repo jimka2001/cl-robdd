@@ -23,7 +23,7 @@
   :version "1.0"
   :description "a CL implementation of Reduced Ordered Binary Decision Diagrams, ROBDD"
   :license "MIT"
-  :depends-on (:jimka-addons)
+  :depends-on (:adjuvant)
   :components
   ((:module "src"
     :components

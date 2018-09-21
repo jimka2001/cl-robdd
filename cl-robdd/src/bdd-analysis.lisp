@@ -22,7 +22,7 @@
 
 (defpackage :cl-robdd-analysis
   (:use :cl :cl-robdd 
-	:jimka-addons
+	:adjuvant
 	)
   (:export
    "*COLORS*"

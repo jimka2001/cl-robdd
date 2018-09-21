@@ -24,7 +24,7 @@
   :description "Test cases for cl-robdd package/system"
   :license "MIT"
   :depends-on (:cl-robdd
-	       :jimka-addons
+	       :adjuvant
                :scrutiny)
   :components
   ((:module "src"
