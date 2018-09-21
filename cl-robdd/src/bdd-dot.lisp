@@ -117,7 +117,8 @@
      
 (defvar *dot-path* (if (probe-file "/opt/local/bin/dot")
 		  "/opt/local/bin/dot"
-		  "dot"))
+		  "dot")
+  "Full path to the graphviz dot program")
 (defun bdd-to-png (bdd &key (reduced t) (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd))))
   "Generate a PNG (graphics) file to graphically view an ROBDD.  The special var *DOT-PATH* is used to locate
 the dot (graphviz) program which will convert a .dot file to .png . Full path of the .png is returned."
