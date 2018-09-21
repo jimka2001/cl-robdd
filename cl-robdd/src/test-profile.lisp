@@ -25,7 +25,8 @@
   (shadow-all-symbols :package-from :cl-robdd-analysis
 		      :package-into :cl-robdd-analysis-test))
 
-(define-test profile/test1
+
+(defun profile/test1 () ; not a unit test because it takes far to long to run to be considered a unit test
   (flet ((test-function ()
            (let (nums)
              (dotimes (a 10)

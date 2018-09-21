@@ -115,17 +115,19 @@
        ;; footer
        (format stream "}~%")))))
      
-(defvar *dot* (if (probe-file "/opt/local/bin/dot")
+(defvar *dot-path* (if (probe-file "/opt/local/bin/dot")
 		  "/opt/local/bin/dot"
 		  "dot"))
 (defun bdd-to-png (bdd &key (reduced t) (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd))))
+  "Generate a PNG (graphics) file to graphically view an ROBDD.  The special var *DOT-PATH* is used to locate
+the dot (graphviz) program which will convert a .dot file to .png . Full path of the .png is returned."
   (let ((dot-path (format nil "~A.dot" basename))
         (png-path (format nil "~A.png" basename)))
     (ensure-directories-exist dot-path)
     (with-open-file (stream dot-path :direction :output :if-exists :supersede :if-does-not-exist :create)
       (bdd-to-dot bdd stream :reduced reduced))
     (format t "~A~%" png-path)
-    (run-program *dot*
+    (run-program *dot-path*
                  (list "-Tpng" dot-path
                        "-o" png-path))
     png-path))

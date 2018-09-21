@@ -22,45 +22,6 @@
 (in-package :cl-robdd)
 
 
-(defvar *tmp-dir* (format nil "/tmp/~A/" (or (getenv "USER")
-                                             "unknown-user")))
-
-(defun make-temp-dir (suffix)
-  (format nil "~A/~A/" *tmp-dir* suffix))
-
-(defun boolean-expr-to-latex (expr &optional (stream t))
-  (etypecase expr
-    ((eql nil)
-     (format stream "\\bot"))
-    ((eql t)
-     (format stream "\\top"))
-    ((not list)
-     (format stream "~A" expr))
-    ((cons (eql and))
-          (format stream "(")
-     (boolean-expr-to-latex (cadr expr) stream)
-     (dolist (subexpr (cddr expr))
-       (format stream " \\wedge ")
-       (boolean-expr-to-latex subexpr stream))
-     (format stream ")")
-     )
-    ((cons (eql or))
-     (format stream "(")
-     (boolean-expr-to-latex (cadr expr) stream)
-     (dolist (subexpr (cddr expr))
-       (format stream " \\vee ")
-       (boolean-expr-to-latex subexpr stream))
-     (format stream ")")
-     )
-    ((cons (eql not))
-     (format stream "\\neg ")
-     (boolean-expr-to-latex (cadr expr) stream))))
-
-
-(defun garbage-collect ()
-  #+sbcl (sb-ext::gc :full t)
-  #+allegro (excl:gc t)
-)
 
 (defun scale-sci-notations (sci-notations &key expo)
   (declare (type (or null fixnum) expo))

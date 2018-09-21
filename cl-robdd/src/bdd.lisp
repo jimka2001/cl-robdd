@@ -73,8 +73,12 @@
   #'bdd)
 
 (defun bdd-bfs (bdd action)
+  "Walk a given BDD (object of class) bdd, calling the given FUNCTION on each node exactly once.
+The return value of FUNCTION is ignored."
+  (declare (type bdd bdd)
+	   (type (function (bdd) t) action))
   (let* ((buf (tconc nil bdd))
-         ;; TODO -- don't really need nodes, we could
+         ;; don't really need nodes, we could
          ;; actually just pop (car buf), but this way
          ;; is a bit less obscure.
          (nodes (car buf)))
@@ -225,36 +229,6 @@
   (declare (type class-designator bdd-node-class))
   (%bdd-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
-(defun tree-reduce (function bdd-list &key initial-value (key #'identity))
-  (declare (type (function (t t) t) function)
-	   (type list bdd-list)
-	   (optimize (speed 3) (debug 0) (compilation-speed 0)))
-  (cond
-    ((cdr bdd-list)
-     (labels ((compactify (stack)
-		(if (null (cdr stack))
-		    stack
-		    (destructuring-bind ((n1 obj1) (n2 obj2) &rest tail) stack
-		      (declare (type (and fixnum unsigned-byte) n1 n2))
-		      (if (= n1 n2)
-			  (compactify (cons (list (1+ n1) (funcall function obj1 obj2)) tail))
-			  stack))))
-	      (finish-stack (acc stack)
-		(if stack
-		    (finish-stack (funcall function acc (cadr (car stack)))
-				  (cdr stack))
-		    acc)))
-       (destructuring-bind ((_ obj) &rest tail) (reduce (lambda (stack item)
-							  (compactify (cons (list 1 (funcall key item)) stack)))
-							(cdr bdd-list)
-							:initial-value (list (list 1 (funcall key (car bdd-list)))))
-	 (declare (ignore _))
-	 (finish-stack obj tail))))
-    (bdd-list
-     (car bdd-list))
-    (t
-     initial-value)))
-    
 (defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
 
 (defvar *bdd-reduce-function* #'tree-reduce)
@@ -510,6 +484,10 @@
   (error "bdd-and-not not implemented for ~A and ~A" b1 b2))
 
 (defun bdd-to-dnf (bdd)
+  "Return the DNF (disjunctive normal form) of the Boolean expression representing the
+given BDD.  This DNF generation is lazy and memoized.  The first time BDD-TO-DNF is called
+the expression is generated and attached to the BDD object (via the DNF slot), 
+thereafter, the same s-expression is returned."
   (slot-value bdd 'dnf))
 
 (defun bdd-to-expr (bdd)
