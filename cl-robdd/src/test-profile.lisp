@@ -21,8 +21,9 @@
 
 
 (in-package :cl-robdd-analysis-test)
-(shadow-all-symbols :package-from :cl-robdd-analysis
-                    :package-into :cl-robdd-analysis-test)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (shadow-all-symbols :package-from :cl-robdd-analysis
+		      :package-into :cl-robdd-analysis-test))
 
 (define-test profile/test1
   (flet ((test-function ()

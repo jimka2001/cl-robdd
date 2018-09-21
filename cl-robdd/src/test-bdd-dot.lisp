@@ -21,7 +21,8 @@
 
 (in-package :cl-robdd-test)
 
-(shadow-all-symbols :package-from :cl-robdd :package-into :cl-robdd-test)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (shadow-all-symbols :package-from :cl-robdd :package-into :cl-robdd-test))
 
 (define-test test/bdd-to-png
   (bdd-with-new-hash ()

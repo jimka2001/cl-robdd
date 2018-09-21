@@ -22,7 +22,8 @@
 
 (in-package :cl-robdd-test)
 
-(shadow-all-symbols :package-from :cl-robdd :package-into :cl-robdd-test)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (shadow-all-symbols :package-from :cl-robdd :package-into :cl-robdd-test))
 
 (define-test test/open-pipe-to-file
   (let ((answer (with-output-to-string (str)

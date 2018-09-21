@@ -24,16 +24,12 @@
 
 (in-package :cl-robdd-analysis-test)
 
-(shadow-all-symbols :package-from :cl-robdd-analysis
-                    :package-into :cl-robdd-analysis-test)
-
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (shadow-all-symbols :package-from :cl-robdd-analysis
+		      :package-into :cl-robdd-analysis-test))
 
 (defun test ()
   (run-package-tests :cl-robdd-analysis-test))
-
-
-
-
 
 (define-test test/median
   (assert-true (= 1 (median-a-list '((1 3)))))
