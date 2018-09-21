@@ -23,36 +23,8 @@
 
 
 
-(defun scale-sci-notations (sci-notations &key expo)
-  (declare (type (or null fixnum) expo))
-  (let ((max-exponent (or expo
-			  (reduce #'max sci-notations :key #'cadr :initial-value (cadr (car sci-notations))))))
-    (list max-exponent
-	  (loop :for sci :in sci-notations
-	  :collect (destructuring-bind (mant exp) sci
-		     (list mant (- exp max-exponent)))))))
-    
-(defun sci-notation (bignum)
-  (cond
-    ((zerop bignum)
-     (list 0.0 1))
-    ((minusp bignum)
-     (destructuring-bind (alpha beta) (sci-notation (- bignum))
-       (list (- alpha) beta)))
-    (t
-     ;; bignum = alpha * 10^beta
-     (let* ((log_x (log bignum 10))
-            (beta (truncate (log bignum 10.0)))
-            (log_alpha (- log_x beta))
-            (alpha (expt 10d0 log_alpha)))
-       (if (< alpha 1)
-           (list (float (* 10 alpha) 1.0) (1- beta))
-           (list (float alpha 1.0) beta))))))
 
-(defun sci-notation-string (num)
-  (typecase num
-    (bignum (destructuring-bind (alpha beta) (sci-notation num)
-              (format nil "~Ae~A" alpha beta)))
-    (t (format nil "~A" num))))
+
+
 
 

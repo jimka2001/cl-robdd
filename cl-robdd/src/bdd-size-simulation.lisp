@@ -230,6 +230,38 @@ than INTERVAL number of seconds"
                 (remaining-seconds (- total-seconds elapsed-seconds)))
            (funcall announce iteration (coerce remaining-seconds 'double-float) (coerce total-seconds 'double-float))))))))
 
+(defun sci-notation (bignum)
+  (cond
+    ((zerop bignum)
+     (list 0.0 1))
+    ((minusp bignum)
+     (destructuring-bind (alpha beta) (sci-notation (- bignum))
+       (list (- alpha) beta)))
+    (t
+     ;; bignum = alpha * 10^beta
+     (let* ((log_x (log bignum 10))
+            (beta (truncate (log bignum 10.0)))
+            (log_alpha (- log_x beta))
+            (alpha (expt 10d0 log_alpha)))
+       (if (< alpha 1)
+           (list (float (* 10 alpha) 1.0) (1- beta))
+           (list (float alpha 1.0) beta))))))
+
+(defun sci-notation-string (num)
+  (typecase num
+    (bignum (destructuring-bind (alpha beta) (sci-notation num)
+              (format nil "~Ae~A" alpha beta)))
+    (t (format nil "~A" num))))
+
+(defun scale-sci-notations (sci-notations &key expo)
+  (declare (type (or null fixnum) expo))
+  (let ((max-exponent (or expo
+			  (reduce #'max sci-notations :key #'cadr :initial-value (cadr (car sci-notations))))))
+    (list max-exponent
+	  (loop :for sci :in sci-notations
+	  :collect (destructuring-bind (mant exp) sci
+		     (list mant (- exp max-exponent)))))))
+
 (defun calc-plist (histogram num-vars randomp &key (exponent 1))
   (declare (type cons histogram)
            (type fixnum num-vars))
@@ -385,10 +417,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
                    (incf c)))
     c))
 
-(defun garbage-collect ()
-  #+sbcl (sb-ext::gc :full t)
-  #+allegro (excl:gc t)
-)
 
 (defun measure-bdd-size (vars num-samples &key (interval 2) (bdd-sizes-file "/dev/null") (read-from-log-p nil) (exponent 1))
   ;; READ-FROM-LOG-P specifies to read a bdd-size from the log file if possible.
@@ -688,6 +716,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
 	 (apply #'format stream control-string point)
 	 (terpri stream))))
     (format stream "};~%")))
+
 
 (defun latex-measure-bdd-sizes (prefix vars num-samples &key (min 1) (max (length vars)) (re-run t) (max-exponent 8) (min-kolmogorov 5) (max-kolmogorov 18))
   ;; example values
