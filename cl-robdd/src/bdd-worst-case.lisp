@@ -43,7 +43,7 @@
           (t2 (expt 2 (expt 2 k))))
       (list n k t1 t2 (+ t1 t2)))))
 
-(defun map-pairs (f objs)
+(defun carefully-map-pairs (f objs)
   (let* ((size (length objs))
          (size^2 (* size size))
          (vec (make-array size :initial-contents objs))
@@ -98,9 +98,9 @@
     ;; build up the bottom
     (while (< (* size (1- size)) (expt 2 row-num))
       (let (bdds)
-        (map-pairs (lambda (o1 o2)
-                     (push (bdd-node (car vars) o1 o2) bdds))
-                   (reduce #'append rows :initial-value ()))
+        (carefully-map-pairs (lambda (o1 o2)
+			       (push (bdd-node (car vars) o1 o2) bdds))
+			     (reduce #'append rows :initial-value ()))
         (push bdds rows)
         (assert (= (length bdds) (* size (1- size))) (size bdds))
         (incf size (* size (1- size)))
@@ -129,14 +129,14 @@
         ;; nodes.  If p*(p-1) >= 2^n then this is sufficient,
         ;; otherwise, remaining denotes how many additional need to be
         ;; created in BLOCK create-remaining.
-        (map-pairs (lambda (positive negative)
-                     (cond
-                       ((plusp needed)
-                        (push (bdd-node (car vars) positive negative) bdds)
-                        (decf needed))
-                       (t
-                        (return-from create-links-to-n+1))))
-                   (car rows)))
+        (carefully-map-pairs (lambda (positive negative)
+			       (cond
+				 ((plusp needed)
+				  (push (bdd-node (car vars) positive negative) bdds)
+				  (decf needed))
+				 (t
+				  (return-from create-links-to-n+1))))
+			     (car rows)))
 
       (block create-remaining
         ;; Next we create any remaining nodes that are needed.  This
@@ -147,18 +147,18 @@
         ;; the existing nodes row n+2, n+3 ... as necessary, skipping
         ;; any pair which has already been created in the previous
         ;; block.
-        (map-pairs (lambda (negative positive &aux (bdd (bdd-node (car vars) positive negative)))
-                     (cond
-                       ;; if there's already a bdd in bdds pointing to
-                       ;; these two nodes, this skip this pair.  we
-                       ;; don't want duplicate nodes.
-                       ((member bdd bdds :test #'eq)) 
-                       ((plusp remaining)
-                        (push bdd bdds)
-                        (decf remaining))
-                       (t
-                        (return-from create-remaining))))
-                   (reduce #'append rows :initial-value ())))
+        (carefully-map-pairs (lambda (negative positive &aux (bdd (bdd-node (car vars) positive negative)))
+			       (cond
+				 ;; if there's already a bdd in bdds pointing to
+				 ;; these two nodes, this skip this pair.  we
+				 ;; don't want duplicate nodes.
+				 ((member bdd bdds :test #'eq)) 
+				 ((plusp remaining)
+				  (push bdd bdds)
+				  (decf remaining))
+				 (t
+				  (return-from create-remaining))))
+			     (reduce #'append rows :initial-value ())))
       
       (assert (= m (length bdds)) (m n p)
               "failed to create exactly ~D=2^~D nodes for row ~d, created ~D instead"
