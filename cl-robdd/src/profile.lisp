@@ -75,8 +75,7 @@
   (labels ((read-next (stream)
              (handler-case (list (read stream nil nil))
                (error (e)
-                 (warn "Error ~S encountered while reading the string profiler-text=~S"
-                       e profiler-text)
+                 (warn "Error ~S encountered while reading the string profiler-text" e)
                  nil)))
            (dashes (str)
              (every (lambda (c)
