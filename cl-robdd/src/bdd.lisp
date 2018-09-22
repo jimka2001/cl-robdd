@@ -235,15 +235,19 @@ The return value of FUNCTION is ignored."
 
 (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
-  (funcall *bdd-reduce-function* #'bdd-xor tail :initial-value *bdd-false* :key (bdd-factory bdd-node-class)))
+  (funcall *bdd-reduce-function* #'bdd-xor tail
+	   :initial-value *bdd-false*
+	   :key (bdd-factory bdd-node-class)))
 
 (defmethod bdd-list-to-bdd ((head (eql 'and)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
-  (funcall *bdd-reduce-function* #'bdd-and tail :initial-value *bdd-true* :key (bdd-factory bdd-node-class)))
+  (funcall *bdd-reduce-function* #'bdd-and tail
+	   :initial-value *bdd-true*
+	   :key (bdd-factory bdd-node-class)))
 
 (defmethod bdd-list-to-bdd ((head (eql 'or)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
-  (funcall *bdd-reduce-function* #'bdd-or (mapcar (bdd-factory bdd-node-class) tail)
+  (funcall *bdd-reduce-function* #'bdd-or tail
 	   :initial-value *bdd-false*
 	   :key (bdd-factory bdd-node-class)))
 
