@@ -127,7 +127,6 @@ the dot (graphviz) program which will convert a .dot file to .png . Full path of
     (ensure-directories-exist dot-path)
     (with-open-file (stream dot-path :direction :output :if-exists :supersede :if-does-not-exist :create)
       (bdd-to-dot bdd stream :reduced reduced))
-    (format t "~A~%" png-path)
     (run-program *dot-path*
                  (list "-Tpng" dot-path
                        "-o" png-path))

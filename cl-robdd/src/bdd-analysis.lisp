@@ -362,7 +362,6 @@ similar to where current Output_Path is indicating."
 					    ("font" "\\tiny"))))
 			 (lambda (&aux legend)
 			   (dolist (density '(1.0 0.22 0.05))
-			     (format t "density=~A~%" density)
 			     (destructuring-bind (linear-xys tree-xys) (cmp-fold-implementations :max max :repeat repeat
 												 :verbose t :density density)
 			       (push (format nil "{linear-fold $\\eta=~A$}" density) legend)
