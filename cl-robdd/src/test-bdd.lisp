@@ -134,3 +134,18 @@
 
 
 
+(define-test test/bdd-1
+  (bdd-with-new-hash ()
+    (assert-true (typep (bdd '(not Z5))
+			'bdd))
+    (assert-true (typep (bdd '(and (not Z5)))
+			'bdd))
+    (assert-true (typep (bdd '(or (and (not CL-ROBDD-ANALYSIS::Z5))))
+			'bdd))
+    (assert-true (typep (bdd '(or (and (not Z5))))
+			'bdd))
+    (assert-true (typep (bdd '(or (and (not CL-ROBDD-ANALYSIS::Z6))))
+			'bdd))
+    (assert-true (typep (bdd '(or (and (not Z6))))
+			'bdd))))
+  
