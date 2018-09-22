@@ -56,7 +56,7 @@
    "BDD-SERIALIZE"
    "BDD-TO-DNF"
    "BDD-TO-EXPR"
-   "*dot-path*"
+   "*DOT-PATH*"
    "BDD-TO-PNG"
    "BDD-TRUE"
    "BDD-WITH-NEW-HASH"
