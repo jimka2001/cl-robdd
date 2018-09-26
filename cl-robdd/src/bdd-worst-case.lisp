@@ -79,11 +79,6 @@
              (funcall f (svref vec i1) (svref vec r)))))))))
 
 
-(defvar *tmp-dir* (format nil "/tmp/~A/" (or (getenv "USER")
-                                             "unknown-user")))
-
-(defun make-temp-dir (suffix)
-  (format nil "~A/~A/" *tmp-dir* suffix))
 
 (defun bdd-view (bdd &key (reduced t) (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd))))
   (run-program "open" (list (bdd-to-png bdd :reduced reduced
