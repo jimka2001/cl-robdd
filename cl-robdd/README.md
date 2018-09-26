@@ -27,6 +27,9 @@ PKG> (bdd-with-new-hash ()
 * `bdd-xor` -- Calculate exclusive-or of two BDDs
 
 ### Traversal
+* `*bdd-reduce-function*` -- has value either  `#'tree-reduce` or `#'cl:reduce`.
+This function will be used within bdd-list-to-bdd when to perfrom and, or, and xor on multiple arguments.
+
 * `bdd-bfs` --   Walk a given BDD, object of class, `bdd`, calling the given `FUNCTION` on each node exactly once.
 The return value of `FUNCTION` is ignored.
 
