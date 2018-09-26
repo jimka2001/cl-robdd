@@ -231,7 +231,8 @@ The return value of FUNCTION is ignored."
 
 (defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
 
-(defvar *bdd-reduce-function* #'tree-reduce)
+(defvar *bdd-reduce-function* #'tree-reduce "function to preform reduction, either #'cl:reduce or cl-robdd:tree-reduce.
+This function will be used within bdd-list-to-bdd when to perfrom and, or, and xor on multiple arguments.")
 
 (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))

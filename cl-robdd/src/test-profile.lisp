@@ -106,4 +106,4 @@ Sampled threads:
 
 
 (define-test profile/test2
-  (CL-ROBDD-ANALYSIS::parse-sprofiler-output *profile/2-text*))
+  (parse-sprofiler-output *profile/2-text*))

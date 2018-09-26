@@ -290,7 +290,7 @@ similar to where current Output_Path is indicating."
 					  (setf plist timing-args))
 					thunk)
 	       plist)
-	     (cmp (cl-robdd::*bdd-reduce-function*)
+	     (cmp (*bdd-reduce-function*)
 	       (garbage-collect)
 	       (bdd-with-new-hash ()
 		 (timing (lambda ()
@@ -301,22 +301,22 @@ similar to where current Output_Path is indicating."
 		     :collect (list* :name name (cmp reduce-function)))))))
 
 #+sbcl
-(defun profile-linear-tree-like (n &key ((:reduce cl-robdd::*bdd-reduce-function*) #'reduce))
+(defun profile-linear-tree-like (n &key ((:reduce *bdd-reduce-function*) #'reduce))
   (sb-profile:profile "CL-ROBDD" "CL-ROBDD-ANALYSIS")
 
   (let ((bool-comb (random-boolean-combination n :density 0.2)))
     (garbage-collect)
 
-    (let ((cl-robdd::*bdd-reduce-function* #'reduce))
-      (format t "=== profile with ~A~%" cl-robdd::*bdd-reduce-function*)
+    (let ((*bdd-reduce-function* #'reduce))
+      (format t "=== profile with ~A~%" *bdd-reduce-function*)
       (sb-profile:reset)
       (bdd-with-new-hash ()
 	(bdd bool-comb))
       (sb-profile:report :print-no-call-list nil))
 
     (garbage-collect)
-    (let ((cl-robdd::*bdd-reduce-function* #'tree-reduce))
-      (format t "=== profile with ~A~%" cl-robdd::*bdd-reduce-function*)
+    (let ((*bdd-reduce-function* #'tree-reduce))
+      (format t "=== profile with ~A~%" *bdd-reduce-function*)
       (sb-profile:reset)
       (bdd-with-new-hash ()
 	(bdd bool-comb))

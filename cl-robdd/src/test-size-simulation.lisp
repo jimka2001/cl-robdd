@@ -92,11 +92,11 @@
 (define-test test/tree-reduce-bdd
   (dolist (density '(0.2 0.5 1.0))
     (loop :for n :from 2 to 9
-	  :for bool-comb = (cl-robdd-analysis::random-boolean-combination n :density density)
-	  :for dnf-linear = (let ((cl-robdd::*bdd-reduce-function* #'reduce))
+	  :for bool-comb = (random-boolean-combination n :density density)
+	  :for dnf-linear = (let ((*bdd-reduce-function* #'reduce))
 			      (bdd-with-new-hash ()
 				(bdd-to-dnf (bdd bool-comb))))
-	  :for dnf-tree = (let ((cl-robdd::*bdd-reduce-function* #'tree-reduce))
+	  :for dnf-tree = (let ((*bdd-reduce-function* #'tree-reduce))
 			    (bdd-with-new-hash ()
 			      (bdd-to-dnf (bdd bool-comb))))
 	  :unless (equal dnf-linear dnf-tree)
