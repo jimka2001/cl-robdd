@@ -43,6 +43,7 @@ thereafter, the same s-expression is returned.
 ### Serialization 
 
 * `*dot-path*` -- Special variable containing the full path to the UNIX `dot` (graphviz) program.
+* `bdd-to-dot` -- Create a graphviz dot file representing the given BDD.
 * `bdd-to-png` -- Generate a PNG, graphics, file to
 graphically view an ROBDD.  The special var `*DOT-PATH*` is used to
 locate the dot, graphviz, program which will convert a `.dot` file to

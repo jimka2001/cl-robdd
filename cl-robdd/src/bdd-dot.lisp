@@ -22,11 +22,19 @@
 (in-package   :cl-robdd)
 
 (defun bdd-to-dot (bdd stream &key (reduced t))
-  (cond
-    ((null stream)
+  "Create a graphviz dot file representing the given BDD.
+STREAM may be given as t (for *standard-output*),
+or a stream to print to, 
+or nil (to print to output string)
+or STRING indicating name of file to write to."
+  (typecase stream
+    (null
      (with-output-to-string (str)
        (bdd-to-dot bdd str :reduced reduced)))
-    (t
+    (string
+     (with-open-file (output stream :direction :output :if-exists :supersede :if-does-not-exist :create)
+       (bdd-to-dot bdd output :reduced reduced)))
+    ((or stream (eql t))
      ;; header
      (format stream "digraph G {~%")
      
@@ -34,7 +42,8 @@
                 (format stream "~D [shape=~A,label=~S]~%"
                         node-num
                         (bdd-shape bdd)
-                        (format nil "~A" (bdd-label bdd))))
+                        (format nil "~A" (or (bdd-label bdd)
+					     "&perp;"))))
               (bdd-shape (bdd)
                 (typecase bdd
                   (bdd-node "ellipse")

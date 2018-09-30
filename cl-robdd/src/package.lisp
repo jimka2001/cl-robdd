@@ -22,6 +22,7 @@
 (cl:defpackage :cl-robdd
   (:use :cl :adjuvant)
   (:export
+   "BDD-TO-DOT"
    "%BDD-CMP"
    "%BDD-NODE"
    "*BDD-CMP-FUNCTION*"
