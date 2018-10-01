@@ -63,5 +63,4 @@
    "BDD-TRUE"
    "BDD-WITH-NEW-HASH"
    "BDD-XOR"
-   "INCR-HASH"
    ))

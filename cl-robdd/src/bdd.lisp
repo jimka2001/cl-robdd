@@ -316,8 +316,6 @@ This function will be used within bdd-list-to-bdd when to perfrom and, or, and x
   (declare (type class-designator bdd-node-class))
   (bdd-node label positive *bdd-false* :bdd-node-class bdd-node-class))
 
-(defvar *bdd-hash-access-count* 0)
-
 (defmethod bdd-node (label (positive bdd) (negative bdd) &key (bdd-node-class 'bdd-node))
   (declare (type class-designator bdd-node-class))
   (%bdd-node label positive negative :bdd-node-class bdd-node-class))
@@ -584,16 +582,6 @@ set of BDDs."
            `(or (and ,(bdd-label bdd) ,(bdd-to-expr (bdd-positive bdd)))
                 (and (not ,(bdd-label bdd)) ,(bdd-to-expr (bdd-negative bdd))))))))
 
-
-(defun incr-hash ()
-  (incf *bdd-hash-access-count*)
-  (when *bdd-verbose*
-    (when (= 0 (mod *bdd-hash-access-count* 10000))
-      (format t "bdd hash = ~A wall-time=~A cpu-time=~A~%"
-              (getf *bdd-hash-struct* :hash)
-              (truncate (get-internal-run-time) internal-time-units-per-second)
-              (truncate (get-universal-time) internal-time-units-per-second)))))
-
 (defmethod bdd-allocate (label (positive-bdd bdd-node) (negative-bdd bdd-node) &key &allow-other-keys)
   (if (eq (typep positive-bdd 'bdd-leaf)
           (typep negative-bdd 'bdd-leaf))
@@ -614,7 +602,6 @@ set of BDDs."
                              :positive positive-bdd
                              :negative negative-bdd))
          (key (bdd-make-key label (bdd-ident positive-bdd) (bdd-ident negative-bdd))))
-    (incr-hash)
     (assert (typep bdd (bdd-node-type)) (bdd) "The bdd hash ~A is expecting objects of type ~A not ~A"
             (bdd-hash) (bdd-node-type)  (type-of bdd))
     (setf (gethash key (bdd-hash)) bdd)))
