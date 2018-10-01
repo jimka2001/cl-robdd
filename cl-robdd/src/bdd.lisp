@@ -218,16 +218,20 @@ rebound by a call to BDD-NEW-HASH whose behavior depends on the value of BDD-NOD
   ((ident :initform 1)
    (label :initform t)
    (dnf :initform t)
-   (expr :initform t)))
+   (expr :initform t))
+  (:documentation
+   "Class of singleton object representing the TRUE leaf node of an ROBDD.  The singleton object is `*bdd-true*`."))
 
 (defclass bdd-false (bdd-leaf)
   ((ident :initform 0)
    (label :initform nil)
    (dnf :initform nil)
-   (expr :initform nil)))
+   (expr :initform nil))
+  (:documentation
+   "Class of singleton object representing the FALSE leaf node of an ROBDD.  The singleton object is `*bdd-false*`."))
 
-(defvar *bdd-true* (make-instance 'bdd-true))
-(defvar *bdd-false* (make-instance 'bdd-false))
+(defvar *bdd-true* (make-instance 'bdd-true) "Singleton TRUE object which is a leaf node of every non-trivial ROBDD.")
+(defvar *bdd-false* (make-instance 'bdd-false) "Singleton FALSE object which is a leaf node of every non-trivial ROBDD.")
 
 (defmethod bdd ((label symbol) &key (bdd-node-class 'bdd-node))
   (declare (type class-designator bdd-node-class))
