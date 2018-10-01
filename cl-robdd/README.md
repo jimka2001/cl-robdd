@@ -55,9 +55,16 @@ locate the dot, graphviz, program which will convert a `.dot` file to
 The CLOS class `ltbdd` defined in package [lisp-types](../lisp-types/README.md) is a subclass of `bdd`
 for representing ROBDDs which understand Common Lisp type system subclassing.
 
-* `bdd-call-with-new-hash` --
-* `incr-hash` --
-* `bdd-true` --
+* `bdd-call-with-new-hash` -- Functional version of the
+`BDD-WITH-NEW-HASH` macro, which takes a 0-ary function to evaluate in
+a dynamic extent which rebinds `*BDD-HASH-STRUCT*` and
+`*BDD-VERBOSE*`.  *`BDD-HASH-STRUCT* is rebound by a call to
+`BDD-NEW-HASH` whose behavior depends on the value of `BDD-NODE-TYPE`.
+Whenever a new element is added to the hash table (via `BDD-ALLOCATE`)
+an assertion is made that the object is of this type."
+
+* `bdd-true` -- Class of singleton object representing the TRUE leaf node of an ROBDD. The singleton object is `*bdd-true*`.
+
 * `bdd-to-expr` --
 * `bdd-serialize` --
 * `bdd-positive` --
@@ -72,14 +79,19 @@ for representing ROBDDs which understand Common Lisp type system subclassing.
 * `bdd-ident` --
 * `bdd-find` --
 * `bdd-hash` --
-* `bdd-false` --
+
+* `bdd-false` -- Class of singleton object representing the TRUE leaf node of an ROBDD.  The singleton object is `*bdd-false*`.
+
 * `%bdd-cmp` --
 * `%bdd-node` --
 * `*bdd-cmp-function*` --
-* `*bdd-false*` --
+
+* `*bdd-false*` -- Singleton FALSE object which is a leaf node of every non-trivial ROBDD.
 * `*bdd-hash-strength*` --
 * `*bdd-hash-struct*` --
-* `*bdd-true*` --
+
+* `*bdd-true*` -- Singleton TRUE object which is a leaf node of every non-trivial ROBDD.
+
 * `bdd-allocate` --
 * `bdd-dnf-wrap` --
 * `bdd-cmp` --
