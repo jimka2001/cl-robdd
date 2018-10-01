@@ -149,9 +149,13 @@ The return value of FUNCTION is ignored."
 (defvar *bdd-verbose* nil)
 
 (defmacro bdd-with-new-hash (vars &body body)
+  "Any access to the machinery in this package must occure within the dynamic extent of this function."
   `(bdd-call-with-new-hash (lambda ,vars ,@body)))
 
 (defun bdd-call-with-new-hash (thunk &key (bdd-node-type '(or bdd-node bdd-leaf)) (verbose *bdd-verbose*))
+  "Functional version of the BDD-WITH-NEW-HASH macro, which takes a 0-ary function to evaluate
+in a dynamic extent which rebinds *BDD-HASH-STRUCT* and *BDD-VERBOSE*.  *BDD-HASH-STRUCT* is
+rebound by a call to BDD-NEW-HASH whose behavior depends on the value of BDD-NODE-TYPE"
   (let ((*bdd-verbose* verbose)
         (*bdd-hash-struct* (bdd-new-hash :bdd-node-type bdd-node-type)))
     (prog1 (funcall thunk)
