@@ -129,6 +129,10 @@
     (assert-true (eq '> (bdd-cmp 'null 'cons)))
     (assert-true (eq '> (bdd-cmp '(a) nil)))
     (assert-true (eq '> (bdd-cmp 1/2 1/3)))
+
+    (assert-false (eq '= (bdd-cmp '(member  0 2 4) '(member 0 2))))
+
+
     )  )
 
 

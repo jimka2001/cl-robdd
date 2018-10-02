@@ -87,7 +87,6 @@ a dynamic extent which rebinds `*BDD-HASH-STRUCT*` and
 Whenever a new element is added to the hash table (via `BDD-ALLOCATE`)
 an assertion is made that the object is of this type."
 
-* `bdd-cmp` --
 * `bdd-dnf-wrap` --
 * `bdd-ensure-hash` --
 * `bdd-factory` --
