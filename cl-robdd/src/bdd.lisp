@@ -38,7 +38,12 @@ such as debugging and PRINT-OBJECT."))
 register the object in the global hash indicated by calling (BDD-HASH).  This function should be
 called after it has been verified that the positive and negative children are not equal, and
 that no such object already exists in the hash table."))
-(defgeneric bdd-dnf-wrap (bdd op zero forms))
+(defgeneric bdd-dnf-wrap (bdd operator zero forms)
+  (:documentation   "Given a BDD object, an OPERATOR, ZERO, and a list FORMS,
+return a Boolean expression as simply as possible representing the a application of
+OPERATOR to FORMS.  The methods of this generic function are free to make further
+reductions depending on the class of BDD given."
+))
 
 (deftype class-designator ()
   `(or (and symbol (not null)) class))
@@ -470,11 +475,18 @@ with additional simplification in the case either child node is *bdd-false* or *
   (declare (type bdd bdd))
   (slot-value bdd 'expr))
 
-(defmethod bdd-dnf-wrap ((bdd bdd) op zero forms)
-  (cond ((cdr forms)
-	 (cons op forms))
+(defmethod bdd-dnf-wrap ((bdd bdd) operator zero terms)
+  "Given a list of TERMS, return an s-expression representing a Boolean expression
+which combines the TERMS with the given OPERATOR.  E.g., (and T1 T2 T3).
+A couple of corner cases are considered.  If TERMS is the empty list, then
+the given ZERO is returned.   ZERO should be NIL when OPERATOR is OR and it should
+be T when OPERATOR is AND.  If TERMS is a singleton list, its first element is returned.
+I.e., rather than returning (or X), simply X is returned; and rather than returning (and),
+T is returned."
+  (cond ((cdr terms)
+	 (cons operator germs))
 	(forms
-	 (car forms))
+	 (car terms))
 	(t
 	 zero)))
 

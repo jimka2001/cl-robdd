@@ -90,8 +90,19 @@ a dynamic extent which rebinds `*BDD-HASH-STRUCT*` and
 Whenever a new element is added to the hash table (via `BDD-ALLOCATE`)
 an assertion is made that the object is of this type."
 
-* `bdd-dnf-wrap` --
-* `bdd-ensure-hash` --
+* `bdd-dnf-wrap` --  Given a `BDD` object, an `OPERATOR`, `ZERO`, and a list `FORMS`,
+return a Boolean expression as simply as possible representing the a application of
+OPERATOR to FORMS.  The methods of this generic function are free to make further
+reductions depending on the class of `BDD` given.
+The method on the class `BDD` is responsibe for returning
+an s-expression representing a Boolean expression
+which combines the `TERMS` with the given `OPERATOR`.  E.g., `(and T1 T2 T3)`.
+A couple of corner cases are considered.  If TERMS is the empty list, then
+the given `ZERO` is returned.   `ZERO` should be `NIL` when `OPERATOR` is `OR` and it should
+be `T` when `OPERATOR` is `AND`.  If `TERMS` is a singleton list, its first element is returned.
+I.e., rather than returning `(or X)`, simply `X` is returned; and rather than returning `(and)`,
+`T` is returned'.
+
 * `bdd-factory` --
 
 * `bdd-false` -- Class of singleton object representing the TRUE leaf node of an ROBDD.  The singleton object is `*bdd-false*`.
