@@ -21,7 +21,9 @@
 
 (in-package :cl-robdd)
 
-(defgeneric bdd-serialize (bdd))
+(defgeneric bdd-serialize (bdd)
+  (:documentation "The serialization of a BDD is used for various types of display purposes
+such as debugging and PRINT-OBJECT."))
 (defgeneric bdd-factory (bdd-class))
 (defgeneric bdd (obj &key bdd-node-class))
 (defgeneric bdd-leaf (value))
@@ -31,7 +33,6 @@
 (defgeneric bdd-and-not (b1 b2))
 (defgeneric bdd-xor (b1 b2))
 (defgeneric bdd-not (b))
-(defgeneric %bdd-node (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys))
 (defgeneric bdd-allocate (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys))
 (defgeneric bdd-dnf-wrap (bdd op zero forms))
 
@@ -94,10 +95,16 @@ The return value of FUNCTION is ignored."
 
 
 (defvar *bdd-generation* 0)
-(defvar *bdd-hash-strength* :weak-dynamic ) ;; or :weak or :weak-dynamic
+(defvar *bdd-hash-strength* :weak-dynamic "Special variable whose type is (member :weak-dynamic :weak :strong).
+The value of this variable indicates which hash strategy to use by controling the behavior of BDD-ENSURE-HASH.
+Each call to BDD-ENSURE-HASH:
+  :strong       -- will create a new strong hash table.
+  :weak         -- will create a new weak hash table.
+  :weak-dynamic -- will create a new hash only if the BDD-NODE-TYPE of the currently available hash table, returned by (bdd-hash), is the same EQUAL valueas BDD-NODE-TYPE passed to BDD-ENSURE-HASH, otherwise the current global hash table be used (without allocating a new one).   In any case if there is no global hash table currently available, a new hash will be allocated and returned.")
 
-(defun bdd-new-hash (&key (bdd-node-type '(or bdd-node bdd-leaf))
+(defun bdd-ensure-hash (&key (bdd-node-type '(or bdd-node bdd-leaf))
                        ((bdd-hash-strength *bdd-hash-strength*) *bdd-hash-strength*))
+  ""
   (flet ((make-hash ()
            (incf *bdd-generation*)
            (case *bdd-hash-strength*
@@ -143,7 +150,7 @@ The return value of FUNCTION is ignored."
 (defun bdd-generation ()
   (getf *bdd-hash-struct* :generation))
 
-;;(defvar *bdd-hash* (bdd-new-hash))
+;;(defvar *bdd-hash* (bdd-ensure-hash))
 ;;(defvar *bdd-recent-count* 0)
 
 (defvar *bdd-verbose* nil)
@@ -155,9 +162,9 @@ The return value of FUNCTION is ignored."
 (defun bdd-call-with-new-hash (thunk &key (bdd-node-type '(or bdd-node bdd-leaf)) (verbose *bdd-verbose*))
   "Functional version of the BDD-WITH-NEW-HASH macro, which takes a 0-ary function to evaluate
 in a dynamic extent which rebinds *BDD-HASH-STRUCT* and *BDD-VERBOSE*.  *BDD-HASH-STRUCT* is
-rebound by a call to BDD-NEW-HASH whose behavior depends on the value of BDD-NODE-TYPE"
+rebound by a call to BDD-ENSURE-HASH whose behavior depends on the value of BDD-NODE-TYPE"
   (let ((*bdd-verbose* verbose)
-        (*bdd-hash-struct* (bdd-new-hash :bdd-node-type bdd-node-type)))
+        (*bdd-hash-struct* (bdd-ensure-hash :bdd-node-type bdd-node-type)))
     (prog1 (funcall thunk)
       (when verbose
         (format t "finished with ~A~%" (bdd-hash))))))
@@ -201,17 +208,20 @@ rebound by a call to BDD-NEW-HASH whose behavior depends on the value of BDD-NOD
 ;;  it seems to be in the critical performance loop and the normal function performs marginally
 ;;  faster than the method
 (defun bdd-negative (bdd)
+  "Read accessor for the NEGATIVE slot of a bdd-node.  Returns the negative child."
   (slot-value bdd 'negative))
 
 ;; reader for the label slot.  I've implemented this as a defun rather than :reader becase
 ;;  it seems to be in the critical performance loop and the normal function performs marginally
 ;;  faster than the method
 (defun bdd-positive (bdd)
+  "Read accessor for the POSITIVE slot of a bdd-node.  Returns the positive child."
   (slot-value bdd 'positive))
 
 (defclass bdd-leaf (bdd) ())
 
 (defmethod bdd-serialize ((leaf bdd-leaf))
+  "Serialize a BDD-LEAF node simply as t or nil."
   (bdd-label leaf))
 
 (defclass bdd-true (bdd-leaf)
@@ -235,7 +245,7 @@ rebound by a call to BDD-NEW-HASH whose behavior depends on the value of BDD-NOD
 
 (defmethod bdd ((label symbol) &key (bdd-node-class 'bdd-node))
   (declare (type class-designator bdd-node-class))
-  (%bdd-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
+  (bdd-ensure-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
 (defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
 
@@ -275,7 +285,7 @@ This function will be used within bdd-list-to-bdd when to perfrom and, or, and x
   (bdd-and-not *bdd-true* (funcall (bdd-factory bdd-node-class) (car tail))))
 
 (defmethod bdd-list-to-bdd (head tail &key bdd-node-class &aux (expr (cons head tail)) )
-  (%bdd-node expr *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
+  (bdd-ensure-node expr *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
 (defmethod bdd ((expr list) &key (bdd-node-class 'bdd-node))
   (declare (type class-designator bdd-node-class))
@@ -293,6 +303,8 @@ This function will be used within bdd-list-to-bdd when to perfrom and, or, and x
   *bdd-false*)
 
 (defmethod bdd-serialize ((b bdd-node))
+  "Serialize a BDD-NODE (i.e., internal node) as a list of the label followed by the serialization
+of the positive then the negative child nodes."
   (list (bdd-label b)
         (bdd-serialize (bdd-positive b))
         (bdd-serialize (bdd-negative b))))
@@ -318,7 +330,7 @@ This function will be used within bdd-list-to-bdd when to perfrom and, or, and x
 
 (defmethod bdd-node (label (positive bdd) (negative bdd) &key (bdd-node-class 'bdd-node))
   (declare (type class-designator bdd-node-class))
-  (%bdd-node label positive negative :bdd-node-class bdd-node-class))
+  (bdd-ensure-node label positive negative :bdd-node-class bdd-node-class))
 
 (defmethod bdd-not ((true bdd-true))
   *bdd-false*)
@@ -366,72 +378,14 @@ This function will be used within bdd-list-to-bdd when to perfrom and, or, and x
 (defmethod bdd-and-not :around ((b bdd) (false bdd-false))
   b)
 (defmethod bdd-and-not ((true bdd-true) (b bdd))
-  (%bdd-node (bdd-label b)
+  (bdd-ensure-node (bdd-label b)
             (bdd-and-not *bdd-true* (bdd-positive b))
             (bdd-and-not *bdd-true* (bdd-negative b))
             :bdd-node-class (class-of b)))
 
-
-(defun %bdd-cmp (t1 t2)
-  (cond
-    ((equal t1 t2)
-     '=)
-    ((null t1)
-     '<)
-    ((null t2)
-     '>)
-    ((and (listp t1)
-          (not (listp t2)))
-     '>)
-    ((and (listp t2)
-          (not (listp t1)))
-     '<)
-    ((not (eql (class-of t1) (class-of t2))) 
-     (bdd-cmp (class-name (class-of t1)) (class-name (class-of t2))))
-    (t
-     ;; thus they are the same type, but they are not equal
-     (typecase t1
-       (list
-        (let (value)
-          (while (and t1
-                      t2
-                      (eq '= (setf value (bdd-cmp (car t1) (car t2)))))
-            (pop t1)
-            (pop t2))
-          (cond
-            ((and t1 t2)
-             value)
-            (t1    '>)
-            (t2    '<)
-            (t     '=))))
-       (symbol
-        (cond
-          ((not (eql (symbol-package t1) (symbol-package t2)))
-           ;; call bdd-cmp because symbol-package might return nil
-           ;;  don't call string= directly
-           (bdd-cmp (symbol-package t1) (symbol-package t2)))
-          ((string< t1 t2) ;; same package
-           '<)
-          (t
-           '>)))
-       (package
-        (bdd-cmp (package-name t1) (package-name t2)))
-       (string
-        ;; know they're not equal, thus not string=
-        (cond
-          ((string< t1 t2)
-           '<)
-          (t
-           '>)))
-       (number
-        (cond ((< t1 t2)
-               '<)
-              (t
-               '>)))
-       (t
-        (error "cannot compare a ~A with a ~A" (class-of t1) (class-of t2)))))))
-
-(defvar *bdd-cmp-function* #'%bdd-cmp)
+(defvar *bdd-cmp-function* #'compare-objects "Special (dynamic) variable containing the function object to be used
+when comparing two ROBDD labels.  This should be a function which returns a symbol CL:<, CL:>, or CL:= deterministically
+given two objects.")
 
 (defun bdd-cmp (t1 t2)
   (the (member < > =)
@@ -450,19 +404,19 @@ This function will be used within bdd-list-to-bdd when to perfrom and, or, and x
       ((=)
        ;; If the labels are equal, then the operations twice,
        ;; once on the two positive branches, and once on the two negative branches.
-       (%bdd-node lab-1 (funcall op positive-1 positive-2) (funcall op negative-1 negative-2)
+       (bdd-ensure-node lab-1 (funcall op positive-1 positive-2) (funcall op negative-1 negative-2)
 		  :bdd-node-class (class-of bdd-1)))
       ;; If the labels are not equal, then take the lesser label
       ;; and perform the op on the lesser.positive vs greater  and lesser.negative vs greater,
       ;; being careful not to change the order of the arguments as there is
       ;; no guarantee that op is commutative, and in fact and-not is not commutative.
-      ;; This means (%bdd-node lesser.label (op lesser.positive greater) (op lesser.negative greater))
-      ;;   or       (%bdd-node lesser.label (op greater lesser.positive) (op greater lesser.negative))
+      ;; This means (bdd-ensure-node lesser.label (op lesser.positive greater) (op lesser.negative greater))
+      ;;   or       (bdd-ensure-node lesser.label (op greater lesser.positive) (op greater lesser.negative))
       ((<)
-       (%bdd-node lab-1 (funcall op positive-1 bdd-2) (funcall op negative-1 bdd-2)
+       (bdd-ensure-node lab-1 (funcall op positive-1 bdd-2) (funcall op negative-1 bdd-2)
 		  :bdd-node-class (class-of bdd-1)))
       ((>)
-       (%bdd-node lab-2 (funcall op bdd-1 positive-2) (funcall op bdd-1 negative-2)
+       (bdd-ensure-node lab-2 (funcall op bdd-1 positive-2) (funcall op bdd-1 negative-2)
 		  :bdd-node-class (class-of bdd-2))))))
 
 (defmethod bdd-or ((b1 bdd-node) (b2 bdd-node))
@@ -502,6 +456,14 @@ thereafter, the same s-expression is returned."
   (slot-value bdd 'dnf))
 
 (defun bdd-to-expr (bdd)
+  "Return a Boolean expression representing the given BDD.  This expression is not
+necessarly the DNF form, rather it is the easiest expression to generate.  The expression
+is formed by accessing the EXPR slot of the given BDD.  Since the slot is lazily 
+initialized, the first call to BDD-TO-EXPR may be more time consuming than subsequent
+calls with the same BDD.  The expression is formed as: (or (and A P) (and (not A) N))
+where P and N are the expressions of the positive and negative children respectively,
+with additional simplification in the case either child node is *bdd-false* or *bdd-true*."
+  (declare (type bdd bdd))
   (slot-value bdd 'expr))
 
 (defmethod bdd-dnf-wrap ((bdd bdd) op zero forms)
@@ -560,6 +522,16 @@ set of BDDs."
         (%bdd-to-dnf bdd)))
 
 (defmethod slot-unbound (class (bdd bdd-node) (slot-name (eql 'expr)))
+  "Lazy initialization for the EXPR slot of a BDD-NODE.
+The value calculated is a Boolean expression which is easier to calculate
+than the DNF form.   The DNF form would require traversal of the entire BDD
+blow this point.  By contrast, calculating the EXPR slot for a node who
+does NOT have terminals as children nodes is simply:
+EXPR = (or (and label P) (and (not label) N))
+where P is the EXPR slot of the positive child (bdd-to-expr (bdd-positive bdd))
+  and N is the EXPR slot of the negative child (bdd-to-expr (bdd-negative bdd)).
+There is additional simplification if one of the child nodes is *bdd-false*
+or *bdd-true*."
   (setf (slot-value bdd 'expr)
         (cond
           ((and (eq *bdd-false* (bdd-positive bdd))
@@ -606,11 +578,41 @@ set of BDDs."
             (bdd-hash) (bdd-node-type)  (type-of bdd))
     (setf (gethash key (bdd-hash)) bdd)))
 
-(defmethod %bdd-node (label (positive-bdd bdd) (negative-bdd bdd) &key (bdd-node-class 'bdd-node))
-  (declare (type class-designator bdd-node-class))
+(defun bdd-ensure-node (label positive-bdd negative-bdd &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class)
+	   (type bdd positive-bdd negative-bdd))
+  "Allocate a new BDD (object of class designator by bdd-node-class) or return an
+existing one if possible.  An existing exists in two cases.  1) if the positive-bdd
+and negative-bdd are EQ, then just return positive-bdd, thus enforcing the deletion
+rule, or 2) if such a BDD already exists in in the hash, as obtained by calling
+BDD-FIND, thus enforcing the merging rule and maintaining structural identity; i.e.,
+two BDDs representing the same Boolean expression, are EQ to each other."
   (cond
     ((eq positive-bdd negative-bdd)
      positive-bdd)
     ((bdd-find (bdd-hash) label positive-bdd negative-bdd))
     (t
      (bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))))
+
+(defun bdd-walk (bdd visitor-function &key (bdd-node-class))
+  "This function starts at a BDD, and walks the dag applying
+the VISITOR-FUNCTION at each internal node.  As long as the VISITOR-FUNCTION
+returns NIL, the descent continues, at each step constructing a new BDD
+(via BDD-ENSURE-NODE build of recursive walks of the positive and negative
+children).
+VISITOR-FUNCTION must be a function which returns NIL indicating to continue walking
+   or a BDD indicating to terminate the descent and return this BDD."
+  (declare (type bdd bdd)
+	   (type (function (bdd) (or bdd null)) visitor-function))
+  (labels ((recure (bdd)
+             (cond
+               ((typep bdd 'bdd-leaf)
+                bdd)
+               ((funcall visitor-function bdd))
+               (t
+                (bdd-ensure-node (bdd-label bdd)
+				 (recure (bdd-positive bdd))
+				 (recure (bdd-negative bdd))
+				 :bdd-node-class bdd-node-class)))))
+    (recure bdd)))
+

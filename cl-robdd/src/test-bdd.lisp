@@ -149,3 +149,37 @@
     (assert-true (typep (bdd '(or (and (not Z6))))
 			'bdd))))
   
+
+(define-test type/bdd-serialize
+  (bdd-with-new-hash ()
+    (assert-true (equal (bdd-serialize
+			 (bdd 'Z1))
+                        '(z1 t nil)))
+    (assert-true (equal (bdd-serialize
+			 (bdd '(not Z1)))
+                        '(z1 nil t)))
+
+    (assert-true (equal (bdd-serialize (bdd '(and Z1 Z2)))
+			'(Z1 (Z2 T NIL) NIL)))
+    (assert-true (equal    (bdd-serialize (bdd '(or Z1 Z2)))
+			   '(Z1 T (Z2 T NIL))))
+    (assert-true (equal    (bdd-serialize (bdd '(and z1 (not z2))))
+			   '(Z1 (Z2 NIL T) NIL)))
+    (assert-true (equal    (bdd-serialize (bdd '(and (not z1) z2)))
+			   '(Z1 NIL (Z2 T NIL))))
+    (assert-true (equal    (bdd-serialize (bdd '(and (not z1) (not z2))))
+			   '(Z1 NIL (Z2 NIL T))))
+    (assert-true (equal    (bdd-serialize (bdd '(or z1 (not z2))))
+			   '(Z1 T (Z2 NIL T))))
+    (assert-true (equal    (bdd-serialize (bdd '(or (not z1) z2)))
+			   '(Z1 (Z2 T NIL) T)))
+    (assert-true (equal    (bdd-serialize (bdd '(or (not z1) (not z2))))
+			   '(Z1 (Z2 NIL T) T)))
+    (assert-true (equal    (bdd-serialize (bdd '(or (and z1 (not z2))
+						 (and (not z1) z2))))
+			   '(Z1 (Z2 NIL T) (Z2 T NIL))))
+    (assert-true (equal    (bdd-serialize (bdd '(and (or z1 (not z2))
+						 (or (not z1) z2))))
+			   '(Z1 (Z2 T NIL) (Z2 NIL T))))))
+			   
+    
