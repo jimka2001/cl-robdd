@@ -104,3 +104,8 @@
 			"created 2 different dnf representations from ~A~%      reduce: ~A~% tree-reduce: ~A~%"
 			bool-comb dnf-linear dnf-tree)
 	  :do (assert-true (equal dnf-linear dnf-tree)))))
+
+(define-test test/random-bdd
+  (bdd-with-new-hash ()
+    (dotimes (_ 100)
+      (assert-true (typep (random-bdd '(a b c)) 'bdd)))))

@@ -24,10 +24,16 @@
 (defgeneric bdd-serialize (bdd)
   (:documentation "The serialization of a BDD is used for various types of display purposes
 such as debugging and PRINT-OBJECT."))
-(defgeneric bdd-factory (bdd-class))
+(defgeneric bdd-factory (bdd-class)
+  (:documentation "Given a class or class-name return the factory function for instantiating a BDD object.
+The factor-function is a unary function which can accept a Boolean expresion as an s-expression,
+and return a BDD representing that expression."))
 (defgeneric bdd (obj &key bdd-node-class))
-(defgeneric bdd-leaf (value))
-(defgeneric bdd-node (label positive negative  &key bdd-node-class))
+(defgeneric bdd-leaf (value)
+  (:documentation "Given T or NIL, return the corresponding leaf node *BDD-TRUE* or *BDD-FALSE*"))
+(defgeneric bdd-node (label positive negative  &key bdd-node-class)
+  (:documentation "Create a new instance of BDD-NODE class if necessary, via a call to BDD-ENSURE-NODE.
+This generic function accepts t and nil as positive and negative children along with other BDD nodes."))
 (defgeneric bdd-or (b1 b2))
 (defgeneric bdd-and (b1 b2))
 (defgeneric bdd-and-not (b1 b2))
@@ -62,6 +68,7 @@ reductions depending on the class of BDD given."
 ;;  it seems to be in the critical performance loop and the normal function performs marginally
 ;;  faster than the method
 (defun bdd-label (bdd)
+  "Reader for the LABEL slot which represents the Boolean variable corresponding to this ROBDD node."
   (slot-value bdd 'label))
 
 ;; reader for the label slot.  I've implemented this as a defun rather than :reader becase
@@ -74,7 +81,10 @@ reductions depending on the class of BDD given."
   ((positive :type bdd :initarg :positive ;;:reader bdd-positive
          )
    (negative :type bdd :initarg :negative ;; :reader bdd-negative
-          )))
+	     ))
+  (:documentation "subclass of BDD representing internal nodes of a BDD, i.e., nodes having
+two children, accessible by the reader functions BDD-POSITIVE and BDD-NEGATIVE."))
+
 
 (defmethod bdd-factory ((bdd-class (eql (find-class 'bdd-node))))
   #'bdd)
@@ -186,11 +196,18 @@ rebound by a call to BDD-ENSURE-HASH whose behavior depends on the value of BDD-
            (optimize (speed 3)))
   (gethash (bdd-make-key label positive negative) hash))
 
-(defun bdd-find (hash label positive-bdd negative-bdd)
+(defun bdd-find (label positive-bdd negative-bdd)
+  "Search the hash table returned from (BDD-HASH) to determine
+whether there is already a BDD whose label is LABEL having
+the two given children."
   (declare (type bdd positive-bdd negative-bdd))
-  (when (eq hash (bdd-hash))
-    (setf (bdd-recent-count) (hash-table-count (bdd-hash))))
-  (bdd-find-int-int hash label (bdd-ident positive-bdd) (bdd-ident negative-bdd)))
+  (let ((hash (bdd-hash)))
+    (setf (bdd-recent-count) (hash-table-count hash))
+    (bdd-find-int-int hash label (bdd-ident positive-bdd) (bdd-ident negative-bdd))))
+
+(defun (setf bdd-find) (bdd label positive-bdd negative-bdd)
+  (let ((key (bdd-make-key label (bdd-ident positive-bdd) (bdd-ident negative-bdd))))
+    (setf (gethash key (bdd-hash)) bdd)))
 
 #+sbcl
 (progn
@@ -227,7 +244,10 @@ rebound by a call to BDD-ENSURE-HASH whose behavior depends on the value of BDD-
   "Read accessor for the POSITIVE slot of a bdd-node.  Returns the positive child."
   (slot-value bdd 'positive))
 
-(defclass bdd-leaf (bdd) ())
+(defclass bdd-leaf (bdd) ()
+  (:documentation "Class reprenting leaf nodes of a BDD.  The two possible leaf
+node objects are *BDD-FALSE* and *BDD-TRUE*, which are singleton instances of
+BDD-FALSE and BDD-TRUE."))
 
 (defmethod bdd-serialize ((leaf bdd-leaf))
   "Serialize a BDD-LEAF node simply as t or nil."
@@ -307,8 +327,10 @@ This function will be used within bdd-list-to-bdd when to perfrom and, or, and x
   *bdd-true*)
 
 (defmethod bdd-leaf ((value (eql t)))
+  "Return the TRUE leaf node *BDD-TRUE*"
   *bdd-true*)
 (defmethod bdd-leaf ((value (eql nil)))
+  "Return the FALSE leaf node *BDD-FALSE*"
   *bdd-false*)
 
 (defmethod bdd-serialize ((b bdd-node))
@@ -484,8 +506,8 @@ be T when OPERATOR is AND.  If TERMS is a singleton list, its first element is r
 I.e., rather than returning (or X), simply X is returned; and rather than returning (and),
 T is returned."
   (cond ((cdr terms)
-	 (cons operator germs))
-	(forms
+	 (cons operator terms))
+	(terms
 	 (car terms))
 	(t
 	 zero)))
@@ -606,7 +628,7 @@ two BDDs representing the same Boolean expression, are EQ to each other."
   (cond
     ((eq positive-bdd negative-bdd)
      positive-bdd)
-    ((bdd-find (bdd-hash) label positive-bdd negative-bdd))
+    ((bdd-find label positive-bdd negative-bdd))
     (t
      (bdd-allocate label positive-bdd negative-bdd :bdd-node-class bdd-node-class))))
 

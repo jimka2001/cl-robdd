@@ -54,7 +54,7 @@
           (push (list 1 (bdd (gen-min-term row vars)))
                 stack)
           (compactify)))
-      (bdd-list-to-bdd 'or (mapcar #'cadr stack)))))
+      (bdd (cons 'or (mapcar #'cadr stack))))))
 
 (defun int-to-boolean-expression (n vars)
   "Returns a Boolean expression which is a Boolean combination of the given variable names.

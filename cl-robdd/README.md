@@ -103,22 +103,35 @@ be `T` when `OPERATOR` is `AND`.  If `TERMS` is a singleton list, its first elem
 I.e., rather than returning `(or X)`, simply `X` is returned; and rather than returning `(and)`,
 `T` is returned'.
 
-* `bdd-factory` --
+* `bdd-factory` -- Given a class or class-name return the factory function for instantiating a BDD object.
+The factor-function is a unary function which can accept a Boolean expresion as an s-expression,
+and return a BDD representing that expression.
 
 * `bdd-false` -- Class of singleton object representing the TRUE leaf node of an ROBDD.  The singleton object is `*bdd-false*`.
 
-* `bdd-find` --
-* `bdd-hash` --
-* `bdd-ident` --
-* `bdd-label` --
-* `bdd-leaf` --
-* `bdd-list-to-bdd` --
-* `bdd-make-key` --
+* `bdd-find` -- Search the hash table returned from `(BDD-HASH)` to determine
+whether there is already a `BDD` whose label is `LABEL` having
+the two given children.
+
+* `(setf bdd-find)` -- `setf` accessor for `bdd-find`.
+
+* `bdd-label` -- Reader for the LABEL slot which represents the Boolean variable corresponding to this ROBDD node.
+
+* `bdd-leaf` -- class -- Class reprenting leaf nodes of an ROBDD.  The two possible leaf
+node objects are `*BDD-FALSE*` and `*BDD-TRUE*`, which are singleton instances of
+`BDD-FALSE` and `BDD-TRUE`.
+
+* `bdd-leaf` -- generic function -- Given `T` or `NIL`, return the corresponding leaf node `*BDD-TRUE*` or `*BDD-FALSE*`.
 
 * `bdd-negative` -- Read accessor for the NEGATIVE slot of a bdd-node.  Returns the negative child.
 
-* `bdd-node-type` --
-* `bdd-node` --
+* `bdd-node` -- class -- subclass of `BDD` representing internal nodes of a BDD, i.e., nodes having
+two children, accessible by the reader functions `bdd-positive` and `bdd-negative`.
+
+* `bdd-node` -- generic function -- Create a new instance of
+`BDD-NODE` class if necessary, via a call to `BDD-ENSURE-NODE`.  This
+generic function accepts `t` and `nil` as positive and negative children
+along with other BDD nodes.
 
 * `bdd-positive` --  Read accessor for the POSITIVE slot of a bdd-node.  Returns the positive child.
 
