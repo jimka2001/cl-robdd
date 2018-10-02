@@ -21,6 +21,7 @@
 
 (asdf:defsystem :cl-robdd-analysis
   :version "1.0"
+  :author "Jim Newton"
   :description "Code for generating plots and analysis in PhD thesis regarding cl-robdd package/system"
   :license "MIT"
   :depends-on (:cl-robdd

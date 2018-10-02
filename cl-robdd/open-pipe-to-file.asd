@@ -21,6 +21,7 @@
 
 (asdf:defsystem :open-pipe-to-file
   :version "1.0"
+  :author "Jim Newton"
   :description ""
   :license "MIT"
   ;;:depends-on ()

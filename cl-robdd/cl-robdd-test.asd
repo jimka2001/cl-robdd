@@ -21,6 +21,7 @@
 
 (asdf:defsystem :cl-robdd-test
   :version "1.0"
+  :author "Jim Newton"
   :description "Test cases for cl-robdd package/system"
   :license "MIT"
   :depends-on (:cl-robdd
