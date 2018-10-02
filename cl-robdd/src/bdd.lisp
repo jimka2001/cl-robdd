@@ -33,7 +33,11 @@ such as debugging and PRINT-OBJECT."))
 (defgeneric bdd-and-not (b1 b2))
 (defgeneric bdd-xor (b1 b2))
 (defgeneric bdd-not (b))
-(defgeneric bdd-allocate (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys))
+(defgeneric bdd-allocate (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys)
+  (:documentation "Allocate a new bdd object, whose class is specified by BDD-NODE-CLASS, and
+register the object in the global hash indicated by calling (BDD-HASH).  This function should be
+called after it has been verified that the positive and negative children are not equal, and
+that no such object already exists in the hash table."))
 (defgeneric bdd-dnf-wrap (bdd op zero forms))
 
 (deftype class-designator ()

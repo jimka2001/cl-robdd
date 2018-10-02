@@ -70,14 +70,17 @@ given two objects.
 
 * `*bdd-hash-strength*` -- Special variable whose type is `(member :weak-dynamic :weak :strong)`.
 The value of this variable indicates which hash strategy to use by controling the behavior of `BDD-ENSURE-HASH`.
-Each call to `BDD-ENSURE-HASH`: 1) if `:strong`, will create a new strong hash table. 2) if `:weak`, will create a new weak hash table.
-3)  if `:weak-dynamic` -- will create a new hash only if the BDD-NODE-TYPE of the currently available hash table, returned by `(bdd-hash)`, is the same `EQUAL` value of `BDD-NODE-TYPE` passed to `BDD-ENSURE-HASH`, otherwise the current global hash table be used (without allocating a new one).   In any case if there is no global hash table currently available, a new hash will be allocated and returned.
-
-* `*bdd-hash-struct*` --
+Each call to `BDD-ENSURE-HASH`: 
+1) if `:strong`, will create a new strong hash table. 
+2) if `:weak`, will create a new weak hash table.
+3) if `:weak-dynamic` -- will create a new hash only if the BDD-NODE-TYPE of the currently available hash table, returned by `(bdd-hash)`, is the same `EQUAL` value of `BDD-NODE-TYPE` passed to `BDD-ENSURE-HASH`, otherwise the current global hash table be used (without allocating a new one).   In any case if there is no global hash table currently available, a new hash will be allocated and returned.
 
 * `*bdd-true*` -- Singleton TRUE object which is a leaf node of every non-trivial ROBDD.
 
-* `bdd-allocate` --
+* `bdd-allocate` -- Allocate a new bdd object, whose class is specified by BDD-NODE-CLASS, and
+register the object in the global hash indicated by calling (BDD-HASH).  This function should be
+called after it has been verified that the positive and negative children are not equal, and
+that no such object already exists in the hash table.
 
 * `bdd-call-with-new-hash` -- Functional version of the
 `BDD-WITH-NEW-HASH` macro, which takes a 0-ary function to evaluate in
