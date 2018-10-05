@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :cl-robdd
-  :version "1.0"
+  :version (:read-file-form "../version.lisp")
   :author "Jim Newton"
   :description "a CL implementation of Reduced Ordered Binary Decision Diagrams, ROBDD"
   :license "MIT"
