@@ -49,6 +49,7 @@ children).
 
 ### Serialization 
 
+* `bdd-ident` -- a positive integer unique to the given BDD.  this may be used for printing or debugging purposes.
 * `*dot-path*` -- Special variable containing the full path to the UNIX `dot` (graphviz) program.
 * `bdd-to-dot` -- Create a graphviz dot file representing the given BDD.
 * `bdd-to-png` -- Generate a PNG, graphics, file to

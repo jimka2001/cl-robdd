@@ -176,7 +176,7 @@
       (pop vars))
 
     ;; the top row has one item, that element is the worst case bdd for the given variables
-    (bdd-view (car (car rows)) :basename basename)
+    ;; (bdd-view (car (car rows)) :basename basename)
     (car (car rows))
     (values 
      (bdd-to-expr (car (car rows)))

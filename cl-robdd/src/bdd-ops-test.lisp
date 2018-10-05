@@ -46,7 +46,7 @@
               (bdd-or x y)
               (bdd-and-not x y)
               (bdd-and-not y x))))))
-    (format t "~A~%" (bdd-hash))))
+    (format t "~A~%" (cl-robdd::bdd-hash))))
 
 
 
