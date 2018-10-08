@@ -640,7 +640,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
   (declare (type string comment)
            (type (function () t) continuation))
   (cond ((string= "" comment)
-         (error "inavalid comment empty-string for tikzpicture"))
+         (error "invalid comment empty-string for tikzpicture"))
         (t
          (format stream "% ~A~%" comment)))
   (format stream "\\begin{tikzpicture}~%")
