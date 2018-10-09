@@ -25,7 +25,7 @@
   :description "Code for generating plots and analysis in PhD thesis regarding cl-robdd package/system"
   :license "MIT"
   :depends-on (:cl-robdd
-	       #+sbcl :sb-sprof
+	       (:feature :sbcl :sb-sprof)
 	       :adjuvant)
   :components
   ((:module "src"
@@ -34,7 +34,7 @@
      (:file "bdd-size-simulation" :depends-on ("bdd-analysis"))
      (:file "timing" :depends-on ("bdd-analysis"))
      (:file "bdd-ops-test" :depends-on ("bdd-analysis"))
-     #+sbcl (:file "profile" :depends-on ("bdd-analysis"))
+     (:file "profile" :if-feature :sbcl :depends-on ("bdd-analysis"))
      (:file "bdd-worst-case" :depends-on ("bdd-analysis"))
      (:file "theta" :depends-on ("bdd-analysis"))
      ))))
