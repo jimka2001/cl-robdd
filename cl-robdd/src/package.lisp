@@ -27,7 +27,6 @@
    "*BDD-HASH-STRENGTH*"
    "*BDD-REDUCE-FUNCTION*"
    "*BDD-TRUE*"
-   "*DOT-PATH*"
    "BDD"
    "BDD-ALLOCATE"
    "BDD-AND"

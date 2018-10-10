@@ -124,12 +124,8 @@ or STRING indicating name of file to write to."
        ;; footer
        (format stream "}~%")))))
      
-(defvar *dot-path* (if (probe-file "/opt/local/bin/dot")
-		  "/opt/local/bin/dot"
-		  "dot")
-  "Full path to the graphviz dot program")
 (defun bdd-to-png (bdd &key (reduced t) (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd))))
-  "Generate a PNG (graphics) file to graphically view an ROBDD.  The special var *DOT-PATH* is used to locate
+  "Generate a PNG (graphics) file to graphically view an ROBDD.  The special var adjuvant:*DOT-PATH* is used to locate
 the dot (graphviz) program which will convert a .dot file to .png . Full path of the .png is returned."
   (let ((dot-path (format nil "~A.dot" basename))
         (png-path (format nil "~A.png" basename)))
