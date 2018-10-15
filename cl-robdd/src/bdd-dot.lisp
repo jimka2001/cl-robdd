@@ -39,11 +39,14 @@ or STRING indicating name of file to write to."
      (format stream "digraph G {~%")
      
      (labels ((dot-node (bdd node-num)
-                (format stream "~D [shape=~A,label=~S]~%"
+                (format stream "~D [shape=~A,label=~S~A]~%"
                         node-num
                         (bdd-shape bdd)
-                        (format nil "~A" (or (bdd-label bdd)
-					     "&perp;"))))
+			(format nil "~A" (or (bdd-label bdd)
+					     "&perp;"))
+                        (typecase bdd
+			  (bdd-true ",fontname=\"sans-serif\"")
+			  (t ""))))
               (bdd-shape (bdd)
                 (typecase bdd
                   (bdd-node "ellipse")
@@ -86,8 +89,8 @@ or STRING indicating name of file to write to."
                           (negative-num (getf (find (bdd-negative bdd) (car buf)
                                                  :key (getter :bdd))
                                            :node-num)))
-                     (format stream "~D -> ~D [style=~A,color=~A]~%" node-num positive-num  "solid" "green")
-                     (format stream "~D -> ~D [style=~A,color=~A]~%" node-num negative-num "dotted" "red"))))))))
+                     (format stream "~D -> ~D [style=~A,color=~A,penwidth=2]~%" node-num positive-num  "solid" "green")
+                     (format stream "~D -> ~D [style=~A,color=~A,penwidth=2]~%" node-num negative-num "dashed" "red"))))))))
          (t
           (let (nodes
                 (num 0))
@@ -116,7 +119,7 @@ or STRING indicating name of file to write to."
                                  (negative-num (getf (find-node (bdd-negative bdd) (cons :R path)) :node-num)))
                             (declare (type fixnum positive-num negative-num))
                             (format stream "~D -> ~D [style=~A]~%" node-num positive-num  "solid")
-                            (format stream "~D -> ~D [style=~A]~%" node-num negative-num "dotted"))))))
+                            (format stream "~D -> ~D [style=~A]~%" node-num negative-num "dashed"))))))
               (visit bdd #'name-node ())
               (visit bdd #'print-node ())
               (visit bdd #'print-connections ())))))
