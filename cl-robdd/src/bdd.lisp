@@ -54,7 +54,8 @@ reductions depending on the class of BDD given."
 (deftype class-designator ()
   `(or (and symbol (not null)) class))
 
-(defvar *bdd-count* 1)
+(defvar *bdd-count* 1
+  "Increment variable to assure that every BDD has a unique IDENT")
 (defclass bdd ()
   ((ident ;; :reader bdd-ident
     :type unsigned-byte

@@ -21,11 +21,14 @@
 
 
 (defpackage :cl-robdd-analysis
-  (:use :cl :cl-robdd 
+  (:use :cl :cl-fad :cl-robdd 
 	:adjuvant
 	)
   (:export
+   "*ANALYSIS-DIR*"
+   "*AUTOGEN-DIR*"
    "*COLORS*"
+   "*DESTINATION-DIR*"
    "*PROFILE-FUNCTIONS*"
    "ADDPLOT"
    "AXIS"
@@ -110,7 +113,8 @@
    "ffd8b1"	;;Coral	(255, 215, 180)	(0, 15, 30, 0)
    "000080"	;;Navy	(0, 0, 128)	(100, 100, 0, 50)
    "808080"	;;Grey	(128, 128, 128)	(0, 0, 0, 50)
-    ))
+   )
+  "List of visibly distinguishable colors")
 
 (defun replace-all (string part replacement &key (test #'char=))
   "Returns a new string in which all the occurences of the part 

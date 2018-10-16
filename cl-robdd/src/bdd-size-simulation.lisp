@@ -22,6 +22,26 @@
 
 (in-package :cl-robdd-analysis)
 
+(defvar *autogen-dir* (or (find-if #'directory-exists-p '("/Users/jnewton/research/autogen"
+							  "/Volumes/Disk2/jimka/research/autogen"
+							  "/lrde/home/jnewton/analysis"))
+                          (ensure-directories-exist (make-temp-dir "autogen"))
+			  (error "cannot find suitable value for *autogen-dir*"))
+  "Full path to use to store autogen files, used by several functions.")
+
+(defvar *destination-dir* (or (find-if #'directory-exists-p '("/Users/jnewton/analysis"
+							      "/Volumes/Disk2/jimka/research/autogen"
+							      "/lrde/home/jnewton/analysis"))
+                              (ensure-directories-exist (make-temp-dir "analysis"))
+			      (error "cannot find suitable value for *destination-dir*"))
+  "Full path of destination directory, used by several functions.")
+
+(defvar *analysis-dir* (or (find-if #'directory-exists-p '("/Users/jnewton/analysis"
+                                                           "/Volumes/Disk2/jimka/analysis"
+                                                           "/lrde/home/jnewton/analysis"))
+                              (ensure-directories-exist (make-temp-dir "analysis"))
+			      (error "cannot find suitable value for *analysis-dir*"))
+  "Full path to store analysis results, used by several functions.")
 
 (defun gen-min-term (i vars)
   ;; interpret the given I as a bit-mask
@@ -104,7 +124,8 @@ Why?  Because the truth table of this function is:
 			    (t
 			     (list var)))) vars)))
 
-(defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1))
+(defvar *bdd-boolean-variables* '(zm zl zk zj zi zh zg zf ze zd zc zb za z9 z8 z7 z6 z5 z4 z3 z2 z1)
+  "Boolean variable names used for testing BDDs")
 
 (defun random-boolean-combination (vars &key (density 1.0))
   "return a randomly selection boolean combination of the given BOOLEAN variables in sum-of-minterms form (or (and ...) (and ...) ...)
@@ -1439,9 +1460,10 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
       (mapcar #'process-file input-paths))
     (close (getf stream :stream))))
 
-(defun generate-latex-plots (&key (analysis-dir "/Users/jnewton/analysis")
-                               (bin-dir "/Users/jnewton/sw/regular-type-expression/bin")
-                               (autogen-dir "/Users/jnewton/research/autogen/.")
+
+(defun generate-latex-plots (&key (analysis-dir *analysis-dir*)
+                               (bin-dir (asdf:system-relative-pathname :cl-robdd-analysis "../bin"))
+                               (autogen-dir *autogen-dir*)
 			       (gen-samples nil)
 			       (max-num-vars 18)
 			       (max-exponent 8))

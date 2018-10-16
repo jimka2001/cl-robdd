@@ -84,7 +84,8 @@
   (run-program "open" (list (bdd-to-png bdd :reduced reduced
                                             :basename basename))))
 
-(defun bdd-make-worst-case (vars &key (basename (format nil "/tmp/jnewton/graph/bdd-worst-~D" (length vars))))
+(defun bdd-make-worst-case (vars &key (basename (format nil (ensure-directories-exist (make-temp-dir (format nil "bdd-worst-~D" (length vars)))))))
+  (declare (ignore basename))
   (let* ((leaves (list *bdd-true* *bdd-false*))
          (size 2) ;; length of leaves
          (row-num (1- (length vars)))
