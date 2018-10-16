@@ -26,6 +26,7 @@
   :license "MIT"
   :depends-on (:cl-robdd
 	       (:feature :sbcl :sb-sprof)
+	       (:feature :sbcl :sb-posix)
 	       :adjuvant)
   :components
   ((:module "src"
