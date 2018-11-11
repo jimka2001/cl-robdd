@@ -54,7 +54,7 @@ EOF-THUNK is a 0-ary function which the calling function must call to close the 
     (recure writable-stream (reverse commands) nil)))
 
 (defmacro with-open-pipe-to-file ((stream-pipe-input stream-pipe-output commands) &body body)
-  (let ((eof (gensym "eof")))
+  (let ((eof (gensym "EOF")))
     `(multiple-value-bind (,stream-pipe-input ,eof)
          (open-pipe-to-file ,stream-pipe-output ,commands)
        (unwind-protect
