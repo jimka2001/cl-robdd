@@ -122,9 +122,20 @@ Each call to BDD-ENSURE-HASH:
   :weak         -- will create a new weak hash table.
   :weak-dynamic -- will create a new hash only if the BDD-NODE-TYPE of the currently available hash table, returned by (bdd-hash), is the same EQUAL valueas BDD-NODE-TYPE passed to BDD-ENSURE-HASH, otherwise the current global hash table be used (without allocating a new one).   In any case if there is no global hash table currently available, a new hash will be allocated and returned.")
 
+
+;; TODO :generation should be removed, along with removing the corresponding global variable
+;;   and the bdd-generation function.
 (defun bdd-ensure-hash (&key (bdd-node-type '(or bdd-node bdd-leaf))
                        ((bdd-hash-strength *bdd-hash-strength*) *bdd-hash-strength*))
-  ""
+  "This function implements the semantics of *BDD-HASH-STRENGH*.
+BDD-ENSURE-HASH is called by BDD-CALL-WITH-NEW-HASH to produce the new hash struct plist
+to be bound to the special variable *BDD-HASH-STRUCT*
+Returns a plist with keys
+    :BDD-NODE-TYPE -- class name of nodes, e.g., bdd-node or bdd-leaf, 
+         may be different class names for subclass of bdd.
+    :RECENT-COUNT -- used in reporting cache lossage
+    :STENGTH -- one of :strong, :weak, or :weak-dynamic
+    :HASH -- the actual hash table storing bdd nodes"
   (flet ((make-hash ()
            (incf *bdd-generation*)
            (case *bdd-hash-strength*
