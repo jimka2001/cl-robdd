@@ -11,13 +11,13 @@ The implementation takes the form of a CLOS class `BDD`
 * `bdd` -- Clos class representing ROBDD objects
 * `bdd` -- the factory function to allocate a BDD.  The object of this function may be any well formed Boolean expression in Lisp form:  E.g., `(bdd '(and (or a b) (not (and c (or d e)))))`
 * `bdd-with-new-hash` -- Any access to the machinery in this package must occure within the dynamic extent of this function.
-````
+```
 PKG> (bdd-with-new-hash ()
        (bdd-to-dnf (bdd-and-not (bdd '(and a b))
 			        (bdd '(or (and a c) (or (and a (not c) d)))))))
 
 (AND A B (NOT C) (NOT D))
-````
+```
 
 ### Algebra of ROBDDs
 * `bdd-and` -- Calculate intersection of two BDDs
@@ -159,7 +159,7 @@ or `*bdd-true*`.
 
 ## License
 
-```
+~~~~
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction,
@@ -178,4 +178,4 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
+~~~~
