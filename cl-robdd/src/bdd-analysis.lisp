@@ -116,10 +116,6 @@
    )
   "List of visibly distinguishable colors")
 
-(defun demand-env-var (env-var-name)
-  (or (getenv env-var-name)
-      (error "Missing env var ~s" env-var-name)))
-
 #+sbcl
 (defun qstat-f ()
   "call qstat -f and write the output to a file with the .sXXXX extension
