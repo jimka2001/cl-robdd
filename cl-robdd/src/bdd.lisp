@@ -288,6 +288,10 @@ BDD-FALSE and BDD-TRUE."))
   (declare (type class-designator bdd-node-class))
   (bdd-ensure-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
 
+(defmethod bdd ((label fixnum) &key (bdd-node-class 'bdd-node))
+  (declare (type class-designator bdd-node-class))
+  (bdd-ensure-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
+
 (defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
 
 (defvar *bdd-reduce-function* #'tree-reduce "function to preform reduction, either #'cl:reduce or cl-robdd:tree-reduce.

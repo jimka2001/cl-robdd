@@ -1,4 +1,4 @@
-;; Copyright (c) 2018 EPITA Research and Development Laboratory
+;; Copyright (c) 2019 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -19,19 +19,17 @@
 ;; OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(asdf:defsystem :cl-robdd-test
-  :version (:read-file-form "../version.lisp")
-  :author "Jim Newton"
-  :description "Test cases for cl-robdd package/system"
-  :license "MIT"
-  :depends-on (:cl-robdd
-	       :adjuvant
-               :scrutiny)
-  :components
-  ((:module "src"
-    :components
-    ((:file "test-bdd")
-     ;;(:file "test-open-pipe-to-file")
-     (:file "test-bdd-dot")
-     (:file "test-cnf")
-     ))))
+(in-package :cl-robdd-test)
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (shadow-all-symbols :package-from :cl-robdd
+		      :package-into :cl-robdd-test))
+
+(define-test test/numerical-cnf-to-bdd
+  (bdd-with-new-hash ()
+    (let ((bdd1 (numerical-cnf-to-bdd '((1 2) (-2 3))))
+          (bdd2 (numerical-cnf-to-bdd '((-1 3) (2 -3) (-2 -3)))))
+      (assert-false (eql *bdd-false* bdd1))
+      (assert-false (eql *bdd-false* bdd2))
+      (assert-true  (eql *bdd-false* (bdd-and bdd1 bdd2))))))
+      
