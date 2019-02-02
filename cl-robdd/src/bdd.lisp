@@ -196,7 +196,7 @@ in a dynamic extent which rebinds *BDD-HASH-STRUCT* and *BDD-VERBOSE*.  *BDD-HAS
 rebound by a call to BDD-ENSURE-HASH whose behavior depends on the value of BDD-NODE-TYPE"
   (let ((*bdd-verbose* verbose)
         (*bdd-hash-struct* (bdd-ensure-hash :bdd-node-type bdd-node-type)))
-    (prog1 (funcall thunk)
+    (multiple-value-prog1 (funcall thunk)
       (when verbose
         (format t "finished with ~A~%" (bdd-hash))))))
   
