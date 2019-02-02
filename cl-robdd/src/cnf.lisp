@@ -49,9 +49,59 @@
                                          num
                                          (list 'not (abs num))))
                                    obj))))))
-         (to-bdd (obj1 obj2)
-           (bdd-and (clause-to-bdd obj1) (clause-to-bdd obj2))))
-    (tree-reduce #'to-bdd (cons *bdd-true* clauses)
-                 :initial-value *bdd-true*)))
+         (local-and (obj1 obj2)
+           (if (eql *bdd-false* obj1)
+               *bdd-false*
+               (the bdd (bdd-and (clause-to-bdd obj1) (clause-to-bdd obj2))))))
+    (the bdd (tree-reduce #'local-and (cons *bdd-true* clauses)
+                          :initial-value *bdd-true*))))
                  
+(defun comb (n m &aux (acc 1))
+  (declare (type unsigned-byte n m))
+  ;; how many ways to chose m items from a population of n
+  ;; n * (n-1) * ... (n-m+1)
+  ;;  (comb 10 9) = 10
+  ;;  (comb 10 8) = 10 * 9
+  ;;  (comb 10 7) = 10 * 9 * 8
+  (assert (<= m n))
+  (loop :for i :from (1+ m) :to n
+        :do (setf acc (* acc i)))
+  acc)
+
                
+(defun random-cnf-sat-p (num-vars num-clauses terms-per-clause)
+  (labels ((random-var ()
+             ;; if num-vars is 13, we need to chose between 1 and 13, not between 0 and 12
+             (1+ (random num-vars)))
+           (randomly-negate (num)
+             (if (= 0 (random 2))
+                 num
+                 (- num)))
+           (random-clause (&aux (remaining terms-per-clause) clause)
+             (loop :while (plusp remaining)
+                   :for var = (random-var)
+                   :unless (member var clause :key #'abs)
+                     :do (progn (decf remaining)
+                                (push (randomly-negate var) clause)))
+             (sort clause #'< :key #'abs))
+           )
+    (assert (<= terms-per-clause num-vars))
+    (assert (< 0 num-vars))
+    (assert (<= num-clauses (expt 3 num-vars)))
+
+    (let ((remaining num-clauses)
+          clauses)
+      (loop :while (plusp remaining)
+            :for clause = (random-clause)
+            :unless (member clause clauses :test #'equal)
+              :do (progn (decf remaining)
+                         (push clause clauses)))
+      (the bdd (numerical-cnf-to-bdd clauses)))))
+
+(defun cnf-statistics (num-vars num-clauses terms-per-clause num-samples)
+  (bdd-with-new-hash (&aux (num-sat 0) (*bdd-cmp-function* #'bdd-std-numerical-cmp))
+    (dotimes (_ num-samples)
+      (unless (eql *bdd-false* (random-cnf-sat-p num-vars num-clauses terms-per-clause))
+        (incf num-sat)))
+    (values (float (/ num-sat num-samples))
+            num-sat num-samples)))

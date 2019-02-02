@@ -32,4 +32,22 @@
       (assert-false (eql *bdd-false* bdd1))
       (assert-false (eql *bdd-false* bdd2))
       (assert-true  (eql *bdd-false* (bdd-and bdd1 bdd2))))))
-      
+
+(define-test test/random-cnf-sat-p
+  (assert-true (member (random-cnf-sat-p 1 2 1)
+                       '(((-1) (1))
+                         ((1) (-1)))
+                       :test #'equal)))
+
+(define-test test/comb
+  ;; how many ways to chose m items from a population of n
+  ;; n * (n-1) * ... (n-m+1)
+  ;;  (comb 10 9) = 10
+  ;;  (comb 10 8) = 10 * 9
+  ;;  (comb 10 7) = 10 * 9 * 8
+  (assert-true (= 1 (comb 10 10)))
+  (assert-true (= 10 (comb 10 9)))
+  (assert-true (= 90 (comb 10 8)))
+  (assert-true (= (* 10 9 8) (comb 10 7))))
+  
+
