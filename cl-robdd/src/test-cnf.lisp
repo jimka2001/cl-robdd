@@ -26,7 +26,7 @@
 		      :package-into :cl-robdd-test))
 
 (define-test test/numerical-cnf-to-bdd
-  (bdd-with-new-hash ()
+  (bdd-with-new-hash (&aux (*bdd-cmp-function* #'bdd-std-numerical-cmp))
     (let ((bdd1 (numerical-cnf-to-bdd '((1 2) (-2 3))))
           (bdd2 (numerical-cnf-to-bdd '((-1 3) (2 -3) (-2 -3)))))
       (assert-false (eql *bdd-false* bdd1))

@@ -21,6 +21,16 @@
 
 (in-package   :cl-robdd)
 
+(defun bdd-std-numerical-cmp (num1 num2)
+  (cond ((= num1 num2)
+         '=)
+        ((< num1 num2)
+         '<)
+        ((> num1 num2)
+         '>)
+        (t
+         (error "cannot compare ~A and ~A" num1 num2))))
+
 (defun numerical-cnf-to-bdd (clauses)
   "CLAUSES is a list of sublists, each called a clause.
  A clause is a list of integers, i, either positive or negative.  (abs i)
