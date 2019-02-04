@@ -293,7 +293,7 @@ similar to where current Output_Path is indicating."
   (let ((bool-comb (random-boolean-combination n :density 0.2)))
     (garbage-collect)
 
-    (let ((*bdd-reduce-function* #'reduce))
+    (let ((*bdd-reduce-function* #'adjuvant:linear-reduce))
       (format t "=== profile with ~A~%" *bdd-reduce-function*)
       (sb-profile:reset)
       (bdd-with-new-hash ()
@@ -301,7 +301,7 @@ similar to where current Output_Path is indicating."
       (sb-profile:report :print-no-call-list nil))
 
     (garbage-collect)
-    (let ((*bdd-reduce-function* #'tree-reduce))
+    (let ((*bdd-reduce-function* #'adjuvant:tree-reduce))
       (format t "=== profile with ~A~%" *bdd-reduce-function*)
       (sb-profile:reset)
       (bdd-with-new-hash ()
