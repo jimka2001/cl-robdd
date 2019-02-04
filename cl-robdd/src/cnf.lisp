@@ -42,18 +42,16 @@
              (etypecase obj
                (bdd obj)
                (list
-                ;; list of integers to bdd
+                ;; convert list of integers into a bdd
                 (bdd (cons 'or
                            (mapcar (lambda (num)
                                      (if (plusp num)
                                          num
                                          (list 'not (abs num))))
-                                   obj))))))
-         (local-and (obj1 obj2)
-           (if (eql *bdd-false* obj1)
-               *bdd-false*
-               (the bdd (bdd-and (clause-to-bdd obj1) (clause-to-bdd obj2))))))
-    (the bdd (tree-reduce #'local-and (cons *bdd-true* clauses)
+                                   obj)))))))
+    (the bdd (tree-reduce #'bdd-and clauses
+                          :key #'clause-to-bdd
+                          :stop-when *bdd-false*
                           :initial-value *bdd-true*))))
                  
 (defun comb (n m &aux (acc 1))
@@ -70,6 +68,9 @@
 
                
 (defun random-cnf-sat-p (num-vars num-clauses terms-per-clause)
+  (assert (<= terms-per-clause num-vars))
+  (assert (< 0 num-vars))
+  (assert (<= num-clauses (expt 3 num-vars)))
   (labels ((random-var ()
              ;; if num-vars is 13, we need to chose between 1 and 13, not between 0 and 12
              (1+ (random num-vars)))
@@ -83,12 +84,7 @@
                    :unless (member var clause :key #'abs)
                      :do (progn (decf remaining)
                                 (push (randomly-negate var) clause)))
-             (sort clause #'< :key #'abs))
-           )
-    (assert (<= terms-per-clause num-vars))
-    (assert (< 0 num-vars))
-    (assert (<= num-clauses (expt 3 num-vars)))
-
+             (sort clause #'< :key #'abs)))
     (let ((remaining num-clauses)
           clauses)
       (loop :while (plusp remaining)
