@@ -33,4 +33,5 @@
     ((:file "test-bdd")
      ;;(:file "test-open-pipe-to-file")
      (:file "test-bdd-dot")
+     (:file "test-cnf")
      ))))
