@@ -101,7 +101,7 @@
 (defun random-cnf-sat-p (num-vars num-clauses terms-per-clause)
   (the bdd (numerical-cnf-to-bdd (random-cdf-clauses num-vars num-clauses terms-per-clause))))
 
-(defun cnf-statistics (num-vars num-clauses terms-per-clause num-samples)
+(defun cnf-statistics (&key num-vars num-clauses terms-per-clause num-samples)
   (bdd-with-new-hash (&aux (num-sat 0) (*bdd-cmp-function* #'bdd-std-numerical-cmp))
     (dotimes (_ num-samples)
       (unless (eql *bdd-false* (random-cnf-sat-p num-vars num-clauses terms-per-clause))
