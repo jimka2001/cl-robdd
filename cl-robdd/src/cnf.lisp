@@ -72,9 +72,9 @@
  restriction that if n is in the clause, then -n is not in the clause.
  each such clause represents a clause in a CNF form where (abs n)
  represents a literal and -(abs n) represents the negated literal."
-  (assert (<= terms-per-clause num-vars))
   (assert (< 0 num-vars))
-  (assert (<= num-clauses (expt 3 num-vars)))
+  (assert (<= terms-per-clause num-vars))
+  (assert (<= num-clauses (* (comb num-vars terms-per-clause) (expt 3 num-vars))))
   (labels ((random-var ()
              ;; if num-vars is 13, we need to chose between 1 and 13, not between 0 and 12
              (1+ (random num-vars)))
