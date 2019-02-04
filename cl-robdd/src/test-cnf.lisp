@@ -33,11 +33,12 @@
       (assert-false (eql *bdd-false* bdd2))
       (assert-true  (eql *bdd-false* (bdd-and bdd1 bdd2))))))
 
-(define-test test/random-cnf-sat-p
-  (assert-true (member (random-cnf-sat-p 1 2 1)
-                       '(((-1) (1))
-                         ((1) (-1)))
-                       :test #'equal)))
+(define-test test/random-cnf-clauses
+  (bdd-with-new-hash (&aux (*bdd-cmp-function* #'bdd-std-numerical-cmp))
+    (assert-true (member (random-cnf-clauses 1 2 1)
+                         '(((-1) (1))
+                           ((1) (-1)))
+                         :test #'equal))))
 
 (define-test test/comb
   ;; how many ways to chose m items from a population of n

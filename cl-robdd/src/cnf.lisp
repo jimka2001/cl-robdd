@@ -65,9 +65,13 @@
   (loop :for i :from (1+ m) :to n
         :do (setf acc (* acc i)))
   acc)
-
                
-(defun random-cnf-sat-p (num-vars num-clauses terms-per-clause)
+(defun random-cnf-clauses (num-vars num-clauses terms-per-clause)
+  "Return a list of distinct clauses, where each clause is a list of
+ integers between (- num-vars) and num-vars, excluding 0, with the
+ restriction that if n is in the clause, then -n is not in the clause.
+ each such clause represents a clause in a CNF form where (abs n)
+ represents a literal and -(abs n) represents the negated literal."
   (assert (<= terms-per-clause num-vars))
   (assert (< 0 num-vars))
   (assert (<= num-clauses (expt 3 num-vars)))
@@ -92,7 +96,10 @@
             :unless (member clause clauses :test #'equal)
               :do (progn (decf remaining)
                          (push clause clauses)))
-      (the bdd (numerical-cnf-to-bdd clauses)))))
+      clauses)))
+
+(defun random-cnf-sat-p (num-vars num-clauses terms-per-clause)
+  (the bdd (numerical-cnf-to-bdd (random-cdf-clauses num-vars num-clauses terms-per-clause))))
 
 (defun cnf-statistics (num-vars num-clauses terms-per-clause num-samples)
   (bdd-with-new-hash (&aux (num-sat 0) (*bdd-cmp-function* #'bdd-std-numerical-cmp))
