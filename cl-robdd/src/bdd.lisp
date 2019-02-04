@@ -452,7 +452,7 @@ given two objects.")
        ;; If the labels are equal, then the operations twice,
        ;; once on the two positive branches, and once on the two negative branches.
        (bdd-ensure-node lab-1 (funcall op positive-1 positive-2) (funcall op negative-1 negative-2)
-		  :bdd-node-class (class-of bdd-1)))
+                        :bdd-node-class (class-of bdd-1)))
       ;; If the labels are not equal, then take the lesser label
       ;; and perform the op on the lesser.positive vs greater  and lesser.negative vs greater,
       ;; being careful not to change the order of the arguments as there is
@@ -461,10 +461,10 @@ given two objects.")
       ;;   or       (bdd-ensure-node lesser.label (op greater lesser.positive) (op greater lesser.negative))
       ((<)
        (bdd-ensure-node lab-1 (funcall op positive-1 bdd-2) (funcall op negative-1 bdd-2)
-		  :bdd-node-class (class-of bdd-1)))
+                        :bdd-node-class (class-of bdd-1)))
       ((>)
        (bdd-ensure-node lab-2 (funcall op bdd-1 positive-2) (funcall op bdd-1 negative-2)
-		  :bdd-node-class (class-of bdd-2))))))
+                        :bdd-node-class (class-of bdd-2))))))
 
 (defmethod bdd-or ((b1 bdd-node) (b2 bdd-node))
   (if (eq b1 b2)
