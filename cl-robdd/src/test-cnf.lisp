@@ -52,3 +52,7 @@
   (assert-true (= (* 10 9 8) (comb 10 7))))
   
 
+(define-test test/quine-mccluskey-reduce
+  (bdd-with-new-hash (&aux (*bdd-cmp-function* #'bdd-std-numerical-cmp))
+    (assert-true (eql (numerical-cnf-to-bdd (quine-mccluskey-reduce 5 '((1 2 3) (-1 2 3) (2 4) (1 -2 4 5) (1 -2 -4 5) (-1 2 3 4 5) (1 2 3 4 5))))
+                      (numerical-cnf-to-bdd '((1 2 3) (-1 2 3) (2 4) (1 -2 4 5) (1 -2 -4 5) (-1 2 3 4 5) (1 2 3 4 5)))))))

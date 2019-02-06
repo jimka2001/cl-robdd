@@ -108,3 +108,59 @@
         (incf num-sat)))
     (values (float (/ num-sat num-samples))
             num-sat num-samples)))
+
+(defun quine-mccluskey-reduce (num-vars clauses)
+  "Given a list of CLAUSES which may either represent a DNF or CNF form,  apply phase-1 of the
+ Quine McCluskey method to reduce terms such as (a+b)(a+b')->a"
+  (labels ((sort-clause (clause)
+             (sort clause #'< :key #'abs))
+           (count-positive (clause)
+             (count-if (lambda (var)
+                         (plusp var)) clause))
+           (group-clauses (&aux (vec (make-array (1+ num-vars) :initial-element nil)))
+             (loop :for pair :in (sort (group-by clauses :key #'count-positive) #'> :key #'car)
+                   :do (destructuring-bind (length clauses) pair
+                         (setf (aref vec length) (mapcar #'sort-clause clauses))))
+             vec)
+           (compatible? (clause1 clause2)
+             ;; returns boolean indicating whether all the corresponding items are equal in absolute value
+             (cond
+               ((not clause1)
+                ;; did we reach the end of both lists at the same time?  then compatible yes.
+                (not clause2))
+               ((not clause2)
+                nil ;;(not clause1)
+                )
+               (t
+                (and (= (abs (car clause1))
+                        (abs (car clause2)))
+                     (compatible? (cdr clause1) (cdr clause2))))))
+           (reduce-one-var (clause1 clause2)
+             ;; given two compatible (according to compatible?) clauses, return the list of
+             ;;   equal elements, ie removing elements which agree in value but differ in absolute-value.
+             ;;   only one such element should be removed.
+             (mapcan (lambda (v1 v2)
+                       (if (= v1 v2)
+                           (list v1)
+                           nil)) clause1 clause2))
+           (reduce-pass (top-index vec)
+             (let (add remove)
+               (loop :for i :from top-index :downto 1
+                     :do (dolist (clause-1 (aref vec i))
+                           (dolist (clause-2 (aref vec (1- i)))
+                             (when (compatible? clause-1 clause-2)
+                               (pushnew clause-1 remove :test #'equal)
+                               (pushnew clause-2 remove :test #'equal)
+                               (pushnew (reduce-one-var clause-1 clause-2) add)))))
+               (cond
+                 ((or remove add)
+                  (dolist (clause remove)
+                    (let ((i (count-positive clause)))
+                      (setf (aref vec i) (remove clause (aref vec i) :test #'equal))))
+                  (dolist (clause add)
+                    (pushnew clause (aref vec (count-positive clause))  :test #'equal))
+                  (reduce-pass (1- top-index) vec))
+                 (t
+                  (loop :for i :from 0 :to num-vars
+                        :nconc (aref vec i)))))))
+    (reduce-pass num-vars (group-clauses))))
