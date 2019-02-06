@@ -110,8 +110,9 @@
             num-sat num-samples)))
 
 (defun quine-mccluskey-reduce (num-vars clauses)
-  "Given a list of CLAUSES which may either represent a DNF or CNF form,  apply phase-1 of the
- Quine McCluskey method to reduce terms such as (a+b)(a+b')->a"
+  "Given a list of CLAUSES which represent a CNF form,  apply phase-1 of the
+ Quine McCluskey method to reduce terms such as (a+b)(a+b')->a
+ In addition, (a+b)(a+b+c)->(a+b) is also done."
   (labels ((sort-clause (clause)
              (sort clause #'< :key #'abs))
            (count-positive (clause)
@@ -162,5 +163,17 @@
                   (reduce-pass (1- top-index) vec))
                  (t
                   (loop :for i :from 0 :to num-vars
-                        :nconc (aref vec i)))))))
-    (reduce-pass num-vars (group-clauses))))
+                        :nconc (aref vec i))))))
+           (remove-supers (clauses acc)
+             (cond
+               ((null clauses)
+                (reverse acc))
+               (t
+                (remove-supers (cdr clauses)
+                               (if  (exists c2 (cdr clauses)
+                                      (subsetp c2 (car clauses)))
+                                    acc
+                                    (cons (car clauses) acc)))))))
+
+    (remove-supers (reverse (reduce-pass num-vars (group-clauses)))
+                   nil)))
