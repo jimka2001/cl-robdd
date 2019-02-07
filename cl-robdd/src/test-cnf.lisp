@@ -52,6 +52,9 @@
   (assert-true (= (* 10 9 8) (comb 10 7))))
   
 
+(define-test test/quine-mccluskey-reduce-2
+  (assert-true (equal '((1)) (quine-mccluskey-reduce 4 '((1 -2) (1 2 3) (1 2 -3))))))
+
 (define-test test/quine-mccluskey-reduce
   (dolist (clauses '(((1) (-1))
                      ((1) (2) (3) (1 2 -3))
