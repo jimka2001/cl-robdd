@@ -147,7 +147,14 @@
                                                           (1+ diff)))))))
 
 
-(defun quine-mccluskey-reduce (num-vars clauses &key (form :cnf)
+(defun calc-num-vars (clauses)
+  (let ((hash (make-hash-table :test #'eql)))
+    (dolist (clause clauses)
+      (dolist (num clause)
+        (setf (gethash (abs num) hash) t)))
+    (hash-table-count hash)))
+
+(defun quine-mccluskey-reduce (clauses &key (form :cnf) (num-vars (calc-num-vars clauses))
                                &aux (vec (make-array (1+ num-vars)
                                                      :initial-contents (loop :for i :from 0 :to num-vars
                                                                              :collect (make-hash-table :test #'eql)))))
