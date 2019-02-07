@@ -314,52 +314,30 @@
  numbered from 1 to N is not followed. The file might declare that
  there are 10 variables, for instance, but allow them to be numbered 2
  through 11."
-  (with-open-file (stream fname :direction :input :if-does-not-exist :error :element-type 'unsigned-byte)
+  (with-open-file (stream fname :direction :input :if-does-not-exist :error
+                                :external-format :utf-8)
     (let ((EOF (list nil))
           clauses)
-      (labels ((next-char ()
-                 (let ((byte (read-byte stream nil EOF)))
-                   (cond ((eql byte EOF)
-                          (return-from read-sat-file clauses))
-                         ((< byte 128)
-                          (format t "~A" (code-char byte))
-                          (code-char byte))
-                         (t
-                          #\-))))
-               (read-to-eol ()
-                 (loop :for ch = (next-char)
-                       :when (char= #\Newline ch)
-                         :do (loop-finish)))
-               (read-comment ()
-                 (read-to-eol))
-               (read-purpose ()
-                 (read-to-eol))
+      (labels ((read-to-eol ()
+                 (read-line stream nil EOF))
                (read-clause ()
-                 (let (clause
-                       (str (with-output-to-string (string nil :element-type 'unsigned-byte)
-                              (loop :for byte = (read-byte stream nil EOF)
-                                    :when (eql EOF byte)
-                                      :do (loop-finish)
-                                    :do (write-byte byte string)
-                                    :when (and (< byte 128)
-                                               (eql #\Newline (code-char byte)))
-                                      :do (loop-finish)))))
-                   (format t "~A~%" str)
-                   (with-input-from-string (stream str)
-                     (loop :for num = (read stream)
-                           :when (eql 0 num)
-                             :do (loop-finish)
-                           :do (push num clause)
-                           :finally (push clause clauses))))))
-          (loop :for ch = (next-char)
-                :do (case ch
-                      ((#\p)
-                       (read-purpose))
-                      ((#\c)
-                       (read-comment))
-                    (t
-                     (unread-char ch stream)
-                     (read-clause))))))))
+                 (let (clause)
+                   (loop :for num = (read stream)
+                         :when (eql 0 num)
+                           :do (loop-finish)
+                         :do (push num clause)
+                         :finally (push clause clauses)))))
+          (loop :for ch = (peek-char nil stream nil EOF)
+                :do (cond
+                      ((eql ch EOF)
+                       (loop-finish))
+                      ((or (digit-char-p ch)
+                           (eql ch #\-))
+                       (read-clause))
+                      (t
+                       (read-to-eol)))))
+
+      clauses)))
                  
                   
 
