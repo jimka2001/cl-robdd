@@ -53,7 +53,7 @@
     "CLAUSES is a list of sublists, each called a clause.
  A clause is a list of integers, i, either positive or negative.  (abs i)
  represents a literal form. If i<0, the literal is interpreted as negated.
- The clause consists of zero or more such integers, which are interpeted 
+ The clause consists of zero or more such integers, which are interpreted 
  as the disjunction of the conjunctive clauses.  E.g., (1 -2 3) represents (x1 + !x2 + x3).
  CLAUSES represents a conjunction such as (and clause1 clause2 ...)."
     (numerical-[cd]nf-to-bdd clauses 'or #'bdd-and
@@ -65,7 +65,7 @@
     "CLAUSES is a list of sublists, each called a clause.
  A clause is a list of integers, i, either positive or negative.  (abs i)
  represents a literal form. If i<0, the literal is interpreted as negated.
- The clause consists of zero or more such integers, which are interpeted 
+ The clause consists of zero or more such integers, which are interpreted
  as the conjunction of the disjunctive clauses.  E.g., (1 -2 3) represents (x1 & !x2 & x3).
  CLAUSES represents a disjunction such as (or clause1 clause2 ...)."
     (numerical-[cd]nf-to-bdd clauses 'and #'bdd-or
@@ -118,7 +118,7 @@
       clauses)))
 
 (defun random-cnf-sat-p (num-vars num-clauses terms-per-clause)
-  (the bdd (numerical-cnf-to-bdd (random-cdf-clauses num-vars num-clauses terms-per-clause))))
+  (the bdd (numerical-cnf-to-bdd (random-cnf-clauses num-vars num-clauses terms-per-clause))))
 
 (defun cnf-statistics (&key num-vars num-clauses terms-per-clause num-samples)
   (bdd-with-new-hash (&aux (num-sat 0) (*bdd-cmp-function* #'bdd-std-numerical-cmp))
@@ -127,6 +127,27 @@
         (incf num-sat)))
     (values (float (/ num-sat num-samples))
             num-sat num-samples)))
+
+(defun qm-compatible? (clause1 clause2 &optional (diff 0))
+  ;; Returns Boolean indicating whether all the corresponding items are equal in absolute value,
+  ;; the lists differ by exactly one value,
+  ;; and the lists are the same length.
+  (cond
+    ((> diff 1)
+     nil)
+    ((not clause1)
+     ;; did we reach the end of both lists at the same time?  then compatible yes.
+     (not clause2))
+    ((not clause2)
+     nil ;;(not clause1)
+     )
+    (t
+     (and (= (abs (car clause1))
+             (abs (car clause2)))
+          (qm-compatible? (cdr clause1) (cdr clause2) (if (= (car clause1) (car clause2))
+                                                          diff
+                                                          (1+ diff)))))))
+
 
 (defun quine-mccluskey-reduce (num-vars clauses &key (form :cnf))
   "Given a list of CLAUSES which represent a CNF form,  apply phase-1 of the
@@ -142,7 +163,8 @@
   ;;                                (or (not a) b c d e) ; (-1 2 3 4 5)
   ;;                                (or a b c d e)       ; (1 2 3 4 5)
   ;;                                )
-  ;; We assume each clause has already been sorted by increasing absolute value (1 -2 3), not (-2 1 3)
+  ;; 0. We enforce that each clause has already been sorted by increasing absolute value (1 -2 3), not (-2 1 3)
+  ;;      this work is done by sort-clause.
   ;; 1. We sort the clauses according to number of positive elements. e.g., (1 -2 -3) < (-1 2 -3 4) < (1 2 3 -4 -5).
   ;;    This is done in function group-clauses which creates a vector, vec, such that vec[i] is the
   ;;    list of all clauses which have i positive elements.
@@ -153,9 +175,8 @@
   ;;    During each pass we compare each element of vec[i] and with each element of vec[i-1] (quadratic search),
   ;;    (this is somewhat inefficient because vec[i] and vec[i-1] contain clauses of different lengths,
   ;;      this problem should be optimized away in a future release).
-  ;;    to find clauses which are compatible, meaning they are the same length and corresponding elements
-  ;;    have the same absolute value.  This implies they differ by exactly one entry (because every clause in vec[i]
-  ;;    has exactly i positive numbers, and every clause in vec[i-1] has exactly i-1 positive elements).
+  ;;    To find clauses which are compatible, meaning they are the same length and corresponding elements
+  ;;    have the same absolute value, and exactly one entry differs.
   ;;    When c1 and c2 are found to be compatible, we schedule them to be removed from vec[i] and vec[i-1]
   ;;    and schedule a new element to be added to vec[i-1], that clause simply removes the element that is different.
   ;;    E.g.,  c1 = (1 -2 3 -4)  ; in vec[2]
@@ -183,31 +204,17 @@
   (declare (type (member :cnf :dnf :raw) form)
            (type (and fixnum unsigned-byte) num-vars))
   (labels ((sort-clause (clause)
-             (sort clause #'< :key #'abs))
+             (sort (copy-list clause) #'< :key #'abs))
            (count-positive (clause)
              (count-if (lambda (var)
                          (plusp var)) clause))
            (group-clauses (&aux (vec (make-array (1+ num-vars) :initial-element nil)))
              (loop :for pair :in (sort (group-by clauses :key #'count-positive) #'> :key #'car)
                    :do (destructuring-bind (length clauses) pair
-                         (setf (aref vec length) (mapcar #'sort-clause clauses))))
+                         (setf (aref vec length) (remove-duplicates (mapcar #'sort-clause clauses) :test #'equal))))
              vec)
-           (compatible? (clause1 clause2)
-             ;; returns Boolean indicating whether all the corresponding items are equal in absolute value
-             ;; and the lists are the same length.
-             (cond
-               ((not clause1)
-                ;; did we reach the end of both lists at the same time?  then compatible yes.
-                (not clause2))
-               ((not clause2)
-                nil ;;(not clause1)
-                )
-               (t
-                (and (= (abs (car clause1))
-                        (abs (car clause2)))
-                     (compatible? (cdr clause1) (cdr clause2))))))
            (reduce-one-var (clause1 clause2)
-             ;; given two compatible (according to compatible?) clauses, return the list of
+             ;; given two compatible (according to qm-compatible?) clauses, return the list of
              ;;   equal elements, ie removing elements which agree in value but differ in absolute-value.
              ;;   only one such element should be removed.
              (mapcan (lambda (v1 v2)
@@ -219,7 +226,7 @@
                (loop :for i :from top-index :downto 1
                      :do (dolist (clause-1 (aref vec i))
                            (dolist (clause-2 (aref vec (1- i)))
-                             (when (compatible? clause-1 clause-2)
+                             (when (qm-compatible? clause-1 clause-2)
                                (pushnew clause-1 remove :test #'equal)
                                (pushnew clause-2 remove :test #'equal)
                                (pushnew (reduce-one-var clause-1 clause-2) add)))))
@@ -249,7 +256,9 @@
        (remove-supers (reverse (reduce-pass num-vars (group-clauses)))
                       nil))
       ((:raw)
-       (reduce-pass num-vars (group-clauses))))))
+       (reverse (reduce-pass num-vars (group-clauses)))))))
 
 ;;  LocalWords:  McCluskey mccluskey downto destructuring vec DNF CNF
-;;  LocalWords:  maxterms minterms
+;;  LocalWords:  maxterms minterms cnf dnf MERCHANTABILITY sublicense
+;;  LocalWords:  NONINFRINGEMENT etypecase disjunction bdd cond plusp
+;;  LocalWords:  mapcar setf expt
