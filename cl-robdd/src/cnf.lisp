@@ -248,7 +248,7 @@
                (cond
                  ((or remove-plists add-plists)
                   (destructuring-dolist ((&key pos-count length clause) remove-plists)
-                    (removef clause (gethash length (aref vec pos-count)) :test #'eq))
+                    (remfq clause (gethash length (aref vec pos-count))))
                   (destructuring-dolist ((&key pos-count length clause) add-plists)
                     (pushnew clause (gethash length (aref vec pos-count)) :test #'equal))
                   (reduce-pass (1- top-pos-count)))
