@@ -157,12 +157,12 @@
 
 (define-test test/compatible
   (assert-false (qm-compatible? '(-1 2 3 4) '(1 -2 3 -4)))
-  (assert-false (qm-compatible? '(1 2) '(1)))
-  (assert-false (qm-compatible? '(-1 2) '(1)))
-  (assert-false (qm-compatible? '(1 2) '(-1)))
-  (assert-false (qm-compatible? '(1) '(1 2)))
-  (assert-false (qm-compatible? '(1) '(-1 2)))
-  (assert-false (qm-compatible? '(-1) '(1 2)))
+  (assert-false (qm-compatible? '(1 2) '(-1 -2)))
+  (assert-false (qm-compatible? '(-1 2) '(1 3)))
+  (assert-false (qm-compatible? '(1 2) '(-1 3)))
+  (assert-false (qm-compatible? '(1 3) '(1 2)))
+  (assert-false (qm-compatible? '(1 3) '(-1 2)))
+  (assert-false (qm-compatible? '(-1 3) '(1 2)))
   (assert-false (qm-compatible? '(-1 3) '(1 2)))
 
   (assert-true (qm-compatible? '(1 2) '(-1 2)))

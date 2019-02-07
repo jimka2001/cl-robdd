@@ -130,17 +130,15 @@
 
 (defun qm-compatible? (clause1 clause2 &optional (diff 0))
   ;; Returns Boolean indicating whether all the corresponding items are equal in absolute value,
-  ;; the lists differ by exactly one value,
-  ;; and the lists are the same length.
+  ;; but the lists differ by exactly one value,
+  ;; We have already verified (assured that) clause1 and clause2 have the same length
+  
   (cond
-    ((> diff 1)
+    ((> diff 1) ; stop if diff ever exceeds 1
      nil)
-    ((not clause1)
-     ;; did we reach the end of both lists at the same time?  then compatible yes.
-     (not clause2))
-    ((not clause2)
-     nil ;;(not clause1)
-     )
+    ((null clause1) ; if we reached the end, we should have found exactly 1 difference
+     (assert (null clause2))
+     (= 1 diff))
     (t
      (and (= (abs (car clause1))
              (abs (car clause2)))
@@ -149,7 +147,10 @@
                                                           (1+ diff)))))))
 
 
-(defun quine-mccluskey-reduce (num-vars clauses &key (form :cnf))
+(defun quine-mccluskey-reduce (num-vars clauses &key (form :cnf)
+                               &aux (vec (make-array (1+ num-vars)
+                                                     :initial-contents (loop :for i :from 0 :to num-vars
+                                                                             :collect (make-hash-table :test #'eql)))))
   "Given a list of CLAUSES which represent a CNF form,  apply phase-1 of the
  Quine McCluskey method to reduce terms such as (a+b)(a+b')->a
  In addition, (a+b)(a+b+c)->(a+b) is also done.
@@ -166,23 +167,24 @@
   ;; 0. We enforce that each clause has already been sorted by increasing absolute value (1 -2 3), not (-2 1 3)
   ;;      this work is done by sort-clause.
   ;; 1. We sort the clauses according to number of positive elements. e.g., (1 -2 -3) < (-1 2 -3 4) < (1 2 3 -4 -5).
-  ;;    This is done in function group-clauses which creates a vector, vec, such that vec[i] is the
-  ;;    list of all clauses which have i positive elements.
+  ;;    This is done in function group-clauses which creates a vector, vec, such that vec[i] is a hash table
+  ;;    for which hash[length] is a list of clauses with length=length, and having i positive elements.
+  ;;    for example (gethash 3 (aref vec 2)) is a list of clauses each of length 3, and each having 2 positive elements
+  ;;    e.g., ((1 2 -3) (-1 3 5) (2 -3 4) ...)
   ;; 2. We traverse over vec num-vars - 1 times in reverse order,
   ;;      first  pass from i = num-vars downto 1,
   ;;      second pass from i = num-vars - 1 downto 1,
   ;;      third  pas  from i = num-vars - 2 downto 1.
-  ;;    During each pass we compare each element of vec[i] and with each element of vec[i-1] (quadratic search),
-  ;;    (this is somewhat inefficient because vec[i] and vec[i-1] contain clauses of different lengths,
-  ;;      this problem should be optimized away in a future release).
+  ;;    During each pass we compare each element of vec[i][j] and with each element of vec[i-1][j] (quadratic search),
+  ;;       (this is done from j from i down to 1).
   ;;    To find clauses which are compatible, meaning they are the same length and corresponding elements
   ;;    have the same absolute value, and exactly one entry differs.
-  ;;    When c1 and c2 are found to be compatible, we schedule them to be removed from vec[i] and vec[i-1]
-  ;;    and schedule a new element to be added to vec[i-1], that clause simply removes the element that is different.
-  ;;    E.g.,  c1 = (1 -2 3 -4)  ; in vec[2]
-  ;;           c2 = (1  2 3 -4)  ; in vec[3]
-  ;;     remove c1 from vec[2], remove c2 from vec[3]
-  ;;     and add (1 3 -4) to vec[2].
+  ;;    When c1 and c2 are found to be compatible, we schedule them to be removed from vec[i][j] and vec[i-1][j]
+  ;;    and schedule a new element to be added to vec[i-1][j-1], that clause simply removes the element that is different.
+  ;;    E.g.,  c1 = (1 -2 3 -4)  ; in vec[2][4]
+  ;;           c2 = (1  2 3 -4)  ; in vec[3][4]
+  ;;     remove c1 from vec[2][4], remove c2 from vec[3][4]
+  ;;     and add (1 3 -4) to vec[2][3].
   ;;     This adding and removal is delayed so as not to interfere with the iteration.
   ;;   Each of these backward traversals over vec, (perhaps) removes some clauses of size m and m-1 and
   ;;     adds clauses of size m for various sizes of m.
@@ -208,11 +210,14 @@
            (count-positive (clause)
              (count-if (lambda (var)
                          (plusp var)) clause))
-           (group-clauses (&aux (vec (make-array (1+ num-vars) :initial-element nil)))
-             (loop :for pair :in (sort (group-by clauses :key #'count-positive) #'> :key #'car)
-                   :do (destructuring-bind (length clauses) pair
-                         (setf (aref vec length) (remove-duplicates (mapcar #'sort-clause clauses) :test #'equal))))
-             vec)
+           (group-clauses ()
+             ;; vec is an array of hash tables
+             ;; the index of vec indicates the length of all the clauses contained in the hash table
+             ;; the hash table maps number-of-positive elements in clause -> list of clauses of same length
+             ;;    with that number of positive elements
+             (dolist (clause clauses)
+               (pushnew (sort-clause clause) (gethash (length clause)
+                                                      (aref vec (count-positive clause))) :test #'equal)))
            (reduce-one-var (clause1 clause2)
              ;; given two compatible (according to qm-compatible?) clauses, return the list of
              ;;   equal elements, ie removing elements which agree in value but differ in absolute-value.
@@ -221,26 +226,36 @@
                        (if (= v1 v2)
                            (list v1)
                            nil)) clause1 clause2))
-           (reduce-pass (top-index vec)
-             (let (add remove)
-               (loop :for i :from top-index :downto 1
-                     :do (dolist (clause-1 (aref vec i))
-                           (dolist (clause-2 (aref vec (1- i)))
-                             (when (qm-compatible? clause-1 clause-2)
-                               (pushnew clause-1 remove :test #'equal)
-                               (pushnew clause-2 remove :test #'equal)
-                               (pushnew (reduce-one-var clause-1 clause-2) add)))))
+           (reduce-pass (top-pos-count)
+             (let (add-plists remove-plists)
+               (loop :for pos-count :from top-pos-count :downto 1
+                     :do (loop :for length :from pos-count :downto 1
+                               :do (dolist (clause-1 (gethash length (aref vec pos-count)))
+                                     (dolist (clause-2 (gethash length (aref vec (1- pos-count))))
+                                       (when (qm-compatible? clause-1 clause-2)
+                                         (pushnew (list :pos-count pos-count
+                                                        :length length
+                                                        :clause clause-1) remove-plists
+                                                  :test #'equal)
+                                         (pushnew (list :pos-count (1- pos-count)
+                                                        :length length
+                                                        :clause clause-2) remove-plists
+                                                  :test #'equal)
+                                         (pushnew (list :pos-count (1- pos-count)
+                                                        :length (1- length)
+                                                        :clause (reduce-one-var clause-1 clause-2)) add-plists
+                                                  :test #'equal))))))
                (cond
-                 ((or remove add)
-                  (dolist (clause remove)
-                    (let ((i (count-positive clause)))
-                      (setf (aref vec i) (remove clause (aref vec i) :test #'equal))))
-                  (dolist (clause add)
-                    (pushnew clause (aref vec (count-positive clause))  :test #'equal))
-                  (reduce-pass (1- top-index) vec))
+                 ((or remove-plists add-plists)
+                  (destructuring-dolist ((&key pos-count length clause) remove-plists)
+                    (removef clause (gethash length (aref vec pos-count)) :test #'eq))
+                  (destructuring-dolist ((&key pos-count length clause) add-plists)
+                    (pushnew clause (gethash length (aref vec pos-count)) :test #'equal))
+                  (reduce-pass (1- top-pos-count)))
                  (t
-                  (loop :for i :from 0 :to num-vars
-                        :nconc (aref vec i))))))
+                  (loop :for length :from 0 :to num-vars
+                        :nconc (loop :for clauses :being :the :hash-values :of (aref vec length)
+                                     :nconc clauses))))))
            (remove-supers (clauses acc)
              (cond
                ((null clauses)
@@ -251,14 +266,16 @@
                                       (subsetp c2 (car clauses)))
                                     acc
                                     (cons (car clauses) acc)))))))
+    (group-clauses)
     (case form
       ((:cnf :dnf)
-       (remove-supers (reverse (reduce-pass num-vars (group-clauses)))
+       (remove-supers (reverse (reduce-pass num-vars))
                       nil))
       ((:raw)
-       (reverse (reduce-pass num-vars (group-clauses)))))))
+       (reverse (reduce-pass num-vars))))))
 
 ;;  LocalWords:  McCluskey mccluskey downto destructuring vec DNF CNF
 ;;  LocalWords:  maxterms minterms cnf dnf MERCHANTABILITY sublicense
 ;;  LocalWords:  NONINFRINGEMENT etypecase disjunction bdd cond plusp
-;;  LocalWords:  mapcar setf expt
+;;  LocalWords:  mapcar setf expt dolist pushnew aref eql gethash eq
+;;  LocalWords:  removef plists pos qm nconc acc subsetp cdr nconc
