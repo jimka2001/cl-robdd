@@ -53,6 +53,19 @@
   
 
 (define-test test/quine-mccluskey-reduce
-  (bdd-with-new-hash (&aux (*bdd-cmp-function* #'bdd-std-numerical-cmp))
-    (assert-true (eql (numerical-cnf-to-bdd (quine-mccluskey-reduce 5 '((1 2 3) (-1 2 3) (2 4) (1 -2 4 5) (1 -2 -4 5) (-1 2 3 4 5) (1 2 3 4 5))))
-                      (numerical-cnf-to-bdd '((1 2 3) (-1 2 3) (2 4) (1 -2 4 5) (1 -2 -4 5) (-1 2 3 4 5) (1 2 3 4 5)))))))
+  (dolist (clauses '(((1 2 3) (-1 2 3) (2 4) (1 -2 4 5) (1 -2 -4 5) (-1 2 3 4 5) (1 2 3 4 5))
+                     ((1 2 3) (-1 2 3) (2 4) (1 -2 4 5) (1 3 -5) (1 -2 -4 5) (-1 2 3 4 5) (1 2 3 4 5))
+                     ((1 2) (1 -2))
+                     ((1 2 3) (1 2 -3) (1 2) (2 -3))))
+    (bdd-with-new-hash (&aux (*bdd-cmp-function* #'bdd-std-numerical-cmp))
+      (assert-true (eql (numerical-cnf-to-bdd (quine-mccluskey-reduce 5 clauses :form :raw))
+                        (numerical-cnf-to-bdd clauses)))
+      (assert-true (eql (numerical-dnf-to-bdd (quine-mccluskey-reduce 5 clauses :form :raw))
+                        (numerical-dnf-to-bdd clauses)))
+
+      (assert-true (eql (numerical-cnf-to-bdd (quine-mccluskey-reduce 5 clauses :form :cnf))
+                        (numerical-cnf-to-bdd clauses)))
+
+      (assert-true (eql (numerical-dnf-to-bdd (quine-mccluskey-reduce 5 clauses :form :dnf))
+                        (numerical-dnf-to-bdd clauses)))
+      )))
