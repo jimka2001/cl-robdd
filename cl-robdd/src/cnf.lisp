@@ -274,6 +274,95 @@
       ((:raw)
        (reverse (reduce-pass num-vars))))))
 
+(defun read-sat-file (fname)
+  "Read a DIMACS CNF file, as described by https://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html
+ The CNF file format is an ASCII file format.
+
+ The file may begin with comment lines. The first character of each
+ comment line must be a lower case letter \"c\". Comment lines typically
+ occur in one section at the beginning of the file, but are allowed to
+ appear throughout the file.
+
+ The comment lines are followed by the \"problem\" line. This begins
+ with a lower case \"p\" followed by a space, followed by the problem
+ type, which for CNF files is \"cnf\", followed by the number of
+ variables followed by the number of clauses.
+
+ The remainder of the file contains lines defining the clauses, one by
+ one.
+
+ A clause is defined by listing the index of each positive literal,
+ and the negative index of each negative literal. Indices are 1-based,
+ and for obvious reasons the index 0 is not allowed.
+
+ The definition of a clause may extend beyond a single line of text.
+
+ The definition of a clause is terminated by a final value of \"0\".
+
+ The file terminates after the last clause is defined.
+
+ Some odd facts include:
+
+ The definition of the next clause normally begins on a new line, but
+ may follow, on the same line, the \"0\" that marks the end of the
+ previous clause.
+
+ In some examples of CNF files, the definition of the last clause is
+ not terminated by a final '0';
+
+ In some examples of CNF files, the rule that the variables are
+ numbered from 1 to N is not followed. The file might declare that
+ there are 10 variables, for instance, but allow them to be numbered 2
+ through 11."
+  (with-open-file (stream fname :direction :input :if-does-not-exist :error :element-type 'unsigned-byte)
+    (let ((EOF (list nil))
+          clauses)
+      (labels ((next-char ()
+                 (let ((byte (read-byte stream nil EOF)))
+                   (cond ((eql byte EOF)
+                          (return-from read-sat-file clauses))
+                         ((< byte 128)
+                          (format t "~A" (code-char byte))
+                          (code-char byte))
+                         (t
+                          #\-))))
+               (read-to-eol ()
+                 (loop :for ch = (next-char)
+                       :when (char= #\Newline ch)
+                         :do (loop-finish)))
+               (read-comment ()
+                 (read-to-eol))
+               (read-purpose ()
+                 (read-to-eol))
+               (read-clause ()
+                 (let (clause
+                       (str (with-output-to-string (string nil :element-type 'unsigned-byte)
+                              (loop :for byte = (read-byte stream nil EOF)
+                                    :when (eql EOF byte)
+                                      :do (loop-finish)
+                                    :do (write-byte byte string)
+                                    :when (and (< byte 128)
+                                               (eql #\Newline (code-char byte)))
+                                      :do (loop-finish)))))
+                   (format t "~A~%" str)
+                   (with-input-from-string (stream str)
+                     (loop :for num = (read stream)
+                           :when (eql 0 num)
+                             :do (loop-finish)
+                           :do (push num clause)
+                           :finally (push clause clauses))))))
+          (loop :for ch = (next-char)
+                :do (case ch
+                      ((#\p)
+                       (read-purpose))
+                      ((#\c)
+                       (read-comment))
+                    (t
+                     (unread-char ch stream)
+                     (read-clause))))))))
+                 
+                  
+
 ;;  LocalWords:  McCluskey mccluskey downto destructuring vec DNF CNF
 ;;  LocalWords:  maxterms minterms cnf dnf MERCHANTABILITY sublicense
 ;;  LocalWords:  NONINFRINGEMENT etypecase disjunction bdd cond plusp
