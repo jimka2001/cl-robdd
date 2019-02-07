@@ -237,21 +237,36 @@
              (let (add-plists remove-plists)
                (loop :for pos-count :from top-pos-count :downto 1
                      :do (loop :for length :from pos-count :downto 1
+                               :for hash1 = (make-hash-table :test #'eql)
+                               :for hash2 = (make-hash-table :test #'eql)
+                               ;; rather than a quadratic search of
+                               ;;    (gethash length (aref vec pos-count)) X (gethash length (aref vec (1- pos-count)))
+                               ;; instead we group them into categories according to abs of first element of the list,
+                               ;; then do quadratic on hopefully smaller lists.
                                :do (dolist (clause-1 (gethash length (aref vec pos-count)))
-                                     (dolist (clause-2 (gethash length (aref vec (1- pos-count))))
-                                       (when (qm-compatible? clause-1 clause-2)
-                                         (pushnew (list :pos-count pos-count
-                                                        :length length
-                                                        :clause clause-1) remove-plists
-                                                  :test #'equal)
-                                         (pushnew (list :pos-count (1- pos-count)
-                                                        :length length
-                                                        :clause clause-2) remove-plists
-                                                  :test #'equal)
-                                         (pushnew (list :pos-count (1- pos-count)
-                                                        :length (1- length)
-                                                        :clause (reduce-one-var clause-1 clause-2)) add-plists
-                                                  :test #'equal))))))
+                                     (push clause-1 (gethash (abs (car clause-1)) hash1)))
+                               :do (dolist (clause-2 (gethash length (aref vec (1- pos-count))))
+                                     (push clause-2 (gethash (abs (car clause-2)) hash2)))
+                                   
+                               :do (loop :for abs :being :the :hash-keys :of (if (< (hash-table-count hash1)
+                                                                                    (hash-table-count hash2))
+                                                                                 hash1
+                                                                                 hash2)
+                                         :do (dolist (clause-1 (gethash abs hash1))
+                                               (dolist (clause-2 (gethash abs hash2))
+                                                 (when (qm-compatible? clause-1 clause-2)
+                                                   (pushnew (list :pos-count pos-count
+                                                                  :length length
+                                                                  :clause clause-1) remove-plists
+                                                                  :test #'equal)
+                                                   (pushnew (list :pos-count (1- pos-count)
+                                                                  :length length
+                                                                  :clause clause-2) remove-plists
+                                                                  :test #'equal)
+                                                   (pushnew (list :pos-count (1- pos-count)
+                                                                  :length (1- length)
+                                                                  :clause (reduce-one-var clause-1 clause-2)) add-plists
+                                                                  :test #'equal)))))))
                (cond
                  ((or remove-plists add-plists)
                   (destructuring-dolist ((&key pos-count length clause) remove-plists)
