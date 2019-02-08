@@ -158,7 +158,14 @@
      (< (abs c1) (abs c2)))))
 
 
-(defun quine-mccluskey-reduce (num-vars clauses &key (form :cnf)
+(defun calc-num-vars (clauses)
+  (let ((hash (make-hash-table :test #'eql)))
+    (dolist (clause clauses)
+      (dolist (num clause)
+        (setf (gethash (abs num) hash) t)))
+    (hash-table-count hash)))
+
+(defun quine-mccluskey-reduce (clauses &key (form :cnf) (num-vars (calc-num-vars clauses))
                                &aux (vec (make-array (1+ num-vars)
                                                      :initial-contents (loop :for i :from 0 :to num-vars
                                                                              :collect (make-hash-table :test #'eql)))))
@@ -245,21 +252,36 @@
              (let (add-plists remove-plists)
                (loop :for pos-count :from top-pos-count :downto 1
                      :do (loop :for length :from pos-count :downto 1
+                               :for hash1 = (make-hash-table :test #'eql)
+                               :for hash2 = (make-hash-table :test #'eql)
+                               ;; rather than a quadratic search of
+                               ;;    (gethash length (aref vec pos-count)) X (gethash length (aref vec (1- pos-count)))
+                               ;; instead we group them into categories according to abs of first element of the list,
+                               ;; then do quadratic on hopefully smaller lists.
                                :do (dolist (clause-1 (gethash length (aref vec pos-count)))
-                                     (dolist (clause-2 (gethash length (aref vec (1- pos-count))))
-                                       (when (qm-compatible? clause-1 clause-2)
-                                         (pushnew (list :pos-count pos-count
-                                                        :length length
-                                                        :clause clause-1) remove-plists
-                                                  :test #'equal)
-                                         (pushnew (list :pos-count (1- pos-count)
-                                                        :length length
-                                                        :clause clause-2) remove-plists
-                                                  :test #'equal)
-                                         (pushnew (list :pos-count (1- pos-count)
-                                                        :length (1- length)
-                                                        :clause (reduce-one-var clause-1 clause-2)) add-plists
-                                                  :test #'equal))))))
+                                     (push clause-1 (gethash (abs (car clause-1)) hash1)))
+                               :do (dolist (clause-2 (gethash length (aref vec (1- pos-count))))
+                                     (push clause-2 (gethash (abs (car clause-2)) hash2)))
+                                   
+                               :do (loop :for abs :being :the :hash-keys :of (if (< (hash-table-count hash1)
+                                                                                    (hash-table-count hash2))
+                                                                                 hash1
+                                                                                 hash2)
+                                         :do (dolist (clause-1 (gethash abs hash1))
+                                               (dolist (clause-2 (gethash abs hash2))
+                                                 (when (qm-compatible? clause-1 clause-2)
+                                                   (pushnew (list :pos-count pos-count
+                                                                  :length length
+                                                                  :clause clause-1) remove-plists
+                                                                  :test #'equal)
+                                                   (pushnew (list :pos-count (1- pos-count)
+                                                                  :length length
+                                                                  :clause clause-2) remove-plists
+                                                                  :test #'equal)
+                                                   (pushnew (list :pos-count (1- pos-count)
+                                                                  :length (1- length)
+                                                                  :clause (reduce-one-var clause-1 clause-2)) add-plists
+                                                                  :test #'equal)))))))
                (cond
                  ((or remove-plists add-plists)
                   (destructuring-dolist ((&key pos-count length clause) remove-plists)
@@ -290,6 +312,73 @@
                       nil))
       ((:raw)
        (reverse (reduce-pass num-vars))))))
+
+(defun read-sat-file (fname)
+  "Read a DIMACS CNF file, as described by https://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html
+ The CNF file format is an ASCII file format.
+
+ The file may begin with comment lines. The first character of each
+ comment line must be a lower case letter \"c\". Comment lines typically
+ occur in one section at the beginning of the file, but are allowed to
+ appear throughout the file.
+
+ The comment lines are followed by the \"problem\" line. This begins
+ with a lower case \"p\" followed by a space, followed by the problem
+ type, which for CNF files is \"cnf\", followed by the number of
+ variables followed by the number of clauses.
+
+ The remainder of the file contains lines defining the clauses, one by
+ one.
+
+ A clause is defined by listing the index of each positive literal,
+ and the negative index of each negative literal. Indices are 1-based,
+ and for obvious reasons the index 0 is not allowed.
+
+ The definition of a clause may extend beyond a single line of text.
+
+ The definition of a clause is terminated by a final value of \"0\".
+
+ The file terminates after the last clause is defined.
+
+ Some odd facts include:
+
+ The definition of the next clause normally begins on a new line, but
+ may follow, on the same line, the \"0\" that marks the end of the
+ previous clause.
+
+ In some examples of CNF files, the definition of the last clause is
+ not terminated by a final '0';
+
+ In some examples of CNF files, the rule that the variables are
+ numbered from 1 to N is not followed. The file might declare that
+ there are 10 variables, for instance, but allow them to be numbered 2
+ through 11."
+  (with-open-file (stream fname :direction :input :if-does-not-exist :error
+                                :external-format :utf-8)
+    (let ((EOF (list nil))
+          clauses)
+      (labels ((read-to-eol ()
+                 (read-line stream nil EOF))
+               (read-clause ()
+                 (let (clause)
+                   (loop :for num = (read stream)
+                         :when (eql 0 num)
+                           :do (loop-finish)
+                         :do (push num clause)
+                         :finally (push clause clauses)))))
+          (loop :for ch = (peek-char nil stream nil EOF)
+                :do (cond
+                      ((eql ch EOF)
+                       (loop-finish))
+                      ((or (digit-char-p ch)
+                           (eql ch #\-))
+                       (read-clause))
+                      (t
+                       (read-to-eol)))))
+
+      clauses)))
+                 
+                  
 
 ;;  LocalWords:  McCluskey mccluskey downto destructuring vec DNF CNF
 ;;  LocalWords:  maxterms minterms cnf dnf MERCHANTABILITY sublicense
