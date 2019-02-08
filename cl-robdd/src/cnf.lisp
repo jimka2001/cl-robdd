@@ -363,30 +363,35 @@
  numbered from 1 to N is not followed. The file might declare that
  there are 10 variables, for instance, but allow them to be numbered 2
  through 11."
-  (with-open-file (stream fname :direction :input :if-does-not-exist :error
-                                :external-format :utf-8)
-    (let ((EOF (list nil))
-          clauses)
-      (labels ((read-to-eol ()
-                 (read-line stream nil EOF))
-               (read-clause ()
-                 (let (clause)
-                   (loop :for num = (read stream)
-                         :when (eql 0 num)
-                           :do (loop-finish)
-                         :do (push num clause)
-                         :finally (push clause clauses)))))
-          (loop :for ch = (peek-char nil stream nil EOF)
-                :do (cond
-                      ((eql ch EOF)
-                       (loop-finish))
-                      ((or (digit-char-p ch)
-                           (eql ch #\-))
-                       (read-clause))
-                      (t
-                       (read-to-eol)))))
+  (typecase file
+    ((or pathname string)                             ; file name
+     (with-open-file (stream file :direction :input :if-does-not-exist :error
+                                  :external-format :utf-8)
+       (read-sat-file stream :consume consume)))
+    (stream
+     (let ((EOF (list nil))
+           final-value)
+       (labels ((skip-to-eol ()
+                  (read-line file nil EOF))
+                (read-clause ()
+                  (let (clause)
+                    (loop :for num = (read file nil EOF)
+                          :when (or (eql 0 num)
+                                    (eql EOF num))
+                            :do (loop-finish)
+                          :do (push num clause)
+                          :finally (setf final-value (funcall consume clause))))))
+         (loop :for ch = (peek-char nil file nil EOF)
+               :do (cond
+                     ((eql ch EOF)
+                      (loop-finish))
+                     ((or (digit-char-p ch)
+                          (eql ch #\-))
+                      (read-clause))
+                     (t
+                      (skip-to-eol)))))
 
-      clauses)))
+       final-value))))
                  
                   
 
