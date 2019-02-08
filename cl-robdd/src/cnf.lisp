@@ -157,7 +157,6 @@
     (t
      (< (abs c1) (abs c2)))))
 
-
 (defun calc-num-vars (clauses)
   (let ((hash (make-hash-table :test #'eql)))
     (dolist (clause clauses)

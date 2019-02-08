@@ -55,20 +55,19 @@
 (define-test test/cmp-clauses
   ;; TODO finish this test
   (assert-true (equal nil
-                      (cmp-clauses nil)))
+                      (sort nil #'cmp-clauses)))
   (assert-true (equal '((1))
-                      (cmp-clauses '((1)))))
+                      (sort (copy-list '((1))) #'cmp-clauses)))
   (assert-true (equal '((-1) (1))
-                      (cmp-clauses '((1) (-1)))))
+                      (sort (copy-list '((1) (-1))) #'cmp-clauses)))
   (assert-true (equal '((-1) (1))
-                      (cmp-clauses '((-1) (1)))))
-
+                      (sort (copy-list '((-1) (1))) #'cmp-clauses)))
   (assert-true (equal '((-1 3) (1 2))
-                      (cmp-clauses '((1 2) (-1 3)))))
-  (assert-true (equal '((-2 2) (2 1) (-1 3) (1 2) (1 3))
-                      (cmp-clauses '((1 2) (-2 2) (-1 3) (1 3) (2 1)))))
+                      (sort (copy-list '((1 2) (-1 3))) #'cmp-clauses)))
+  (assert-true (equal '((-1 3) (1 2) (1 3) (-2 2) (2 1) )
+                      (sort (copy-list '((1 2) (-2 2) (-1 3) (1 3) (2 1))) #'cmp-clauses)))
   (assert-true (equal '((-1 3) (1 2))
-                      (cmp-clauses '((-1 3) (1 2))))))
+                      (sort (copy-list '((-1 3) (1 2))) #'cmp-clauses))))
   
 
 (define-test test/quine-mccluskey-reduce-2
