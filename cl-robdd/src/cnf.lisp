@@ -374,6 +374,13 @@
         ((:raw)
          clauses)))))
 
+(defun dimacs-to-vec (file)
+  (let ((vec (make-instance 'qm-vec)))
+    (read-sat-file file
+                   :consume (lambda (clause)
+                              (add-clause vec clause)))
+    vec))
+
 (defun read-sat-file (file &key (consume (let ((conc-buf (list nil)))
                                            (lambda (clause)
                                              (tconc conc-buf (reverse clause))

@@ -265,7 +265,10 @@ p cnf 3 2
                          "simple_v3_c2.cnf"
                          "zebra_v155_c1135.cnf")))
     (dolist (sample sample-files)
-      (read-sat-file (merge-pathnames data-path sample)))))
+      (let ((fname (merge-pathnames data-path sample)))
+        (read-sat-file fname)
+        (dimacs-to-vec fname)
+        (quine-mccluskey-reduce (dimacs-to-vec fname))))))
                          
     
     
