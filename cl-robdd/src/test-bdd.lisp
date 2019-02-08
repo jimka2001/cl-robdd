@@ -21,7 +21,7 @@
 
 
 (defpackage :cl-robdd-test
-  (:use :cl :cl-robdd :scrutiny :adjuvant
+  (:use :cl :cl-robdd :scrutiny :adjuvant :cl-fad
 	)
   )
   

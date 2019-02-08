@@ -66,9 +66,9 @@
   (assert-true (equal '((-1 3) (1 2))
                       (cmp-clauses '((1 2) (-1 3)))))
   (assert-true (equal '((-2 2) (2 1) (-1 3) (1 2) (1 3))
-                      (cmp-clauses '((1 2) (-2 2) (-1 3) (1 3) (2 1))))
+                      (cmp-clauses '((1 2) (-2 2) (-1 3) (1 3) (2 1)))))
   (assert-true (equal '((-1 3) (1 2))
-                      (cmp-clauses '((-1 3) (1 2)))))
+                      (cmp-clauses '((-1 3) (1 2))))))
   
 
 (define-test test/quine-mccluskey-reduce-2
@@ -229,13 +229,12 @@ p cnf 3 2
                                       (read-sat-file stream) :test (lambda (x y)
                                                                      (and (subsetp x y)
                                                                           (subsetp y x)))))))
-    (let ((conc-buf (list nil)))
-      (with-input-from-string (stream "c  simple_v3_c2.cnf
+  (with-input-from-string (stream "c  simple_v3_c2.cnf
 c
 p cnf 3 2
 1 -3 0 2 3 -1 0")
-        (assert-true (equal '((1 -3) (2 3 -1))
-                            (read-sat-file stream)))))
+    (assert-true (equal '((1 -3) (2 3 -1))
+                        (read-sat-file stream))))
 
   (let ((count 0))
     (with-input-from-string (stream "c  simple_v3_c2.cnf
