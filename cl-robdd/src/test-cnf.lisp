@@ -247,3 +247,28 @@ p cnf 3 2
                                        (incf count))))
     (assert-true (equal 2 count)))
   )
+
+(define-test test/read-sat-file-2
+  (let* ((cl-robdd-test-system (asdf:find-system :cl-robdd-test))
+         (cl-robdd-test-path (asdf:component-pathname cl-robdd-test-system))
+         (data-path (pathname-as-directory (merge-pathnames cl-robdd-test-path "data")))
+         (sample-files '("aim-100-1_6-no-1.cnf"
+                         "aim-50-1_6-yes1-4.cnf"
+                         "bf0432-007.cnf"
+                         "dtba-sat.cnf"
+                         "dubois20.cnf"
+                         "dubois21.cnf"
+                         "dubois22.cnf"
+                         "hole6.cnf"
+                         "par8-1-c.cnf"
+                         "quinn.cnf"
+                         "sat-33ZzxW.cnf"
+                         ;; "sat-dMt1DH.cnf" ; too big
+                         "simple_v3_c2.cnf"
+                         "zebra_v155_c1135.cnf")))
+    (dolist (sample sample-files)
+      (read-sat-file (merge-pathnames data-path sample)))))
+                         
+    
+    
+    
