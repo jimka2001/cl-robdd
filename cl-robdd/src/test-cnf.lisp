@@ -151,7 +151,7 @@
                       (2 4))))
     (bdd-with-new-hash (&aux (*bdd-cmp-function* #'bdd-std-numerical-cmp))
       (labels ((f (clauses)
-                 (unless (eql (numerical-cnf-to-bdd (quine-mccluskey-reduce clauses :form :raw))
+                 (unless (eql (numerical-cnf-to-bdd (quine-mccluskey-reduce clauses))
                               (numerical-cnf-to-bdd clauses))
                    (when (cdr clauses)
                      (dolist (clause clauses)
@@ -163,12 +163,12 @@
                  ;; (format t "qm-raw ~A~%" (quine-mccluskey-reduce 7 clauses :form :raw))
                  ;; (format t "qm-cnf ~A~%" (quine-mccluskey-reduce 7 clauses :form :cnf))
 
-                 (assert-true (eql (numerical-cnf-to-bdd (quine-mccluskey-reduce clauses :form :raw))
+                 (assert-true (eql (numerical-cnf-to-bdd (quine-mccluskey-reduce clauses))
                                    (numerical-cnf-to-bdd clauses)))
                  (assert-true (eql (numerical-dnf-to-bdd (quine-mccluskey-reduce clauses :form :raw))
                                    (numerical-dnf-to-bdd clauses)))
 
-                 (assert-true (eql (numerical-cnf-to-bdd (quine-mccluskey-reduce clauses :form :cnf))
+                 (assert-true (eql (numerical-cnf-to-bdd (quine-mccluskey-reduce clauses))
                                    (numerical-cnf-to-bdd clauses)))
 
                  (assert-true (eql (numerical-dnf-to-bdd (quine-mccluskey-reduce clauses :form :dnf))
