@@ -228,18 +228,6 @@
            (count-positive (clause)
              (count-if (lambda (var)
                          (plusp var)) clause))
-           (group-clauses ()
-             ;; vec is an array of hash tables
-             ;; the index of vec indicates the length of all the clauses contained in the hash table
-             ;; the hash table maps number-of-positive elements in clause -> list of clauses of same length
-             ;;    with that number of positive elements
-             (dolist (clause clauses)
-               (pushnew (sort-clause clause) (gethash (length clause)
-                                                      (aref vec (count-positive clause))) :test #'equal))
-             (loop :for pos-count :from num-vars :to 0
-                   :do (loop :for length :being :the :hash-keys :of (aref vec pos-count)
-                             :do (setf (gethash length (aref vec pos-count))
-                                       (sort (gethash length (aref vec pos-count)) #'cmp-clauses)))))
            (reduce-one-var (clause1 clause2)
              ;; given two compatible (according to qm-compatible?) clauses, return the list of
              ;;   equal elements, ie removing elements which agree in value but differ in absolute-value.
@@ -248,6 +236,22 @@
                        (if (= v1 v2)
                            (list v1)
                            nil)) clause1 clause2))
+           (add-clause (vec &key clause (pos-count (count-positive clause)) (length (length clause)))
+             (unless (member clause (gethash length (aref vec pos-count)) :test #'equal)
+               (setf (gethash length (aref vec pos-count))
+                     (merge 'list (list clause) (gethash length (aref vec pos-count)) #'cmp-clauses))))
+           (remove-clause (vec &key clause (pos-count (count-positive clause)) (length (length clause)))
+             (remfq clause (gethash length (aref vec pos-count))))
+           (get-clauses (vec &key pos-count length)
+             (declare (type (and fixnum unsigned-byte) pos-count length))
+             (gethash length (aref vec pos-count)))
+           (group-clauses ()
+             ;; vec is an array of hash tables
+             ;; the index of vec indicates the length of all the clauses contained in the hash table
+             ;; the hash table maps number-of-positive elements in clause -> list of clauses of same length
+             ;;    with that number of positive elements
+             (dolist (clause clauses)
+               (add-clause vec :clause (sort-clause clause))))
            (reduce-pass (top-pos-count)
              (let (add-plists remove-plists)
                (loop :for pos-count :from top-pos-count :downto 1
@@ -258,9 +262,9 @@
                                ;;    (gethash length (aref vec pos-count)) X (gethash length (aref vec (1- pos-count)))
                                ;; instead we group them into categories according to abs of first element of the list,
                                ;; then do quadratic on hopefully smaller lists.
-                               :do (dolist (clause-1 (gethash length (aref vec pos-count)))
+                               :do (dolist (clause-1 (get-clauses vec :pos-count pos-count :length length))
                                      (push clause-1 (gethash (abs (car clause-1)) hash1)))
-                               :do (dolist (clause-2 (gethash length (aref vec (1- pos-count))))
+                               :do (dolist (clause-2 (get-clauses vec :pos-count (1- pos-count) :length length))
                                      (push clause-2 (gethash (abs (car clause-2)) hash2)))
                                    
                                :do (loop :for abs :being :the :hash-keys :of (if (< (hash-table-count hash1)
@@ -285,11 +289,9 @@
                (cond
                  ((or remove-plists add-plists)
                   (destructuring-dolist ((&key pos-count length clause) remove-plists)
-                    (remfq clause (gethash length (aref vec pos-count))))
+                    (remove-clause vec :clause clause :length length :pos-count pos-count))
                   (destructuring-dolist ((&key pos-count length clause) add-plists)
-                    (unless (member clause (gethash length (aref vec pos-count)) :test #'equal)
-                      (setf (gethash length (aref vec pos-count))
-                            (merge 'list (list clause) (gethash length (aref vec pos-count)) #'cmp-clauses))))
+                    (add-clause vec :clause clause :pos-count pos-count :length length))
                   (reduce-pass (1- top-pos-count)))
                  (t
                   (loop :for length :from 0 :to num-vars
