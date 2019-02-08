@@ -191,3 +191,59 @@
   (assert-true (qm-compatible? '(1 -2) '(1 2)))
   (assert-true (qm-compatible? '(-1 2) '(1 2)))
   (assert-true (qm-compatible? '(1 2) '(1 -2))))
+
+(define-test test/read-sat-file
+  (dolist (string '(
+                    ;; example from https://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html
+                    "c  simple_v3_c2.cnf
+c
+p cnf 3 2
+1 -3 0
+2 3 -1 0"
+                    ;; missing final 0
+                    "c  simple_v3_c2.cnf
+c
+p cnf 3 2
+1 -3 0
+2 3 -1 "
+                    ;; space at the end of some lines
+                    "c  simple_v3_c2.cnf
+c
+p cnf 3 2
+1 -3 0   
+2 3 -1 "
+                    ;; missing final 0 and space
+                    "c  simple_v3_c2.cnf
+c
+p cnf 3 2
+1 -3 0
+2 3 -1"
+                    ;; missing newline between clauses
+                    "c  simple_v3_c2.cnf
+c
+p cnf 3 2
+1 -3 0 2 3 -1 0"
+                    ))
+    (with-input-from-string (stream string)
+      (assert-false (set-exclusive-or '((1 -3) (2 3 -1))
+                                      (read-sat-file stream) :test (lambda (x y)
+                                                                     (and (subsetp x y)
+                                                                          (subsetp y x)))))))
+    (let ((conc-buf (list nil)))
+      (with-input-from-string (stream "c  simple_v3_c2.cnf
+c
+p cnf 3 2
+1 -3 0 2 3 -1 0")
+        (assert-true (equal '((1 -3) (2 3 -1))
+                            (read-sat-file stream)))))
+
+  (let ((count 0))
+    (with-input-from-string (stream "c  simple_v3_c2.cnf
+c
+p cnf 3 2
+1 -3 0 2 3 -1 0")
+      (read-sat-file stream :consume (lambda (clause)
+                                       (declare (ignore clause))
+                                       (incf count))))
+    (assert-true (equal 2 count)))
+  )

@@ -313,9 +313,19 @@
       ((:raw)
        (reverse (reduce-pass num-vars))))))
 
-(defun read-sat-file (fname)
+(defun read-sat-file (file &key (consume (let ((conc-buf (list nil)))
+                                           (lambda (clause)
+                                             (tconc conc-buf (reverse clause))
+                                             (car conc-buf)))))
   "Read a DIMACS CNF file, as described by https://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html
  The CNF file format is an ASCII file format.
+
+ Each clause encountered in the DIMACS file is passed to a call to the given CONSUME
+ function.  The terms of the clause are in reverse order as listed explicitly in the file.
+ E.g., if the clause in the file is listed as '1 2 -3 0', then consume is called with 
+ (-3 2 1) as argument.  The default consume function reverses these back into
+ the order specified in the DIMACS file, and accumulates the list of clauses
+ in the same order as in the file. 
 
  The file may begin with comment lines. The first character of each
  comment line must be a lower case letter \"c\". Comment lines typically
