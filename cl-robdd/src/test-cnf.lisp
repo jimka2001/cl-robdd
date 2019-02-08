@@ -52,6 +52,25 @@
   (assert-true (= (* 10 9 8) (comb 10 7))))
   
 
+(define-test test/cmp-clauses
+  ;; TODO finish this test
+  (assert-true (equal nil
+                      (cmp-clauses nil)))
+  (assert-true (equal '((1))
+                      (cmp-clauses '((1)))))
+  (assert-true (equal '((-1) (1))
+                      (cmp-clauses '((1) (-1)))))
+  (assert-true (equal '((-1) (1))
+                      (cmp-clauses '((-1) (1)))))
+
+  (assert-true (equal '((-1 3) (1 2))
+                      (cmp-clauses '((1 2) (-1 3)))))
+  (assert-true (equal '((-2 2) (2 1) (-1 3) (1 2) (1 3))
+                      (cmp-clauses '((1 2) (-2 2) (-1 3) (1 3) (2 1))))
+  (assert-true (equal '((-1 3) (1 2))
+                      (cmp-clauses '((-1 3) (1 2)))))
+  
+
 (define-test test/quine-mccluskey-reduce-2
   (assert-true (equal '((1)) (quine-mccluskey-reduce 4 '((1 -2) (1 2 3) (1 2 -3))))))
 

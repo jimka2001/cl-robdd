@@ -146,6 +146,17 @@
                                                           diff
                                                           (1+ diff)))))))
 
+(defun cmp-clauses (clause1 clause2 &aux (c1 (car clause1)) (c2 (car clause2)))
+  (cond
+    ((null clause1)
+     (error "not expecting equal clauses"))                 
+    ((= c1 c2)
+     (cmp-clauses (cdr clause1) (cdr clause2)))
+    ((= (abs c1) (abs c2))
+     (< c1 c2))
+    (t
+     (< (abs c1) (abs c2)))))
+
 
 (defun quine-mccluskey-reduce (num-vars clauses &key (form :cnf)
                                &aux (vec (make-array (1+ num-vars)
@@ -217,7 +228,11 @@
              ;;    with that number of positive elements
              (dolist (clause clauses)
                (pushnew (sort-clause clause) (gethash (length clause)
-                                                      (aref vec (count-positive clause))) :test #'equal)))
+                                                      (aref vec (count-positive clause))) :test #'equal))
+             (loop :for pos-count :from num-vars :to 0
+                   :do (loop :for length :being :the :hash-keys :of (aref vec pos-count)
+                             :do (setf (gethash length (aref vec pos-count))
+                                       (sort (gethash length (aref vec pos-count)) #'cmp-clauses)))))
            (reduce-one-var (clause1 clause2)
              ;; given two compatible (according to qm-compatible?) clauses, return the list of
              ;;   equal elements, ie removing elements which agree in value but differ in absolute-value.
@@ -250,7 +265,9 @@
                   (destructuring-dolist ((&key pos-count length clause) remove-plists)
                     (remfq clause (gethash length (aref vec pos-count))))
                   (destructuring-dolist ((&key pos-count length clause) add-plists)
-                    (pushnew clause (gethash length (aref vec pos-count)) :test #'equal))
+                    (unless (member clause (gethash length (aref vec pos-count)) :test #'equal)
+                      (setf (gethash length (aref vec pos-count))
+                            (merge 'list (list clause) (gethash length (aref vec pos-count)) #'cmp-clauses))))
                   (reduce-pass (1- top-pos-count)))
                  (t
                   (loop :for length :from 0 :to num-vars
@@ -279,3 +296,4 @@
 ;;  LocalWords:  NONINFRINGEMENT etypecase disjunction bdd cond plusp
 ;;  LocalWords:  mapcar setf expt dolist pushnew aref eql gethash eq
 ;;  LocalWords:  removef plists pos qm nconc acc subsetp cdr nconc
+;;  LocalWords:  dotimes
