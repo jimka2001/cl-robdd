@@ -219,6 +219,7 @@
   "Given a list of CLAUSES which represent a CNF form,  apply phase-1 of the
  Quine McCluskey method to reduce terms such as (a+b)(a+b')->a
  In addition, (a+b)(a+b+c)->(a+b) is also done."
+  (declare (optimize (speed 3) (debug 0) (compilation-speed 0)))
   ;; the QM method is implemented as follows
   ;; clauses is a list such as ((1 2 3) (-1 2 3) (2 4) (1 -2 4 5) (1 -2 -4 5) (-1 2 3 4 5) (1 2 3 4 5))
   ;;    which has the meaning  (and (or x1 x2 x3)       ; (1 2 3)
@@ -272,11 +273,13 @@
              ;;   equal elements, ie removing elements which agree in value but differ in absolute-value.
              ;;   only one such element should be removed.
              (mapcan (lambda (v1 v2)
+                       (declare (type fixnum v1 v2))
                        (if (= v1 v2)
                            (list v1)
                            nil)) clause1 clause2))
 
            (abs-car (clause)
+             (declare (type (cons fixnum) clause))
              (abs (car clause)))
            (reduce-1 (pos-count)
              (let* ((pos-count-1 (1- pos-count))
@@ -292,7 +295,9 @@
                                     (mapping-2 (sort (group-by clauses-b :key #'abs-car) #'< :key #'car)))
                                 (while (and mapping-1 mapping-2)
                                   (destructuring-bind (el-1 clauses-a) (car mapping-1)
+                                    (declare (type fixnum el-1))
                                     (destructuring-bind (el-2 clauses-b) (car mapping-2)
+                                      (declare (type fixnum el-2))
                                       (cond
                                         ((eql el-1 el-2)
                                          (dolist (clause-a clauses-a)
@@ -342,10 +347,11 @@
                  ;;   and make that the new max-pos-count
                  (setf max-pos-count
                        (loop :for pos-count :being :the :hash-keys :of (pos-count-hash vec)
-                       :when (< pos-count max-pos-count)
-                         :maximize pos-count)))))
+                             :when (< pos-count max-pos-count)
+                               :maximize pos-count)))))
            
            (remove-supers (clauses acc)
+             (declare (optimize (speed 3) (debug 0)))
              (cond
                ((null clauses)
                 acc)
