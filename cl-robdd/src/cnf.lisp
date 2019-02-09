@@ -132,7 +132,9 @@
   ;; Returns Boolean indicating whether all the corresponding items are equal in absolute value,
   ;; but the lists differ by exactly one value,
   ;; We have already verified (assured that) clause1 and clause2 have the same length
-  
+  (declare (type (and fixnum unsigned-byte) diff)
+           (type (or null (cons fixnum)) clause1 clause2)
+           (optimize (speed 3) (debug 0) (compilation-speed 0)))
   (cond
     ((> diff 1) ; stop if diff ever exceeds 1
      nil)
@@ -173,15 +175,21 @@
   (count-if (lambda (var)
               (plusp var)) clause))
 
-(defgeneric add-clause (vec clause &key pos-count length))
-(defmethod add-clause ((vec qm-vec) clause &key (pos-count (count-positive clause)) (length (length clause)))
+(defgeneric add-clause (vec clause &key pos-count length test-unique))
+(defmethod add-clause ((vec qm-vec) clause &key (test-unique t) (pos-count (count-positive clause)) (length (length clause)))
   (let* ((pos-count-hash (pos-count-hash vec)) ; the hash indexed by pos-count
          (length-hash (or (gethash pos-count pos-count-hash)
                           (setf (gethash pos-count pos-count-hash)
                                 (make-hash-table :test #'eql))))) ; the hash indexed by length
-    (unless (member clause (gethash length length-hash) :test #'equal)
-      (setf (gethash length length-hash)
-            (merge 'list (list clause) (gethash length length-hash) #'cmp-clauses)))))
+    (cond
+      ((null test-unique)
+       (setf (gethash length length-hash)
+             (merge 'list (list clause) (gethash length length-hash) #'cmp-clauses)))
+      ((member clause (gethash length length-hash) :test #'equal)
+       nil)
+      (t
+       (setf (gethash length length-hash)
+             (merge 'list (list clause) (gethash length length-hash) #'cmp-clauses))))))
 
 (defgeneric remove-clause (vec clause &key pos-count length))
 (defmethod remove-clause ((vec qm-vec) clause &key (pos-count (count-positive clause)) (length (length clause)))
@@ -378,7 +386,7 @@
   (let ((vec (make-instance 'qm-vec)))
     (read-sat-file file
                    :consume (lambda (clause)
-                              (add-clause vec clause)))
+                              (add-clause vec clause :test-unique nil)))
     vec))
 
 (defun read-sat-file (file &key (consume (let ((conc-buf (list nil)))
