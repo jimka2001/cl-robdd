@@ -286,9 +286,6 @@
                            (list v1)
                            nil)) clause1 clause2))
 
-           (abs-car (clause)
-             (declare (type (cons fixnum) clause))
-             (abs (car clause)))
            (reduce-1 (pos-count)
              (let* ((pos-count-1 (1- pos-count))
                     (length-hash-a (gethash pos-count (pos-count-hash vec)))
@@ -297,40 +294,41 @@
                     remove-plists)
                (when (and length-hash-a
                           length-hash-b)
+                 (format t "pos-count ~A~%" pos-count)
                  (maphash (lambda (length clauses-a &aux (clauses-b (gethash length length-hash-b)))
-                            (when clauses-b
-                              (let ((mapping-1 (sort (group-by clauses-a :key #'abs-car) #'< :key #'car))
-                                    (mapping-2 (sort (group-by clauses-b :key #'abs-car) #'< :key #'car)))
-                                (while (and mapping-1 mapping-2)
-                                  (destructuring-bind (el-1 clauses-a) (car mapping-1)
-                                    (declare (type fixnum el-1))
-                                    (destructuring-bind (el-2 clauses-b) (car mapping-2)
-                                      (declare (type fixnum el-2))
-                                      (cond
-                                        ((eql el-1 el-2)
-                                         (dolist (clause-a clauses-a)
-                                           (dolist (clause-b clauses-b)
-                                             (when (qm-compatible? clause-a clause-b)
-                                               (pushnew (list :pos-count pos-count
-                                                              :length length
-                                                              :clause clause-a) remove-plists
-                                                              :test #'equal)
-                                               (pushnew (list :pos-count (1- pos-count)
-                                                              :length length
-                                                              :clause clause-b) remove-plists
-                                                              :test #'equal)
-                                               (pushnew (list :pos-count (1- pos-count)
-                                                              :length (1- length)
-                                                              :clause (reduce-one-var clause-a clause-b)) add-plists
-                                                              :test #'equal))))
-                                         (pop mapping-1)
-                                         (pop mapping-2))
-                                        ((< el-1 el-2)
-                                         (pop mapping-1))
-                                        (t
-                                         (pop mapping-2)))
-
-                                      ))))))
+                            (format t "    length ~A~%" length)
+                            (while (and clauses-a
+                                        clauses-b)
+                              ;;(format t "        clause length ~A~%" (+ (length clauses-a) (length clauses-b)))
+                              (let ((clause-a (car clauses-a))
+                                    (clause-b (car clauses-b)))
+                                (cond
+                                  ((qm-compatible? clause-a clause-b)
+                                   (pushnew (list :pos-count pos-count
+                                                  :length length
+                                                  :clause clause-a) remove-plists
+                                                  :test #'equal)
+                                   (pushnew (list :pos-count (1- pos-count)
+                                                  :length length
+                                                  :clause clause-b) remove-plists
+                                                  :test #'equal)
+                                   (add-clause vec (reduce-one-var clause-a clause-b)
+                                               :length (1- length)
+                                               :pos-count (1- pos-count))
+                                   ;; (pushnew (list :pos-count (1- pos-count)
+                                   ;;                :length (1- length)
+                                   ;;                :clause (reduce-one-var clause-a clause-b)) add-plists
+                                   ;;                :test #'equal)
+                                   
+                                   ;;(format t "            adding ~A~%" (length add-plists))
+                                   (pop clauses-a)
+                                   (pop clauses-b))
+                                  ((clause-< clause-a clause-b)
+                                   (pop clauses-a))
+                                  (t
+                                   (pop clauses-b))))
+                              
+                              ))
                           length-hash-a)
                  (destructuring-dolist ((&key pos-count length clause) remove-plists)
                    (remove-clause vec clause :length length :pos-count pos-count))
