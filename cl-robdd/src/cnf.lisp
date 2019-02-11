@@ -175,8 +175,19 @@
   (count-if (lambda (var)
               (plusp var)) clause))
 
-(defgeneric add-clause (vec clause &key pos-count length test-unique))
-(defmethod add-clause ((vec qm-vec) clause &key (test-unique t) (pos-count (count-positive clause)) (length (length clause)))
+(defun sort-unique (data predicate-< predicate-=)
+  (let ((sorted (sort data predicate-<)))
+    (labels ((unique-sorted (data acc)
+               (cond
+                 ((null data)
+                  (nreverse acc))
+                 ((null (cdr data))
+                  (unique-sorted nil (cons (car data) acc)))
+                 ((funcall predicate-= (car data) (cadr data))
+                  (unique-sorted (cdr data) acc))
+                 (t
+                  (unique-sorted (cdr data) (cons (car data) acc))))))
+      (unique-sorted sorted nil))))
   (let* ((pos-count-hash (pos-count-hash vec)) ; the hash indexed by pos-count
          (length-hash (or (gethash pos-count pos-count-hash)
                           (setf (gethash pos-count pos-count-hash)

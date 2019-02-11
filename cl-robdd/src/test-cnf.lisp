@@ -270,6 +270,11 @@ p cnf 3 2
         (dimacs-to-vec fname)
         (quine-mccluskey-reduce (dimacs-to-vec fname))))))
                          
-    
-    
-    
+(define-test test/sort-unique
+  (assert-true (equal '(1 2 3 4 5)
+                      (sort-unique '(1 2 3 4 5) #'< #'=)))
+  (assert-true (equal '(1 2 3 4 5)
+                      (sort-unique '(1 2 3 3 4 3 5) #'< #'=)))
+  (assert-true (equal '(1 2 3 4 5)
+                      (sort-unique '(1 2 1 3 1 4 1 2 3 3 4 3 5) #'< #'=))))
+  
