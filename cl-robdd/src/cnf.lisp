@@ -128,6 +128,13 @@
     (values (float (/ num-sat num-samples))
             num-sat num-samples)))
 
+
+(defun equal-abs-list (clause-1 clause-2)
+  "assuming two lists have the same length, are corresponding elements equal in absolute value?"
+  (every (lambda (x y)
+           (eql (abs x) (abs y)))
+         clause-1 clause-2))
+
 (defun qm-compatible? (clause1 clause2 &optional (diff 0))
   ;; Returns Boolean indicating whether all the corresponding items are equal in absolute value,
   ;; but the lists differ by exactly one value,
@@ -148,12 +155,14 @@
                                                           diff
                                                           (1+ diff)))))))
 
-(defun cmp-clauses (clause1 clause2 &aux (c1 (car clause1)) (c2 (car clause2)))
+(defun clause-< (clause1 clause2 &aux (c1 (car clause1)) (c2 (car clause2)))
+  (declare (optimize (speed 3) (debug 0) (compilation-speed 0))
+           (type (or null fixnum) c1 c2))
   (cond
     ((null clause1)
-     (error "not expecting equal clauses"))                 
+     nil)
     ((= c1 c2)
-     (cmp-clauses (cdr clause1) (cdr clause2)))
+     (clause-< (cdr clause1) (cdr clause2)))
     ((= (abs c1) (abs c2))
      (< c1 c2))
     (t
@@ -175,36 +184,49 @@
   (count-if (lambda (var)
               (plusp var)) clause))
 
-(defun sort-unique (data predicate-< predicate-=)
-  (let ((sorted (sort data predicate-<)))
-    (labels ((unique-sorted (data acc)
-               (cond
-                 ((null data)
-                  (nreverse acc))
-                 ((null (cdr data))
-                  (unique-sorted nil (cons (car data) acc)))
-                 ((funcall predicate-= (car data) (cadr data))
-                  (unique-sorted (cdr data) acc))
-                 (t
-                  (unique-sorted (cdr data) (cons (car data) acc))))))
-      (unique-sorted sorted nil))))
+(defgeneric add-clause (vec clause &key pos-count length test-unique sort))
+(defmethod add-clause ((vec qm-vec) clause &key (sort t) (test-unique t) (pos-count (count-positive clause)) (length (length clause)))
+  (declare (type (and unsigned-byte fixnum) pos-count length))
   (let* ((pos-count-hash (pos-count-hash vec)) ; the hash indexed by pos-count
          (length-hash (or (gethash pos-count pos-count-hash)
                           (setf (gethash pos-count pos-count-hash)
                                 (make-hash-table :test #'eql))))) ; the hash indexed by length
     (cond
-      ((null test-unique)
+      ((and (null test-unique)
+            (null sort))
+       (push clause (gethash length length-hash)))
+      ((and test-unique
+            (not (member clause (gethash length length-hash) :test #'equal)))
        (setf (gethash length length-hash)
-             (merge 'list (list clause) (gethash length length-hash) #'cmp-clauses)))
-      ((member clause (gethash length length-hash) :test #'equal)
-       nil)
+             (merge 'list (list clause) (gethash length length-hash) #'clause-<)))
+      (sort
+       (setf (gethash length length-hash)
+             (merge 'list (list clause) (gethash length length-hash) #'clause-<)))
       (t
-       (setf (gethash length length-hash)
-             (merge 'list (list clause) (gethash length length-hash) #'cmp-clauses))))))
+       (push clause (gethash length length-hash))))))
+
+(defgeneric sort-vec (vec))
+(defmethod sort-vec ((vec qm-vec))
+  (declare (optimize (speed 3) (debug 0) (compilation-speed 0)))
+  (loop :for length-hash :being :the :hash-values :of (pos-count-hash vec)
+        :do (loop :for length :being :the :hash-keys :of length-hash
+                  :do (setf (gethash length length-hash)
+                            (sort (gethash length length-hash) #'clause-<))
+                  :do (labels ((remove-duplicates-sorted (sorted acc)
+                                 (cond
+                                   ((null sorted)
+                                    (nreverse acc))
+                                   ((equal (car sorted) (cadr sorted))
+                                    (remove-duplicates-sorted (cdr sorted) acc))
+                                   (t
+                                    (remove-duplicates-sorted (cdr sorted) (cons (car sorted) acc))))))
+                        (setf (gethash length length-hash)
+                              (remove-duplicates-sorted (gethash length length-hash) nil))))))
 
 (defgeneric remove-clause (vec clause &key pos-count length))
-(defmethod remove-clause ((vec qm-vec) clause &key (pos-count (count-positive clause)) (length (length clause)))
-  (remfq clause (gethash length (gethash pos-count (pos-count-hash vec)))))
+(defmethod remove-clause ((vec qm-vec) clause &key (pos-count (count-positive clause)) (length (length clause)) &aux (hash (gethash pos-count (pos-count-hash vec))))
+  (setf (gethash length hash)
+        (delete clause (gethash length hash) :test #'eq :count 1)))
 
 (defgeneric get-clauses (vec &key pos-count length))
 (defmethod get-clauses ((vec qm-vec) &key pos-count length)
@@ -238,6 +260,16 @@
   "Given a list of CLAUSES which represent a CNF form,  apply phase-1 of the
  Quine McCluskey method to reduce terms such as (a+b)(a+b')->a
  In addition, (a+b)(a+b+c)->(a+b) is also done."
+
+
+    ;; (maphash (lambda (pos-count length-hash)
+    ;;            (check-type pos-count fixnum)
+    ;;            (check-type length-hash hash-table)
+    ;;            (maphash (lambda (length clauses)
+    ;;                       (check-type length fixnum)
+    ;;                       (check-type clauses list)) length-hash))
+    ;;          (pos-count-hash vec))
+
   (declare (optimize (speed 3) (debug 0) (compilation-speed 0)))
   ;; the QM method is implemented as follows
   ;; clauses is a list such as ((1 2 3) (-1 2 3) (2 4) (1 -2 4 5) (1 -2 -4 5) (-1 2 3 4 5) (1 2 3 4 5))
@@ -295,70 +327,89 @@
                        (declare (type fixnum v1 v2))
                        (if (= v1 v2)
                            (list v1)
-                           nil)) clause1 clause2))
+                           nil))
+                     clause1 clause2))
 
-           (reduce-1 (pos-count)
+           (reduce-1 (pos-count add-plist remove-plist)
              (let* ((pos-count-1 (1- pos-count))
                     (length-hash-a (gethash pos-count (pos-count-hash vec)))
-                    (length-hash-b (gethash pos-count-1 (pos-count-hash vec)))
-                    add-plists
-                    remove-plists)
+                    (length-hash-b (gethash pos-count-1 (pos-count-hash vec))))
                (when (and length-hash-a
                           length-hash-b)
-                 (format t "pos-count ~A~%" pos-count)
-                 (maphash (lambda (length clauses-a &aux (clauses-b (gethash length length-hash-b)))
-                            (format t "    length ~A~%" length)
+                 ;; (format t "reduce-1 pos-count ~A~%" pos-count)
+                 (maphash (lambda (length clauses-a
+                                   &aux
+                                     (clauses-b (gethash length length-hash-b)))
+                            ;; e.g., clauses-a and clauses-b are lists of different lengths
+                            ;;  each element of clause-a and clause-b is a list of length L (e.g., L=5)
+                            ;;  every element of clause-a has P positive elements
+                            ;;  every element of clause-b has P-1 positive elements
+                            ;; (format t "    length ~A~%" length)
                             (while (and clauses-a
                                         clauses-b)
-                              ;;(format t "        clause length ~A~%" (+ (length clauses-a) (length clauses-b)))
+                              ;; (when (= 0 (mod (length clauses-a) 5000))
+                              ;;(format t " length clauses-a=~D~%" (length clauses-a)))
+                              ;;(when (= 0 (mod (length clauses-b) 5000))
+                              ;; (format t " length clauses-b=~D~%" (length clauses-b)))
+                              ;;(format t "        ~D clauses of length=~D pos-count=~A~%" (length clauses-a) length pos-count)
+                              ;;(format t "  ~A~%" clauses-a)
+                              ;;(format t "        ~D clauses of length=~D pos-count=~A~%" (length clauses-b) length pos-count-1)
+                              ;;(format t "  ~A~%" clauses-b)
                               (let ((clause-a (car clauses-a))
                                     (clause-b (car clauses-b)))
                                 (cond
-                                  ((qm-compatible? clause-a clause-b)
-                                   (pushnew (list :pos-count pos-count
-                                                  :length length
-                                                  :clause clause-a) remove-plists
-                                                  :test #'equal)
-                                   (pushnew (list :pos-count (1- pos-count)
-                                                  :length length
-                                                  :clause clause-b) remove-plists
-                                                  :test #'equal)
-                                   (add-clause vec (reduce-one-var clause-a clause-b)
-                                               :length (1- length)
-                                               :pos-count (1- pos-count))
-                                   ;; (pushnew (list :pos-count (1- pos-count)
-                                   ;;                :length (1- length)
-                                   ;;                :clause (reduce-one-var clause-a clause-b)) add-plists
-                                   ;;                :test #'equal)
-                                   
-                                   ;;(format t "            adding ~A~%" (length add-plists))
-                                   (pop clauses-a)
-                                   (pop clauses-b))
+                                  ((equal-abs-list clause-a clause-b)
+                                   ;;(format t "  abs-equal-clauses ~A ~A~%" clause-a clause-b)
+                                   (let ((clauses-aa (list (pop clauses-a)))
+                                         (clauses-bb (list (pop clauses-b))))
+                                     (while (and clauses-a
+                                                 (equal-abs-list clause-a (car clauses-a)))
+                                       ;;(format t "  abs-equal-clauses ~A ~A~%" clause-a (car clauses-a))
+                                       (push (pop clauses-a) clauses-aa))
+                                     (while (and clauses-b
+                                                 (equal-abs-list clause-b (car clauses-b)))
+                                       ;;(format t "  abs-equal-clauses ~A ~A~%" clause-b (car clauses-b))
+                                       (push (pop clauses-b) clauses-bb))
+                                     ;; now a quadratic search, but maximally length^2 times
+                                     (dolist (aa clauses-aa)
+                                       (dolist (bb clauses-bb)
+                                         (when (qm-compatible? aa bb)
+                                           (funcall remove-plist aa :length length :pos-count pos-count)
+                                           (funcall remove-plist bb :length length :pos-count pos-count-1)
+                                           (funcall add-plist (reduce-one-var aa bb)
+                                                    :sort nil :test-unique nil :length (1- length) :pos-count pos-count-1))))))
                                   ((clause-< clause-a clause-b)
                                    (pop clauses-a))
                                   (t
-                                   (pop clauses-b))))
-                              
-                              ))
-                          length-hash-a)
-                 (destructuring-dolist ((&key pos-count length clause) remove-plists)
-                   (remove-clause vec clause :length length :pos-count pos-count))
-                 (destructuring-dolist ((&key pos-count length clause) add-plists)
-                   (add-clause vec clause :pos-count pos-count :length length))
-                 ;; return true if something changed
-                 (and (or remove-plists add-plists) t))))
-
+                                   (pop clauses-b))))))
+                          length-hash-a))))
            
            (reduce-pass ()
              (let ((changed t)
+                   remove-plists
+                   add-plists
                    (max-pos-count (loop :for pos-count :being :the :hash-keys :of (pos-count-hash vec)
                                         :maximize pos-count)))
+               ;;(format t "reduce-pass max-pos-count=~A~%" max-pos-count)
                (while changed
                  (setf changed nil)
                  (loop :for pos-count :being :the :hash-keys :of (pos-count-hash vec)
                        :when (<= pos-count max-pos-count)
                          ;; call reduce-1 on all pos-count entries, but remember whether something changed
-                         :do (setf changed (or (reduce-1 pos-count) changed)))
+                         :do (reduce-1 pos-count
+                                       (lambda (&rest plist)
+                                         (push plist add-plists))
+                                       (lambda (&rest plist)
+                                         (push plist remove-plists))))
+                 (setf changed add-plists)
+                 ;;(format t "removing ~D~%" (length remove-plists))
+                 (dolist (plist remove-plists)
+                   (apply #'remove-clause vec plist))
+                 ;;(format t "adding ~D~%" (length add-plists))
+                 (dolist (plist add-plists)
+                   (apply #'add-clause vec plist))
+                 (setf remove-plists nil
+                       add-plists nil)
                  ;; There might be new indices, but nothing larger than max-pos-count.
                  ;; We wish to find the maximum pos-count which is strictly < max-pos-count
                  ;;   and make that the new max-pos-count
@@ -367,35 +418,79 @@
                              :when (< pos-count max-pos-count)
                                :maximize pos-count)))))
            
-           (remove-supers (clauses acc)
-             (declare (optimize (speed 3) (debug 0)))
-             (cond
-               ((null clauses)
-                acc)
-               (t
-                (remove-supers (cdr clauses)
-                               (if (exists c2 (cdr clauses)
-                                     (subsetp c2 (car clauses)))
-                                   acc
-                                   (cons (car clauses) acc)))))))
+           (remove-supers ()
+             (destructuring-dolist ((&key pos-count length clause)
+                                    (loop
+                                      :for pos-count-1 fixnum :being :the :hash-keys :of (pos-count-hash vec)
+                                      :for length-1-hash = (gethash pos-count-1 (pos-count-hash vec))
+                                      :nconc
+                                      (loop
+                                        :for pos-count-2 fixnum :being :the :hash-keys :of (pos-count-hash vec)
+                                        :for length-2-hash = (gethash pos-count-2 (pos-count-hash vec))
+                                        :when (<= pos-count-1 pos-count-2)
+                                          ;; don't search for subsets A < B if pos-count(A) > pos-count(B)
+                                          :nconc
+                                          (loop
+                                            :for length-1 fixnum :being :the :hash-keys :of length-1-hash
+                                            :nconc
+                                            (loop
+                                              :for length-2 fixnum :being :the :hash-keys :of length-2-hash
+                                              :when (< length-1 length-2) ; strictly less
+                                                ;; :do (format t "length: ~A < ~A  pos-count ~A <=~A ~%" length-1 length-2 pos-count-1 pos-count-2)
+                                                :nconc
+                                                (loop
+                                                  :for clause-2 :in (gethash length-2 length-2-hash)
+                                                  :when (exists clause-1 (gethash length-1 length-1-hash)
+                                                          (subsetp clause-1 clause-2))
+                                                    :collect (list :pos-count pos-count-2
+                                                                   :length length-2
+                                                                   :clause clause-2)))))))
+               (remove-clause vec clause :pos-count  pos-count :length length))))
+
+    ;; (format t "reducing~%")
     (reduce-pass)
-    
+
+    (case (form vec)
+      ((:cnf :dnf)
+       ;;(format t "removing supers~%")
+       (remove-supers))
+      ((:raw)
+       nil))
+
+    ;;(format t "sorting~%")
     (let (clauses)
       (sort (map-clauses (lambda (clause &key &allow-other-keys)
+                           ;;(format t "clause=~A~%" clause)
                            (push clause clauses))
-                   vec) #'< :key #'length)
-      (case (form vec)
-        ((:cnf :dnf)
-         (remove-supers (reverse clauses)
-                        nil))
-        ((:raw)
-         clauses)))))
+                         vec)
+            #'< :key #'length)
+      clauses
+      )))
 
 (defun dimacs-to-vec (file)
   (let ((vec (make-instance 'qm-vec)))
+    ;; (format t "reading ~A~%" file)
     (read-sat-file file
                    :consume (lambda (clause)
-                              (add-clause vec clause :test-unique nil)))
+                              (add-clause vec clause :test-unique nil :sort nil)))
+    ;;(format t "sorting~%")
+
+    ;; (maphash (lambda (pos-count length-hash)
+    ;;            (check-type pos-count fixnum)
+    ;;            (check-type length-hash hash-table)
+    ;;            (maphash (lambda (length clauses)
+    ;;                       (check-type length fixnum)
+    ;;                       (check-type clauses list)) length-hash))
+    ;;          (pos-count-hash vec))
+    (sort-vec vec)
+
+    ;; (maphash (lambda (pos-count length-hash)
+    ;;            (check-type pos-count fixnum)
+    ;;            (check-type length-hash hash-table)
+    ;;            (maphash (lambda (length clauses)
+    ;;                       (check-type length fixnum)
+    ;;                       (check-type clauses list)) length-hash))
+    ;;          (pos-count-hash vec))
     vec))
 
 (defun read-sat-file (file &key (consume (let ((conc-buf (list nil)))

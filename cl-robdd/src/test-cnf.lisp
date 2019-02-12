@@ -55,19 +55,19 @@
 (define-test test/cmp-clauses
   ;; TODO finish this test
   (assert-true (equal nil
-                      (sort nil #'cmp-clauses)))
+                      (sort nil #'clause-<)))
   (assert-true (equal '((1))
-                      (sort (copy-list '((1))) #'cmp-clauses)))
+                      (sort (copy-list '((1))) #'clause-<)))
   (assert-true (equal '((-1) (1))
-                      (sort (copy-list '((1) (-1))) #'cmp-clauses)))
+                      (sort (copy-list '((1) (-1))) #'clause-<)))
   (assert-true (equal '((-1) (1))
-                      (sort (copy-list '((-1) (1))) #'cmp-clauses)))
+                      (sort (copy-list '((-1) (1))) #'clause-<)))
   (assert-true (equal '((-1 3) (1 2))
-                      (sort (copy-list '((1 2) (-1 3))) #'cmp-clauses)))
+                      (sort (copy-list '((1 2) (-1 3))) #'clause-<)))
   (assert-true (equal '((-1 3) (1 2) (1 3) (-2 2) (2 1) )
-                      (sort (copy-list '((1 2) (-2 2) (-1 3) (1 3) (2 1))) #'cmp-clauses)))
+                      (sort (copy-list '((1 2) (-2 2) (-1 3) (1 3) (2 1))) #'clause-<)))
   (assert-true (equal '((-1 3) (1 2))
-                      (sort (copy-list '((-1 3) (1 2))) #'cmp-clauses))))
+                      (sort (copy-list '((-1 3) (1 2))) #'clause-<))))
   
 
 (define-test test/quine-mccluskey-reduce-2
@@ -270,11 +270,4 @@ p cnf 3 2
         (dimacs-to-vec fname)
         (quine-mccluskey-reduce (dimacs-to-vec fname))))))
                          
-(define-test test/sort-unique
-  (assert-true (equal '(1 2 3 4 5)
-                      (sort-unique '(1 2 3 4 5) #'< #'=)))
-  (assert-true (equal '(1 2 3 4 5)
-                      (sort-unique '(1 2 3 3 4 3 5) #'< #'=)))
-  (assert-true (equal '(1 2 3 4 5)
-                      (sort-unique '(1 2 1 3 1 4 1 2 3 3 4 3 5) #'< #'=))))
   
