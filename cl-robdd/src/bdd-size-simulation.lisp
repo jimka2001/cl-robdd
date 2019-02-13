@@ -1377,8 +1377,7 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
           collect (destructuring-bind (&key bdd expr node-count &allow-other-keys) data
                     (list :node-count node-count
                           :num-vars num-vars
-                          :path (bdd-to-png bdd :reduced t
-                                                :basename (format nil "~A/vars=~D-~D-~D"
+                          :path (bdd-to-png bdd :basename (format nil "~A/vars=~D-~D-~D"
                                                                   prefix num-vars node-count (incf uniq)))
                           :expr expr)))
           #'< :key (getter :node-count))))

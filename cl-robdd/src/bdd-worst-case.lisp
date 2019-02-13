@@ -80,9 +80,8 @@
 
 
 
-(defun bdd-view (bdd &key (reduced t) (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd))))
-  (run-program "open" (list (bdd-to-png bdd :reduced reduced
-                                            :basename basename))))
+(defun bdd-view (bdd &key (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd))))
+  (run-program "open" (list (bdd-to-png bdd :basename basename))))
 
 (defun bdd-make-worst-case (vars &key (basename (format nil (ensure-directories-exist (make-temp-dir (format nil "bdd-worst-~D" (length vars)))))))
   (declare (ignore basename))
