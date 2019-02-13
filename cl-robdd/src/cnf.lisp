@@ -470,7 +470,7 @@
 (defun dimacs-to-vec (file)
   (let ((vec (make-instance 'qm-vec)))
     ;; (format t "reading ~A~%" file)
-    (read-sat-file file
+    (read-dimacs-file file
                    :consume (lambda (clause)
                               (add-clause vec clause :test-unique nil :sort nil)))
     ;;(format t "sorting~%")
@@ -493,7 +493,7 @@
     ;;          (pos-count-hash vec))
     vec))
 
-(defun read-sat-file (file &key (consume (let ((conc-buf (list nil)))
+(defun read-dimacs-file (file &key (consume (let ((conc-buf (list nil)))
                                            (lambda (clause)
                                              (tconc conc-buf (reverse clause))
                                              (car conc-buf)))))
@@ -547,7 +547,7 @@
     ((or pathname string)                             ; file name
      (with-open-file (stream file :direction :input :if-does-not-exist :error
                                   :external-format :utf-8)
-       (read-sat-file stream :consume consume)))
+       (read-dimacs-file stream :consume consume)))
     (stream
      (let ((EOF (list nil))
            final-value)

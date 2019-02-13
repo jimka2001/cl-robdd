@@ -201,7 +201,7 @@
   (assert-true (qm-compatible? '(-1 2) '(1 2)))
   (assert-true (qm-compatible? '(1 2) '(1 -2))))
 
-(define-test test/read-sat-file
+(define-test test/read-dimacs-file
   (dolist (string '(
                     ;; example from https://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html
                     "c  simple_v3_c2.cnf
@@ -235,7 +235,7 @@ p cnf 3 2
                     ))
     (with-input-from-string (stream string)
       (assert-false (set-exclusive-or '((1 -3) (2 3 -1))
-                                      (read-sat-file stream) :test (lambda (x y)
+                                      (read-dimacs-file stream) :test (lambda (x y)
                                                                      (and (subsetp x y)
                                                                           (subsetp y x)))))))
   (with-input-from-string (stream "c  simple_v3_c2.cnf
@@ -243,20 +243,20 @@ c
 p cnf 3 2
 1 -3 0 2 3 -1 0")
     (assert-true (equal '((1 -3) (2 3 -1))
-                        (read-sat-file stream))))
+                        (read-dimacs-file stream))))
 
   (let ((count 0))
     (with-input-from-string (stream "c  simple_v3_c2.cnf
 c
 p cnf 3 2
 1 -3 0 2 3 -1 0")
-      (read-sat-file stream :consume (lambda (clause)
+      (read-dimacs-file stream :consume (lambda (clause)
                                        (declare (ignore clause))
                                        (incf count))))
     (assert-true (equal 2 count)))
   )
 
-(define-test test/read-sat-file-2
+(define-test test/read-dimacs-file-2
   (let* ((cl-robdd-test-system (asdf:find-system :cl-robdd-test))
          (cl-robdd-test-path (asdf:component-pathname cl-robdd-test-system))
          (data-path (pathname-as-directory (merge-pathnames cl-robdd-test-path "data")))
@@ -276,7 +276,7 @@ p cnf 3 2
                          "zebra_v155_c1135.cnf")))
     (dolist (sample sample-files)
       (let ((fname (merge-pathnames data-path sample)))
-        (read-sat-file fname)
+        (read-dimacs-file fname)
         (dimacs-to-vec fname)
         (quine-mccluskey-reduce (dimacs-to-vec fname))))))
                          
