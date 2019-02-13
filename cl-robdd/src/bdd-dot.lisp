@@ -21,12 +21,14 @@
 
 (in-package   :cl-robdd)
 
-(defun bdd-to-dot (bdd stream &key (reduced t))
+(defun bdd-to-dot (bdd stream &key (reduced t) (pen-width 2) (draw-false-leaf t))
   "Create a graphviz dot file representing the given BDD.
 STREAM may be given as t (for *standard-output*),
 or a stream to print to, 
 or nil (to print to output string)
-or STRING indicating name of file to write to."
+or STRING indicating name of file to write to.
+:DRAW-FALSE-LEAVE nil may be used to simplify the display of the bdd, by omitting all
+paths to the false leaf."
   (typecase stream
     (null
      (with-output-to-string (str)
@@ -38,19 +40,32 @@ or STRING indicating name of file to write to."
      ;; header
      (format stream "digraph G {~%")
      
-     (labels ((dot-node (bdd node-num)
-                (format stream "~D [shape=~A,label=~S~A]~%"
-                        node-num
-                        (bdd-shape bdd)
-			(format nil "~A" (or (bdd-label bdd)
-					     "&perp;"))
-                        (typecase bdd
-			  (bdd-true ",fontname=\"sans-serif\"")
-			  (t ""))))
-              (bdd-shape (bdd)
+     (labels ((draw-node-p (bdd)
                 (typecase bdd
-                  (bdd-node "ellipse")
-                  (bdd-leaf "box"))))
+                  ((or bdd-node bdd-true)
+                   t)
+                  (bdd-false
+                   draw-false-leaf)))
+              (dot-node (bdd node-num)
+                (typecase bdd
+                  (bdd-node
+                   (format stream "~D [shape=~A,label=~S]~%"
+                           node-num
+                           "ellipse"
+			   (bdd-label bdd)))
+                  (bdd-true
+                   (format stream "~D [shape=~A,label=~S,fontname=~S]~%"
+                           node-num
+                           "box"
+			   (bdd-label bdd)
+                           "sans-serif"))
+                  (bdd-false
+                   (when draw-false-leaf
+                     (format stream "~D [shape=~A,label=~S]~%"
+                             node-num
+                             "box"
+			     "&perp;"
+                             ))))))
        (cond
          (reduced
           (let* ((num 0)
@@ -83,14 +98,18 @@ or STRING indicating name of file to write to."
               (destructuring-bind (&key node-num bdd) node
                 (typecase bdd
                   (bdd-node
-                   (let* ((positive-num  (getf (find (bdd-positive  bdd) (car buf)
-                                                 :key (getter :bdd))
-                                           :node-num))
-                          (negative-num (getf (find (bdd-negative bdd) (car buf)
-                                                 :key (getter :bdd))
-                                           :node-num)))
-                     (format stream "~D -> ~D [style=~A,color=~A,penwidth=2]~%" node-num positive-num  "solid" "green")
-                     (format stream "~D -> ~D [style=~A,color=~A,penwidth=2]~%" node-num negative-num "dashed" "red"))))))))
+                   (when (draw-node-p (bdd-positive bdd))
+                     (let ((positive-num (getf (find (bdd-positive  bdd) (car buf)
+                                                     :key (getter :bdd))
+                                               :node-num)))
+                       (format stream "~D -> ~D [style=~A,color=~A,penwidth=~D]~%"
+                               node-num positive-num  "solid" "green" pen-width)))
+                   (when (draw-node-p (bdd-negative bdd))
+                     (let ((negative-num (getf (find (bdd-negative bdd) (car buf)
+                                                     :key (getter :bdd))
+                                               :node-num)))
+                       (format stream "~D -> ~D [style=~A,color=~A,penwidth=~D,arrowhead=~s,arrowtail=~s,dir=~s]~%"
+                               node-num negative-num "dashed" "red" pen-width "normal" "odot" "both")))))))))
          (t
           (let (nodes
                 (num 0))
@@ -126,15 +145,18 @@ or STRING indicating name of file to write to."
          
        ;; footer
        (format stream "}~%")))))
-     
-(defun bdd-to-png (bdd &key (reduced t) (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd))))
+
+(defun bdd-to-png (bdd &key (reduced t) (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd)))
+                         (draw-false-leaf t) (pen-width 2))
   "Generate a PNG (graphics) file to graphically view an ROBDD.  The special var adjuvant:*DOT-PATH* is used to locate
-the dot (graphviz) program which will convert a .dot file to .png . Full path of the .png is returned."
-  (let ((dot-path (format nil "~A.dot" basename))
-        (png-path (format nil "~A.png" basename)))
+the dot (graphviz) program which will convert a .dot file to .png . Full path of the .png is returned.
+:DRAW-FALSE-LEAVE nil may be used to simplify the display of the bdd, by omitting all
+paths to the false leaf."
+  (let ((dot-path (replace-all (format nil "~A.dot" basename) "//" "/"))
+        (png-path (replace-all (format nil "~A.png" basename) "//" "/")))
     (ensure-directories-exist dot-path)
     (with-open-file (stream dot-path :direction :output :if-exists :supersede :if-does-not-exist :create)
-      (bdd-to-dot bdd stream :reduced reduced))
+      (bdd-to-dot bdd stream :reduced reduced :draw-false-leaf draw-false-leaf :pen-width pen-width))
     (run-program *dot-path*
                  (list "-Tpng" dot-path
                        "-o" png-path))
