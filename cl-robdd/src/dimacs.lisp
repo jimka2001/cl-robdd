@@ -34,18 +34,24 @@
   (declare (type (and fixnum unsigned-byte) diff)
            (type (or null (cons fixnum)) clause1 clause2)
            (optimize (speed 3) (debug 0) (compilation-speed 0)))
-  (cond
-    ((> diff 1) ; stop if diff ever exceeds 1
-     nil)
-    ((null clause1) ; if we reached the end, we should have found exactly 1 difference
-     (assert (null clause2))
-     (= 1 diff))
-    (t
-     (and (= (abs (car clause1))
-             (abs (car clause2)))
-          (qm-compatible? (cdr clause1) (cdr clause2) (if (= (car clause1) (car clause2))
-                                                          diff
-                                                          (1+ diff)))))))
+  (flet ((_abs (a)
+           (declare (type fixnum a))
+           (if (< a 0)
+               (- a)
+               a)))
+             
+    (cond
+      ((> diff 1)                       ; stop if diff ever exceeds 1
+       nil)
+      ((null clause1) ; if we reached the end, we should have found exactly 1 difference
+       (assert (null clause2))
+       (= 1 diff))
+      (t
+       (and (= (_abs (car clause1))
+               (_abs (car clause2)))
+            (qm-compatible? (cdr clause1) (cdr clause2) (if (= (car clause1) (car clause2))
+                                                            diff
+                                                            (1+ diff))))))))
 
 (defun clause-< (clause1 clause2 &aux (c1 (car clause1)) (c2 (car clause2)))
   "The comparison function used by sort to sort the clauses deterministically.
