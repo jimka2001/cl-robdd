@@ -266,28 +266,17 @@
                             ;; (format t "    length ~A~%" length)
                             (while (and clauses-a
                                         clauses-b)
-                              ;; (when (= 0 (mod (length clauses-a) 5000))
-                              ;;(format t " length clauses-a=~D~%" (length clauses-a)))
-                              ;;(when (= 0 (mod (length clauses-b) 5000))
-                              ;; (format t " length clauses-b=~D~%" (length clauses-b)))
-                              ;;(format t "        ~D clauses of length=~D pos-count=~A~%" (length clauses-a) length pos-count)
-                              ;;(format t "  ~A~%" clauses-a)
-                              ;;(format t "        ~D clauses of length=~D pos-count=~A~%" (length clauses-b) length pos-count-1)
-                              ;;(format t "  ~A~%" clauses-b)
                               (let ((clause-a (car clauses-a))
                                     (clause-b (car clauses-b)))
                                 (cond
                                   ((equal-abs-list clause-a clause-b)
-                                   ;;(format t "  abs-equal-clauses ~A ~A~%" clause-a clause-b)
                                    (let ((clauses-aa (list (pop clauses-a)))
                                          (clauses-bb (list (pop clauses-b))))
                                      (while (and clauses-a
                                                  (equal-abs-list clause-a (car clauses-a)))
-                                       ;;(format t "  abs-equal-clauses ~A ~A~%" clause-a (car clauses-a))
                                        (push (pop clauses-a) clauses-aa))
                                      (while (and clauses-b
                                                  (equal-abs-list clause-b (car clauses-b)))
-                                       ;;(format t "  abs-equal-clauses ~A ~A~%" clause-b (car clauses-b))
                                        (push (pop clauses-b) clauses-bb))
                                      ;; now a quadratic search, but maximally length^2 times
                                      (dolist (aa clauses-aa)
@@ -316,9 +305,8 @@
                          ;; call reduce-1 on all pos-count entries, but remember whether something changed
                          :do (reduce-1 pos-count
                                        (lambda (&rest plist)
-                                         ;; TODO we could add immediately, but delay removal
+                                         (setf changed t)
                                          (apply #'add-clause vec plist)
-                                         ;;(push plist add-plists)
                                          )
                                        (lambda (&rest plist)
                                          (push plist remove-plists))))
@@ -326,9 +314,7 @@
                  ;;(format t "removing ~D~%" (length remove-plists))
                  (dolist (plist remove-plists)
                    (apply #'remove-clause vec plist))
-                 ;;(format t "adding ~D~%" (length add-plists))
-                 ;; (dolist (plist add-plists)
-                 ;;   (apply #'add-clause vec plist))
+                 (setf remove-plists nil)
                  (setf remove-plists nil
                        add-plists nil)
                  ;; There might be new indices, but nothing larger than max-pos-count.
