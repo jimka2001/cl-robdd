@@ -27,7 +27,7 @@ object dimacsApp  {
       else (clause1,clause2) match {
        case (a::as,b::bs) => (
           equalAbs(a,b) && loop(as,bs,(if (a==b) diff else diff+1)))
-        case (_,_) => (1==diff)
+        case (_,_) => 1==diff
       }
     }
     loop(clause1,clause2,0)
@@ -38,8 +38,8 @@ object dimacsApp  {
   def clauseLess(clause1:Clause,clause2:Clause):Boolean = {
     (clause1,clause2) match {
       case (Nil,Nil) => false
-      case (c1::c1s,c2::c2s) if (c1==c2) => clauseLess(c1s,c2s)
-      case (c1::_,c2::_) if (abs(c1)==abs(c2)) => c1 < c2
+      case (c1::c1s,c2::c2s) if c1==c2 => clauseLess(c1s,c2s)
+      case (c1::_,c2::_) if abs(c1)==abs(c2) => c1 < c2
       case (c1::_,c2::_) => absLess(c1,c2)
     }
   }
@@ -60,7 +60,7 @@ object dimacsApp  {
         case (Nil, Nil) => acc.reverse
         case (a :: as, Nil) => loop(as, Nil, a :: acc)
         case (Nil, b :: bs) => loop(Nil, bs, b :: acc)
-        case (a :: as, b :: bs) if (clauseLess(a, b)) => loop(as, b :: bs, a :: acc)
+        case (a :: as, b :: bs) if clauseLess(a, b) => loop(as, b :: bs, a :: acc)
         case (a :: as, b :: bs) => loop(a :: as, bs, b :: acc)
       }
     }
@@ -135,7 +135,7 @@ object dimacsApp  {
     def mapClauses(consume: Clause => Unit): Unit = {
       for ((numPos, lengthHash) <- hash) {
         for ((length, clauses) <- lengthHash) {
-          clauses map consume
+          clauses foreach consume
         }
       }
     }
@@ -146,14 +146,14 @@ object dimacsApp  {
 
     def quineMccluskeyReduce(clauses: Clauses): Clauses = {
       val vec = new QmVec
-      clauses map ((clause) => addClause(sortClause(clause)))
+      clauses foreach (clause => addClause(sortClause(clause)))
       quineMccluskeyReduce()
     }
     def mapcan[A1,A2,B](f:(A1,A2)=>List[B],L1:List[A1],L2:List[A2]):List[B] = {
       (L1,L2).zipped.flatMap(f)
     }
     def reduceOneVar (clause1:Clause,clause2:Clause):Clause = {
-      mapcan( ((v1:Integer,v2:Integer)=>(if (v1 == v2) List(v1) else Nil)), clause1 ,clause2)
+      mapcan( (v1:Integer,v2:Integer)=>(if (v1 == v2) List(v1) else Nil), clause1 ,clause2)
     }
     //                         clause, posCount, length
     type HashUpdateFunction = (Clause,Integer,Integer)=>Unit
@@ -163,8 +163,8 @@ object dimacsApp  {
       (hash.get(posCount),hash.get(posCountDec)) match {
         case (None,_) => Unit
         case (_,None) => Unit
-        case (lengthHashA,lengthHashB) => {
-          for((length -> clausesA)<-lengthHashA){
+        case (Some(lengthHashA),Some(lengthHashB)) => {
+          for((length,clausesA)<-lengthHashA){
             val clausesB = lengthHashB.getOrElse(length,Nil)
             def loop(clausesA:Clauses,clausesB:Clauses):Unit = {
               (clausesA,clausesB) match {
@@ -203,22 +203,19 @@ object dimacsApp  {
       var maxPosCount:Integer = hash.foldLeft(0){ case (acc, (k, _)) => max(k,acc) }
       def loop():Unit = {
         var changed = false
-        var removes:List[Unit=>Unit] = Nil
+        var removes:List[()=>Unit] = Nil
         def addCBF(clause:Clause,posCount:Integer,length:Integer):Unit = {
           changed = true
           addClause(clause,posCount,length,false,false)
         }
         def removeCBF(clause:Clause,posCount:Integer,length:Integer):Unit = {
-          def thunk():Unit = {
-            removeClause(clause,posCount,length)
-          }
-          removes = thunk::removes
+          removes = (()=>removeClause(clause,posCount,length))::removes
         }
-        for((posCount -> _) <- hash) {
+        for((posCount,_) <- hash) {
           if (posCount < maxPosCount)
             reduceOne(posCount,addCBF,removeCBF)
         }
-        for(thunk <- removes)
+        for(thunk<- removes)
           thunk()
         maxPosCount = hash.foldLeft(0){
           case (acc, (k, _)) => if (k<maxPosCount) max(k,acc) else acc
@@ -229,7 +226,11 @@ object dimacsApp  {
       loop()
     }
     def quineMccluskeyReduce(): Clauses = {
+      qmReduce()
+      var clauses:Clauses = Nil
 
+      mapClauses((clause:Clause) => clauses = clause::clauses)
+      clauses.sortWith((clause1,clause2)=>clause1.length < clause2.length)
     }
 
     def sortQmVec(): Unit = {
@@ -242,7 +243,7 @@ object dimacsApp  {
   }
   def calcNumVars(clauses: Clauses): Integer = {
     val hash: HashMap[Int, Boolean] = new HashMap
-    clauses map ((clause: List[Integer]) => clause map ((num: Integer) => hash += ((abs(num) -> true))))
+    clauses map ((clause: List[Integer]) => clause map ((num: Integer) => hash += (abs(num) -> true)))
     hash.size
   }
 
