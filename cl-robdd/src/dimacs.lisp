@@ -295,7 +295,6 @@
            (qm-reduce ()
              (let ((changed t)
                    remove-plists
-                   add-plists
                    (max-pos-count (loop :for pos-count :being :the :hash-keys :of (pos-count-hash vec)
                                         :maximize pos-count)))
                (while changed
@@ -310,13 +309,10 @@
                                          )
                                        (lambda (&rest plist)
                                          (push plist remove-plists))))
-                 (setf changed add-plists)
                  ;;(format t "removing ~D~%" (length remove-plists))
                  (dolist (plist remove-plists)
                    (apply #'remove-clause vec plist))
                  (setf remove-plists nil)
-                 (setf remove-plists nil
-                       add-plists nil)
                  ;; There might be new indices, but nothing larger than max-pos-count.
                  ;; We wish to find the maximum pos-count which is strictly < max-pos-count
                  ;;   and make that the new max-pos-count
