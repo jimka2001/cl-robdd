@@ -356,7 +356,7 @@
     (when remove-supers
       (case (form vec)
         ((:cnf :dnf)
-         (format t "removing supers~%")
+         ;;(format t "removing supers~%")
          (remove-supers))
         ((:raw)
          nil)))
