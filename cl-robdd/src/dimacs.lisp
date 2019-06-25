@@ -397,9 +397,9 @@
     vec))
 
 (defun read-dimacs-file (file &key (consume (let ((conc-buf (list nil)))
-                                           (lambda (clause)
-                                             (tconc conc-buf (reverse clause))
-                                             (car conc-buf)))))
+                                              (lambda (clause)
+                                                (tconc conc-buf (reverse clause))
+                                                (car conc-buf)))))
   "Read a DIMACS CNF file, as described by https://people.sc.fsu.edu/~jburkardt/data/cnf/cnf.html
  The CNF file format is an ASCII file format.
 
@@ -447,7 +447,7 @@
  there are 10 variables, for instance, but allow them to be numbered 2
  through 11."
   (typecase file
-    ((or pathname string)                             ; file name
+    ((or pathname string)               ; file name
      (with-open-file (stream file :direction :input :if-does-not-exist :error
                                   :external-format :utf-8)
        (read-dimacs-file stream :consume consume)))
