@@ -29,6 +29,7 @@ or nil (to print to output string)
 or STRING indicating name of file to write to.
 :DRAW-FALSE-LEAVE nil may be used to simplify the display of the bdd, by omitting all
 paths to the false leaf."
+  (declare (type bdd bdd))
   (typecase stream
     (null
      (with-output-to-string (str)
@@ -49,7 +50,7 @@ paths to the false leaf."
               (dot-node (bdd node-num)
                 (typecase bdd
                   (bdd-node
-                   (format stream "~D [shape=~A,label=~S]~%"
+                   (format stream "~D [shape=~A,label=~S,penwidth=2]~%"
                            node-num
                            "ellipse"
 			   (bdd-label bdd)))
