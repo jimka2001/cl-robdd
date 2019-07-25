@@ -50,10 +50,11 @@ paths to the false leaf."
               (dot-node (bdd node-num)
                 (typecase bdd
                   (bdd-node
-                   (format stream "~D [shape=~A,label=~S,penwidth=2]~%"
+                   (format stream "~D [shape=~A,label=~S,penwidth=~D]~%"
                            node-num
                            "ellipse"
-			   (bdd-label bdd)))
+			   (bdd-label bdd)
+                           pen-width))
                   (bdd-true
                    (format stream "~D [shape=~A,label=~S,fontname=~S]~%"
                            node-num
