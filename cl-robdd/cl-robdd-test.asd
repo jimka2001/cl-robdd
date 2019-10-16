@@ -25,9 +25,10 @@
   :description "Test cases for cl-robdd package/system"
   :license "MIT"
   :depends-on (:cl-fad
-               :cl-robdd
 	       :adjuvant
-               :scrutiny)
+               :scrutiny
+               :cl-robdd
+               )
   :components
   ((:module "src"
     :components
