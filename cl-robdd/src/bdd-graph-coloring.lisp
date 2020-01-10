@@ -121,16 +121,19 @@
     (list :all-states all-states
           :state-uni-graph (let ((hash (make-hash-table :test #'equal)))
                              (loop :for (state . neighbors) :in uni-graph-alist
-                                   :do (format t "~A ~A~%" state neighbors)
                                    :do (setf (gethash state hash) neighbors))
                              hash)
                            
           :state-bi-graph (let ((hash (make-hash-table :test #'equal)))
                             (loop :for (state1 . neighbors) :in uni-graph-alist
                                   :do (dolist (state2 neighbors)
-                                        (push (gethash state1 hash nil) state2)
-                                        (push (gethash state2 hash nil) state1)))
+                                        (push state2 (gethash state1 hash nil))
+                                        (push state1 (gethash state2 hash nil))))
                             hash))))
+
+(assert (gethash "AL" (getf *usa-graph* :state-bi-graph)))
+(assert (typep (gethash "AL" (getf *usa-graph* :state-bi-graph)) 'list))
+
 
 (defun make-state-to-var-map (all-states)
   (let ((hash (make-hash-table :test #'equal))
@@ -154,11 +157,11 @@
              ;;   neighbors of a given state.
              (destructuring-bind (a . b) (gethash ab state-to-var)
                (let ((neighbors (gethash ab uni-graph ())))
-
                  (reduce (lambda (acc cd)
+                           (format t "constraint ~A ~A~%" cd acc)
                            (destructuring-bind (c . d) (gethash cd state-to-var)
-                             (bdd-and acc (bdd-or (bdd-xor b (bdd-not d))
-                                                  (bdd-xor a (bdd-not c))))))
+                             (bdd-and acc (bdd-or (bdd-xor (bdd b) (bdd-not (bdd d)))
+                                                  (bdd-xor (bdd a) (bdd-not (bdd c)))))))
                          neighbors
                          :initial-value *bdd-true*)))))
       (values state-to-var
@@ -173,15 +176,18 @@
 (defun find-sub-graph (start num-nodes)
   ;; returns (values List[String] Hash[String List[String]])
   (labels ((recur (size states current-graph-assoc)
+             (assert (not (member nil states)))
              (cond ((= size num-nodes)
                     (values states (assoc-to-hash current-graph-assoc :assoc-get #'cdr)))
                    (t
-                    (let* ((halo (mapcan (lambda (state)
-                                           (copy-list (gethash state (getf *usa-graph* :state-bi-graph))))
-                                         states))
-                           (new-state (set-difference halo states :test #'string=)))
-                      (recur (1- size)
-                             (cons new-state states)
+                    (let* ((halo (remove-duplicates (mapcan (lambda (state)
+                                                              (copy-list (gethash state (getf *usa-graph* :state-bi-graph))))
+                                                            states) :test #'string=))
+                           (new-state (car (set-difference halo states :test #'string=))))
+                      (assert new-state)
+                      (assert halo)
+                      (recur (1+ size)
+                             (adjoin new-state states)
                              (cons (cons new-state
                                          (intersection states
                                                        (gethash new-state (getf *usa-graph* :state-bi-graph))))
@@ -190,8 +196,6 @@
     (recur 1
            (list start)
            (list (cons start nil)))))
-    
-
 
 ;; calculate a mapping from graph node to color given that the hard work
 ;;   of solving the Boolean equation has already been done.
@@ -219,14 +223,8 @@
                         (c2 (member v2 assign-true :test #'equal))
                         (color (+ (* 2 (if c1 1 0))
                                   (if c2 1 0))))
-                   (assert (or (and (member v1 assign-true :test #'equal)
-                                    (not (member v1 assign-false :test #'equal)))
-                               (and (not (member v1 assign-true :test #'equal))
-                                    (member v1 assign-false :test #'equal))))
-                   (assert (or (and (member v2 assign-true :test #'equal)
-                                    (not (member v2 assign-false :test #'equal)))
-                               (and (not (member v2 assign-true :test #'equal))
-                                    (member v2 assign-false :test #'equal))))
+                   ;; if a variable is missing, it is a don't care
+                   ;;   we implicitly assume it is false
                                
                    (setf (gethash node hash) (aref colors color)))))
              colorization)
@@ -236,17 +234,16 @@
   (bdd-with-new-hash ()
     (multiple-value-bind (states sub-graph) (find-sub-graph "AL" num-nodes)
       (multiple-value-bind (colorization bdd) (graph-to-bdd states sub-graph)
-        (let ((count 0))
-          (bdd-visit-satisfying-assignments bdd
-                                      (lambda (assign-true assign-false)
-                                        (incf count)
-                                        (assign-colors colorization assign-true assign-false
-                                                       (vector "red"
-                                                               "green"
-                                                               "blue"
-                                                               "yellow"))))
-          (format t "How many possible colorizations of the graph of ~A nodes = ~A"
-                  num-nodes count))))))
+        (multiple-value-bind (assign-true assign-false found-p) (bdd-find-satisfying-assignment bdd)
+          (if found-p
+              (format t "num-nodes=~A~% assign=true=~A colorization=~A~%" num-nodes
+                      assign-true
+                      (hash-to-assoc (assign-colors colorization assign-true assign-false
+                                                    (vector "red"
+                                                            "green"
+                                                            "blue"
+                                                            "yellow"))))
+              (format t "num-nodes=~A no colorization found~%" num-nodes)))))))
 
 (defun sanity-check-2 ()
   (loop :for num-nodes :from 8 :to 26

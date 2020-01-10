@@ -55,6 +55,7 @@
    "BDD-WITH-NEW-HASH"
    "BDD-XOR"
    "BDD-VISIT-SATISFYING-ASSIGNMENTS"
+   "BDD-FIND-SATISFYING-ASSIGNMENT"
    ))
 
 (cl:defpackage :graph-coloring

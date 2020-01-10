@@ -674,10 +674,26 @@ VISITOR-FUNCTION must be a function which returns NIL indicating to continue wal
 (defmethod bdd-visit-satisfying-assignments ((bdd bdd) client)
   (declare (type (function (list list) t) client))
   (labels ((recur (bdd assign-true assign-false)
+             (format t "true=~A  false=~A~%" assign-true assign-false)
              (typecase bdd
-               (bdd-leaf
+               (bdd-true
                 (funcall client assign-true assign-false))
+               (bdd-false
+                ())
                (t
-                (recur (bdd-negative bdd) assign-true (cons (bdd-label bdd) assign-false))
-                (recur (bdd-positive bdd) (cons (bdd-label bdd) assign-true) assign-false)))))
+                (recur (bdd-negative bdd)
+                       assign-true
+                       (cons (bdd-label bdd) assign-false))
+                (recur (bdd-positive bdd)
+                       (cons (bdd-label bdd) assign-true)
+                       assign-false)))))
     (recur bdd () ())))
+
+
+(defgeneric bdd-find-satisfying-assignment (bdd))
+(defmethod bdd-find-satisfying-assignment ((bdd bdd))
+  (bdd-visit-satisfying-assignments bdd
+                                    (lambda (assign-true assign-false)
+                                      (return-from bdd-find-satisfying-assignment
+                                        (values assign-true assign-false t))))
+  (values nil nil nil))
