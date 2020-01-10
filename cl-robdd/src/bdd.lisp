@@ -670,3 +670,14 @@ VISITOR-FUNCTION must be a function which returns NIL indicating to continue wal
 				 :bdd-node-class bdd-node-class)))))
     (recure bdd)))
 
+(defgeneric bdd-visit-satisfying-assignments (bdd client))
+(defmethod bdd-visit-satisfying-assignments ((bdd bdd) client)
+  (declare (type (function (list list) t) client))
+  (labels ((recur (bdd assign-true assign-false)
+             (typecase bdd
+               (bdd-leaf
+                (funcall client assign-true assign-false))
+               (t
+                (recur (bdd-negative bdd) assign-true (cons (bdd-label bdd) assign-false))
+                (recur (bdd-positive bdd) (cons (bdd-label bdd) assign-true) assign-false)))))
+    (recur bdd () ())))

@@ -54,4 +54,11 @@
    "BDD-WALK"
    "BDD-WITH-NEW-HASH"
    "BDD-XOR"
+   "BDD-VISIT-SATISFYING-ASSIGNMENTS"
    ))
+
+(cl:defpackage :graph-coloring
+  (:use :cl :adjuvant :cl-robdd)
+  (:export
+))
+
