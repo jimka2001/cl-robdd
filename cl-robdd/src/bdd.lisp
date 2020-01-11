@@ -38,6 +38,7 @@ This generic function accepts t and nil as positive and negative children along 
 (defgeneric bdd-and (b1 b2))
 (defgeneric bdd-and-not (b1 b2))
 (defgeneric bdd-xor (b1 b2))
+(defgeneric bdd-xnor (b1 b2))
 (defgeneric bdd-not (b))
 (defgeneric bdd-allocate (label positive-bdd negative-bdd &key bdd-node-class &allow-other-keys)
   (:documentation "Allocate a new bdd object, whose class is specified by BDD-NODE-CLASS, and
@@ -290,7 +291,13 @@ BDD-FALSE and BDD-TRUE."))
 
 (defmethod bdd ((label fixnum) &key (bdd-node-class 'bdd-node))
   (declare (type class-designator bdd-node-class))
-  (bdd-ensure-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
+  (cond 
+    ((= label 0)
+     (error "0 not supported as Boolean variable"))
+    ((plusp label)
+     (bdd-ensure-node label *bdd-true* *bdd-false* :bdd-node-class bdd-node-class))
+    (t
+     (bdd-ensure-node label *bdd-false* *bdd-true* :bdd-node-class bdd-node-class))))
 
 (defgeneric bdd-list-to-bdd (head tail &key bdd-node-class))
 
@@ -299,6 +306,7 @@ This function will be used within bdd-list-to-bdd when to perfrom and, or, and x
 
 (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
+  (format t "bdd-list-to-bdd xor ~A~%" tail)
   (funcall *bdd-reduce-function* #'bdd-xor tail
 	   :initial-value *bdd-false*
 	   :key (bdd-factory bdd-node-class)))
@@ -406,6 +414,15 @@ of the positive then the negative child nodes."
 (defmethod bdd-xor :around ((b bdd) (false bdd-false))
   b)
 
+(defmethod bdd-xnor ((true bdd-true) (b bdd))
+  b)
+(defmethod bdd-xnor ((false bdd-false) (b bdd))
+  (bdd-not b))
+(defmethod bdd-xnor :around ((b bdd) (true bdd-true))
+  b)
+(defmethod bdd-xnor :around ((b bdd) (false bdd-false))
+  (bdd-not b))
+
 
 
 (defmethod bdd-and ((true bdd-true) (b bdd))
@@ -476,6 +493,11 @@ given two objects.")
       *bdd-false*
       (bdd-op #'bdd-xor b1 b2)))
 
+(defmethod bdd-xnor ((b1 bdd-node) (b2 bdd-node))
+  (if (eq b1 b2)
+      *bdd-true*
+      (bdd-op #'bdd-xnor b1 b2)))
+
 (defmethod bdd-and ((b1 bdd-node) (b2 bdd-node))
   (if (eq b1 b2)
       b1
@@ -490,6 +512,8 @@ given two objects.")
   (error "bdd-or not implemented for ~A and ~A" b1 b2))
 (defmethod bdd-xor (b1 b2)
   (error "bdd-xor not implemented for ~A and ~A" b1 b2))
+(defmethod bdd-xnor (b1 b2)
+  (error "bdd-xnor not implemented for ~A and ~A" b1 b2))
 (defmethod bdd-and (b1 b2)
   (error "bdd-and not implemented for ~A and ~A" b1 b2))
 (defmethod bdd-and-not (b1 b2)
@@ -670,3 +694,29 @@ VISITOR-FUNCTION must be a function which returns NIL indicating to continue wal
 				 :bdd-node-class bdd-node-class)))))
     (recure bdd)))
 
+(defgeneric bdd-visit-satisfying-assignments (bdd client))
+(defmethod bdd-visit-satisfying-assignments ((bdd bdd) client)
+  (declare (type (function (list list) t) client))
+  (labels ((recur (bdd assign-true assign-false)
+             (typecase bdd
+               (bdd-true
+                (funcall client assign-true assign-false))
+               (bdd-false
+                ())
+               (t
+                (recur (bdd-negative bdd)
+                       assign-true
+                       (cons (bdd-label bdd) assign-false))
+                (recur (bdd-positive bdd)
+                       (cons (bdd-label bdd) assign-true)
+                       assign-false)))))
+    (recur bdd () ())))
+
+
+(defgeneric bdd-find-satisfying-assignment (bdd))
+(defmethod bdd-find-satisfying-assignment ((bdd bdd))
+  (bdd-visit-satisfying-assignments bdd
+                                    (lambda (assign-true assign-false)
+                                      (return-from bdd-find-satisfying-assignment
+                                        (values assign-true assign-false t))))
+  (values nil nil nil))

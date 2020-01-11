@@ -34,4 +34,5 @@
      (:file "bdd-dot" :depends-on ("bdd"))
      (:file "cnf")
      (:file "dimacs")
+     (:file "bdd-graph-coloring" :depends-on ("package" "bdd"))
      ))))

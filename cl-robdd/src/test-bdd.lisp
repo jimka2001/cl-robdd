@@ -72,7 +72,8 @@
     (bdd-with-new-hash ()
       (dolist (test-vector test-vectors)
         (destructuring-bind (a b f) test-vector
-          (assert-true (eq f (bdd-xor a b))))))))
+          (assert-true (eq f (bdd-xor a b)))
+          (assert-true (eq (bdd-not f) (bdd-xnor a b))))))))
 
 (define-test test/bdd-xor-2
   (let ((test-operands '((z1 z2)
@@ -93,6 +94,13 @@
                            (bdd-xor a b)))
           (assert-true (eq (bdd-xor b a)
                            (bdd-xor a b)))
+
+          (assert-true (eq (bdd-not (bdd-or (bdd-and-not a b) (bdd-and-not b a)))
+                           (bdd-xnor a b)))
+          (assert-true (eq (bdd-not (bdd-and-not (bdd-or a b) (bdd-and a b)))
+                           (bdd-xnor a b)))
+          (assert-true (eq (bdd-not (bdd-xor b a))
+                           (bdd-xnor a b)))
 )))))
           
 (define-test test/bdd-cmp
