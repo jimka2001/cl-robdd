@@ -51,6 +51,7 @@
    "BDD-TO-EXPR"
    "BDD-TO-PNG"
    "BDD-TRUE"
+   "BDD-VIEW"
    "BDD-WALK"
    "BDD-WITH-NEW-HASH"
    "BDD-XOR"

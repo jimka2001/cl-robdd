@@ -49,13 +49,13 @@ children).
 
 ### Serialization 
 
-* `bdd-ident` -- a positive integer unique to the given BDD.  this may be used for printing or debugging purposes.
+* `bdd-ident` -- a positive integer unique to the given BDD.  This may be used for printing or debugging purposes.
 * `bdd-to-dot` -- Create a graphviz dot file representing the given BDD.
 * `bdd-to-png` -- Generate a PNG, graphics, file to
 graphically view an ROBDD.  The special var `adjuvant:*DOT-PATH*` is used to
 locate the dot, graphviz, program which will convert a `.dot` file to
 `.png`. Full path of the `.png` is returned."
-
+* `bdd-view` -- display PNG graphic file of ROBDD (macos only)
 
 ## API for extending `bdd` through subclassing
 

@@ -1,4 +1,4 @@
-;; Copyright (c) 2017,2018 EPITA Research and Development Laboratory
+;; Copyright (c) 2017,2018,2020 EPITA Research and Development Laboratory
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining
 ;; a copy of this software and associated documentation
@@ -129,5 +129,7 @@ paths to the false leaf."
                  (list "-Tpng" dot-path
                        "-o" png-path))
     png-path))
-  
 
+(defun bdd-view (bdd &key (basename (format nil "~A/~A" (make-temp-dir "graph") (bdd-ident bdd)))
+                       (draw-false-leaf t))
+  (run-program "open" (list (bdd-to-png bdd :basename basename :draw-false-leaf draw-false-leaf))))
