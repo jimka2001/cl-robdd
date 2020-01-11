@@ -160,8 +160,9 @@
                  (reduce (lambda (acc cd)
                            (format t "constraint ~A ~A~%" cd acc)
                            (destructuring-bind (c . d) (gethash cd state-to-var)
-                             (bdd-and acc (bdd-or (bdd-xor (bdd b) (bdd-not (bdd d)))
-                                                  (bdd-xor (bdd a) (bdd-not (bdd c)))))))
+                             (format t "  ~A != ~A  or ~A != ~A~%" b d a c)
+                             (bdd-and acc (bdd-or (bdd-xor (bdd b) (bdd d))
+                                                  (bdd-xor (bdd a) (bdd c))))))
                          neighbors
                          :initial-value *bdd-true*)))))
       (values state-to-var
@@ -200,7 +201,8 @@
 ;; calculate a mapping from graph node to color given that the hard work
 ;;   of solving the Boolean equation has already been done.
 (defun assign-colors (colorization assign-true assign-false colors)
-  (declare (type vector colors)
+  (declare (ignore assign-false)
+           (type vector colors)
            (type hash-table colorization)
            (type list assign-true assign-false))
 

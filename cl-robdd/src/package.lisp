@@ -55,8 +55,15 @@
    "BDD-WALK"
    "BDD-WITH-NEW-HASH"
    "BDD-XOR"
+   "BDD-XNOR"
    "BDD-VISIT-SATISFYING-ASSIGNMENTS"
    "BDD-FIND-SATISFYING-ASSIGNMENT"
+   ;; we have to export XNOR and XNOR becasuse they are not part of the CL package.
+   ;; If we don't, then (BDD '(XOR A B)) will not work in user code as
+   ;;  XOR will intern as USER-APPLICATION::XOR rather than CL-ROBDD::XOR.
+   ;;  similar for XNOR.
+   "XOR"  
+   "XNOR"
    ))
 
 (cl:defpackage :graph-coloring
