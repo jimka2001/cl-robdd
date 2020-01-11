@@ -158,9 +158,7 @@
              (destructuring-bind (a . b) (gethash ab state-to-var)
                (let ((neighbors (gethash ab uni-graph ())))
                  (reduce (lambda (acc cd)
-                           (format t "constraint ~A ~A~%" cd acc)
                            (destructuring-bind (c . d) (gethash cd state-to-var)
-                             (format t "  ~A != ~A  or ~A != ~A~%" b d a c)
                              (bdd-and acc (bdd-or (bdd-xor (bdd b) (bdd d))
                                                   (bdd-xor (bdd a) (bdd c))))))
                          neighbors
@@ -191,7 +189,8 @@
                              (adjoin new-state states)
                              (cons (cons new-state
                                          (intersection states
-                                                       (gethash new-state (getf *usa-graph* :state-bi-graph))))
+                                                       (gethash new-state (getf *usa-graph* :state-bi-graph))
+                                                       :test #'string=))
                                    current-graph-assoc)))))))
     
     (recur 1
@@ -236,6 +235,7 @@
   (bdd-with-new-hash ()
     (multiple-value-bind (states sub-graph) (find-sub-graph "AL" num-nodes)
       (multiple-value-bind (colorization bdd) (graph-to-bdd states sub-graph)
+        ;; (bdd-view bdd :draw-false-leaf nil)
         (multiple-value-bind (assign-true assign-false found-p) (bdd-find-satisfying-assignment bdd)
           (if found-p
               (format t "num-nodes=~A~% assign=true=~A colorization=~A~%" num-nodes

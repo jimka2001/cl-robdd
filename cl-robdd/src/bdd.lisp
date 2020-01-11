@@ -306,6 +306,7 @@ This function will be used within bdd-list-to-bdd when to perfrom and, or, and x
 
 (defmethod bdd-list-to-bdd ((head (eql 'xor)) tail &key (bdd-node-class 'bdd-node) &allow-other-keys)
   (declare (type class-designator bdd-node-class))
+  (format t "bdd-list-to-bdd xor ~A~%" tail)
   (funcall *bdd-reduce-function* #'bdd-xor tail
 	   :initial-value *bdd-false*
 	   :key (bdd-factory bdd-node-class)))
@@ -697,7 +698,6 @@ VISITOR-FUNCTION must be a function which returns NIL indicating to continue wal
 (defmethod bdd-visit-satisfying-assignments ((bdd bdd) client)
   (declare (type (function (list list) t) client))
   (labels ((recur (bdd assign-true assign-false)
-             (format t "true=~A  false=~A~%" assign-true assign-false)
              (typecase bdd
                (bdd-true
                 (funcall client assign-true assign-false))
