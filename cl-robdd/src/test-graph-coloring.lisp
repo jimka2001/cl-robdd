@@ -30,6 +30,31 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (shadow-all-symbols :package-from :graph-coloring :package-into :graph-coloring-test))
 
+(define-test test/find-sub-graph
+  (find-sub-graph "ME" 2
+                  (getf *usa-graph* :state-bi-graph)
+                  (getf *usa-graph* :all-states))
+  )
+
+(define-test test/find-candidate
+  (assert-true (equal (find-candidate '("ME")
+                                      (getf *usa-graph* :state-bi-graph)
+                                      (getf *usa-graph* :all-states))
+                      "NH"))
+  (assert-true (equal (find-candidate '("MS" "AL") 
+                                       (getf *usa-graph* :state-bi-graph)
+                                       (getf *usa-graph* :all-states))
+                       "TN")))
+
+(define-test test/uni-graph-to-bi-graph
+  (let* ((uni-graph (assoc-to-hash '(("a" "b" "c")
+                                     ("x" "a")) :test #'equal :assoc-get #'cdr))
+         (bi-graph (uni-graph-to-bi-graph uni-graph :test #'equal)))
+    (assert-false (set-exclusive-or (gethash "a" bi-graph) '("x" "b" "c") :test #'string=))
+    (assert-false (set-exclusive-or (gethash "b" bi-graph) '("a") :test #'string=))
+    (assert-false (set-exclusive-or (gethash "c" bi-graph) '("a") :test #'string=))
+    (assert-false (set-exclusive-or (gethash "x" bi-graph) '("a") :test #'string=))))
+
 (define-test test/coloring
   (bdd-with-new-hash ()
     (let* ((nodes (list "a" "b" "c" "d"))
@@ -37,11 +62,11 @@
                                                    ("b" ("a"))
                                                    ("c" ("a"))
                                                    ("d" ("c" "b")))))
-           (colors (vector "red" "green" "blue" "yellow")))
+           (colors (list "red" "green" "blue" "yellow")))
       (multiple-value-bind (colorization bdd) (graph-to-bdd nodes uni-directional-graph)
         (bdd-visit-satisfying-assignments
          bdd (lambda (assign-true assign-false)
-               (let ((color-mapping (assign-colors colorization assign-true assign-false colors)))
+               (let ((color-mapping (assign-colors colorization assign-true assign-false (coerce colors 'vector))))
                  (dolist (color colors)
                    (let ((same-color-states (loop :for state :being :the :hash-keys :in color-mapping
                                                   :if (string= color (gethash state color-mapping))
