@@ -55,6 +55,11 @@
     (assert-false (set-exclusive-or (gethash "c" bi-graph) '("a") :test #'string=))
     (assert-false (set-exclusive-or (gethash "x" bi-graph) '("a") :test #'string=))))
 
+(define-test test/graph-to-starting-bdd
+  (bdd-with-new-hash ()
+    (graph-to-starting-bdd (getf *usa-graph* :state-bi-graph)
+                           (make-state-to-var-map (getf *usa-graph* :all-states)))))
+
 (define-test test/coloring
   (bdd-with-new-hash ()
     (let* ((nodes (list "a" "b" "c" "d"))

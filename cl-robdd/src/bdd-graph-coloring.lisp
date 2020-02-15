@@ -145,8 +145,34 @@
           :do (incf n))
     hash))
 
+(defun graph-to-starting-bdd (bi-graph state-to-var-map)
+  (declare (type hash-table bi-graph state-to-var-map)) 
+  ;; returns a bdd which sets n states with colors.
+  ;; this is done by finding n number of states n<=4 which all neighbor each other
+  ;; thus they must all be different colors.
+  (or (maphash (lambda (st1 states)
+                 (dolist (st2 states)
+                   (let ((common (set-difference (intersection (gethash st2 bi-graph) states :test #'string=)
+                                                 (list st1 st2))))
+                     (when common
+                       (format t "~A~%" (list st1 st2 common))
+                       (let ((st3 (car common)))
+                         (destructuring-bind ((a1 . b1)
+                                              (a2 . b2)
+                                              (a3 . b3)) (list (gethash st1 state-to-var-map)
+                                                               (gethash st2 state-to-var-map)
+                                                               (gethash st3 state-to-var-map))
+                           (return-from graph-to-starting-bdd
+                             (reduce #'bdd-and (list (bdd (- a1)) (bdd (- b1)) ;; 00
+                                                     (bdd (- a2)) (bdd b2)     ;; 01
+                                                     (bdd a3) (bdd (- b3)))))))))))
+               bi-graph)
+      *bdd-true*))
+
 (defun graph-to-bdd (states uni-graph)
-  (let ((state-to-var (make-state-to-var-map states)))
+  (let* ((state-to-var (make-state-to-var-map states))
+         (starting-bdd (graph-to-starting-bdd (uni-graph-to-bi-graph uni-graph) state-to-var))
+         (step 0))
     (flet ((get-constraints (ab)
              ;; convert the connection (neighbor) information from a state (ab)
              ;;   to a Bdd representing the color constraints because neighboring
@@ -165,9 +191,14 @@
                          neighbors
                          :initial-value *bdd-true*)))))
       (values state-to-var
-              (tree-reduce #'bdd-and
+              (tree-reduce #'(lambda (a b)
+                               (format t "step=~A ~A x ~A~%"
+                                       (incf step)
+                                       (cl-robdd-analysis::bdd-count-nodes a)
+                                       (cl-robdd-analysis::bdd-count-nodes b))
+                               (bdd-and a b))
                            states
-                           :initial-value *bdd-true*
+                           :initial-value starting-bdd
                            :key #'get-constraints)))))
 
 (defun find-candidate (current-states complete-bi-graph possible-candidates)
