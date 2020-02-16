@@ -147,8 +147,8 @@
 
 (defun graph-to-starting-bdd (bi-graph state-to-var-map)
   (declare (type hash-table bi-graph state-to-var-map)) 
-  ;; returns a bdd which sets n states with colors.
-  ;; this is done by finding n number of states n<=4 which all neighbor each other
+  ;; returns a bdd which sets 3 states with colors.
+  ;; this is done by finding 3 states which all neighbor each other
   ;; thus they must all be different colors.
   (or (maphash (lambda (st1 states)
                  (dolist (st2 states)
