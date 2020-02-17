@@ -431,14 +431,6 @@ FRACTION: number between 0 and 1 to indicate which portion of the given populati
       (format t "finished reading from ~A~%" log-file)
       samples)))
 
-(defun bdd-count-nodes (bdd)
-  (let ((c 0))
-    (bdd-bfs bdd (lambda (node)
-                   (declare (ignore node))
-                   (incf c)))
-    c))
-
-
 (defun measure-bdd-size (vars num-samples &key (interval 2) (bdd-sizes-file "/dev/null") (read-from-log-p nil) (exponent 1))
   ;; READ-FROM-LOG-P specifies to read a bdd-size from the log file if possible.
   ;;      if there are fewer than num-samples in the log file, an error is triggered.

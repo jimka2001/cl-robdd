@@ -194,8 +194,8 @@
               (tree-reduce #'(lambda (a b)
                                (format t "step=~A ~A x ~A~%"
                                        (incf step)
-                                       (cl-robdd-analysis::bdd-count-nodes a)
-                                       (cl-robdd-analysis::bdd-count-nodes b))
+                                       (bdd-count-nodes a)
+                                       (bdd-count-nodes b))
                                (bdd-and a b))
                            states
                            :initial-value starting-bdd
