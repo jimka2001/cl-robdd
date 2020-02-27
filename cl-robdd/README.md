@@ -1,7 +1,9 @@
+
 # CL-ROBDD
 
 ## Synopsis
 Implementation of ROBDD, Reduced Ordered Binary Decision Diagram
+
 
 The implementation takes the form of a CLOS class `BDD`	
 
@@ -32,6 +34,10 @@ This function will be used within bdd-list-to-bdd when to perfrom and, or, and x
 
 * `bdd-bfs` --   Walk a given BDD, object of class, `bdd`, calling the given `FUNCTION` on each node exactly once.
 The return value of `FUNCTION` is ignored.
+
+* `bdd-count-nodes` -- walk the giben BDD, counting the nodes.  The
+function is careful to avoid counting the same node twice in case of
+shared nodes between branches.
 
 * `bdd-to-dnf` -- Return the DNF (disjunctive normal form), of the Boolean expression representing the
 given `BDD`.  This DNF generation is lazy and memoized.  The first time `BDD-TO-DNF` is called

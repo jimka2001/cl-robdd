@@ -21,8 +21,18 @@
 
 (in-package   :graph-coloring)
 
+(defun uni-graph-to-bi-graph (uni-graph &key (test #'eql))
+  (let ((hash (make-hash-table :test test)))
+    (maphash (lambda (state1 neighbors)
+               (dolist (state2 neighbors)
+                 (push state2 (gethash state1 hash nil))
+                 (push state1 (gethash state2 hash nil))))
+             uni-graph)
+    hash))
+
+
 (defvar *usa-graph*
-  (let ((all-states '("AL"
+  (let* ((all-states '("AL"
                       ;;"AK"
                       "AZ"
                       "AR"
@@ -116,24 +126,15 @@
                            ("NH".("ME" "MA"))
                            ("MA".("RI" "CT"))
                            ("CT".("RI"))
-                           )))
+                           ))
+         (state-uni-graph (assoc-to-hash uni-graph-alist :test #'equal :assoc-get #'cdr)))
         
     (list :all-states all-states
-          :state-uni-graph (let ((hash (make-hash-table :test #'equal)))
-                             (loop :for (state . neighbors) :in uni-graph-alist
-                                   :do (setf (gethash state hash) neighbors))
-                             hash)
-                           
-          :state-bi-graph (let ((hash (make-hash-table :test #'equal)))
-                            (loop :for (state1 . neighbors) :in uni-graph-alist
-                                  :do (dolist (state2 neighbors)
-                                        (push state2 (gethash state1 hash nil))
-                                        (push state1 (gethash state2 hash nil))))
-                            hash))))
+          :state-uni-graph state-uni-graph
+          :state-bi-graph (uni-graph-to-bi-graph state-uni-graph :test #'equal))))
 
 (assert (gethash "AL" (getf *usa-graph* :state-bi-graph)))
 (assert (typep (gethash "AL" (getf *usa-graph* :state-bi-graph)) 'list))
-
 
 (defun make-state-to-var-map (all-states)
   (let ((hash (make-hash-table :test #'equal))
@@ -144,8 +145,34 @@
           :do (incf n))
     hash))
 
+(defun graph-to-starting-bdd (bi-graph state-to-var-map)
+  (declare (type hash-table bi-graph state-to-var-map)) 
+  ;; returns a bdd which sets 3 states with colors.
+  ;; this is done by finding 3 states which all neighbor each other
+  ;; thus they must all be different colors.
+  (or (maphash (lambda (st1 states)
+                 (dolist (st2 states)
+                   (let ((common (set-difference (intersection (gethash st2 bi-graph) states :test #'string=)
+                                                 (list st1 st2))))
+                     (when common
+                       (format t "~A~%" (list st1 st2 common))
+                       (let ((st3 (car common)))
+                         (destructuring-bind ((a1 . b1)
+                                              (a2 . b2)
+                                              (a3 . b3)) (list (gethash st1 state-to-var-map)
+                                                               (gethash st2 state-to-var-map)
+                                                               (gethash st3 state-to-var-map))
+                           (return-from graph-to-starting-bdd
+                             (reduce #'bdd-and (list (bdd (- a1)) (bdd (- b1)) ;; 00
+                                                     (bdd (- a2)) (bdd b2)     ;; 01
+                                                     (bdd a3) (bdd (- b3)))))))))))
+               bi-graph)
+      *bdd-true*))
+
 (defun graph-to-bdd (states uni-graph)
-  (let ((state-to-var (make-state-to-var-map states)))
+  (let* ((state-to-var (make-state-to-var-map states))
+         (starting-bdd (graph-to-starting-bdd (uni-graph-to-bi-graph uni-graph) state-to-var))
+         (step 0))
     (flet ((get-constraints (ab)
              ;; convert the connection (neighbor) information from a state (ab)
              ;;   to a Bdd representing the color constraints because neighboring
@@ -164,35 +191,51 @@
                          neighbors
                          :initial-value *bdd-true*)))))
       (values state-to-var
-              (tree-reduce #'bdd-and
+              (tree-reduce #'(lambda (a b)
+                               (format t "step=~A ~A x ~A~%"
+                                       (incf step)
+                                       (bdd-count-nodes a)
+                                       (bdd-count-nodes b))
+                               (bdd-and a b))
                            states
-                           :initial-value *bdd-true*
+                           :initial-value starting-bdd
                            :key #'get-constraints)))))
 
+(defun find-candidate (current-states complete-bi-graph possible-candidates)
+  ;; graph is Hash[String List[String]]
+  ;; find the element of POSSIBLE-CANDIDATES which has the most connections
+  ;; to the current-graph
+  (let* ((priority-list (sort (loop :for st1 :in possible-candidates
+                                    :unless (member st1 current-states :test #'string=)
+                                      :collect (cons (loop :for st2 :in current-states
+                                                           :when (member st2 (gethash st1 complete-bi-graph)
+                                                                         :test #'string=)
+                                                             :count :it)
+                                                     st1))
+                              #'>
+                              :key #'car)))
+    (cdr (car priority-list))))
 
 ;; find some subgraph of usa-graph->state-bi-graph which contains at least the starting state
 ;;   and a total of num-nodes - 1 other states.
-(defun find-sub-graph (start num-nodes)
+(defun find-sub-graph (start num-nodes state-bi-graph all-states)
+  (declare (type hash-table state-bi-graph))
+  ;; state-bi-graph e.g., (getf *usa-graph* :state-bi-graph)
   ;; returns (values List[String] Hash[String List[String]])
-  (labels ((recur (size states current-graph-assoc)
-             (assert (not (member nil states)))
+  (labels ((recur (size states-in-current-graph current-graph-assoc)
+             (assert (not (member nil states-in-current-graph)))
              (cond ((= size num-nodes)
-                    (values states (assoc-to-hash current-graph-assoc :assoc-get #'cdr)))
+                    (values states-in-current-graph
+                            (assoc-to-hash current-graph-assoc :assoc-get #'cdr)))
                    (t
-                    (let* ((halo (remove-duplicates (mapcan (lambda (state)
-                                                              (copy-list (gethash state (getf *usa-graph* :state-bi-graph))))
-                                                            states) :test #'string=))
-                           (new-state (car (set-difference halo states :test #'string=))))
-                      (assert new-state)
-                      (assert halo)
+                    (let ((st1 (find-candidate states-in-current-graph state-bi-graph all-states)))
+                      (declare (type string st1))
                       (recur (1+ size)
-                             (adjoin new-state states)
-                             (cons (cons new-state
-                                         (intersection states
-                                                       (gethash new-state (getf *usa-graph* :state-bi-graph))
-                                                       :test #'string=))
+                             (adjoin st1 states-in-current-graph)
+                             (cons (cons st1 (remove-if-not (lambda (st2)
+                                       (member st2 (gethash st1 state-bi-graph)))
+                                                            states-in-current-graph))
                                    current-graph-assoc)))))))
-    
     (recur 1
            (list start)
            (list (cons start nil)))))
@@ -233,7 +276,9 @@
 
 (defun sanity-check (num-nodes)
   (bdd-with-new-hash ()
-    (multiple-value-bind (states sub-graph) (find-sub-graph "AL" num-nodes)
+    (multiple-value-bind (states sub-graph) (find-sub-graph "ME" num-nodes
+                                                            (getf *usa-graph* :state-bi-graph)
+                                                            (getf *usa-graph* :all-states))
       (multiple-value-bind (colorization bdd) (graph-to-bdd states sub-graph)
         ;; (bdd-view bdd :draw-false-leaf nil)
         (multiple-value-bind (assign-true assign-false found-p) (bdd-find-satisfying-assignment bdd)

@@ -720,3 +720,13 @@ VISITOR-FUNCTION must be a function which returns NIL indicating to continue wal
                                       (return-from bdd-find-satisfying-assignment
                                         (values assign-true assign-false t))))
   (values nil nil nil))
+
+
+(defun bdd-count-nodes (bdd)
+  (let ((c 0))
+    (bdd-bfs bdd (lambda (node)
+                   (declare (ignore node))
+                   (incf c)))
+    c))
+
+
