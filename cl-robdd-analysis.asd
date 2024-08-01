@@ -20,7 +20,7 @@
 ;; WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (asdf:defsystem :cl-robdd-analysis
-  :version (:read-file-form "../version.lisp")
+  :version (:read-file-form "version.lisp")
   :author "Jim Newton"
   :description "Code for generating plots and analysis in PhD thesis regarding cl-robdd package/system"
   :license "MIT"
